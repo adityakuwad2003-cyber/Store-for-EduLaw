@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, Grid3X3, List, SlidersHorizontal, X, ShoppingCart } from 'lucide-react';
-import { notesData, categories } from '@/data/notes';
+import { categories } from '@/data/notes';
+import { getAllNotes } from '@/lib/db';
+import type { Note } from '@/types';
 import { NoteCard } from '@/components/ui/NoteCard';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { useCartStore } from '@/store';
@@ -15,22 +17,32 @@ export function Marketplace() {
   const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'price-low' | 'price-high'>('popular');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [allNotes, setAllNotes] = useState<Note[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { getTotalItems } = useCartStore();
 
   const cartCount = getTotalItems();
 
+  // Fetch from Firebase on mount
+  useEffect(() => {
+    getAllNotes().then((notes) => {
+      setAllNotes(notes);
+      setIsLoading(false);
+    });
+  }, []);
+
   // Filter and sort notes
   const filteredNotes = useMemo(() => {
-    let notes = [...notesData];
+    let notes = [...allNotes];
 
     // Search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase();
       notes = notes.filter(note =>
-        note.title.toLowerCase().includes(query) ||
-        note.category.toLowerCase().includes(query) ||
-        note.subjectCode.toLowerCase().includes(query) ||
-        note.description.toLowerCase().includes(query)
+        note.title.toLowerCase().includes(q) ||
+        note.category.toLowerCase().includes(q) ||
+        note.subjectCode.toLowerCase().includes(q) ||
+        note.description.toLowerCase().includes(q)
       );
     }
 
@@ -54,12 +66,11 @@ export function Marketplace() {
         notes.sort((a, b) => b.price - a.price);
         break;
       default:
-        // Popular - featured first, then by ID
         notes.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
     }
 
     return notes;
-  }, [searchQuery, selectedCategory, sortBy]);
+  }, [searchQuery, selectedCategory, sortBy, allNotes]);
 
   const handleCategorySelect = (slug: string | null) => {
     setSelectedCategory(slug);
@@ -87,7 +98,7 @@ export function Marketplace() {
               Browse All <span className="text-gold">Notes</span>
             </h1>
             <p className="font-body text-parchment/70">
-              {notesData.length}+ legal subjects crafted for law students
+              {isLoading ? 'Loading...' : `${allNotes.length}+ legal subjects crafted for law students`}
             </p>
           </div>
         </div>
@@ -108,7 +119,7 @@ export function Marketplace() {
                       !selectedCategory ? 'bg-burgundy text-parchment' : 'text-ink hover:bg-parchment-dark'
                     }`}
                   >
-                    All Categories ({notesData.length})
+                    All Categories ({allNotes.length})
                   </button>
                   {categories.map((category) => (
                     <button
@@ -253,11 +264,21 @@ export function Marketplace() {
 
             {/* Results Count */}
             <p className="text-sm text-mutedgray mb-6">
-              Showing {filteredNotes.length} of {notesData.length} notes
+              {isLoading ? 'Loading notes...' : `Showing ${filteredNotes.length} of ${allNotes.length} notes`}
             </p>
 
             {/* Notes Grid */}
-            {filteredNotes.length > 0 ? (
+            {isLoading ? (
+              <div className={`grid sm:grid-cols-2 xl:grid-cols-3 gap-6`}>
+                {[...Array(9)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl p-5 animate-pulse">
+                    <div className="h-40 bg-parchment-dark rounded-xl mb-4" />
+                    <div className="h-5 bg-parchment-dark rounded w-3/4 mb-2" />
+                    <div className="h-4 bg-parchment-dark rounded w-1/2" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredNotes.length > 0 ? (
               <div className={`grid ${
                 viewMode === 'grid' 
                   ? 'sm:grid-cols-2 xl:grid-cols-3' 

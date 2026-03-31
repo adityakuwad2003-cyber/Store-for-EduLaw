@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── PRODUCTS (public read, no client writes) ──────────────────────────
+    // Anyone can browse the store. Only the Firebase Admin SDK (backend) can
+    // create or update products — never from the browser directly.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── NOTES (same as products — public read, admin-only write) ──────────
+    match /notes/{noteId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── PURCHASES (authenticated owner only) ─────────────────────────────
+    // A user can only read their OWN purchases. No one can create purchases 
+    // from the client — only the server-side Razorpay webhook creates them.
+    match /purchases/{purchaseId} {
+      allow read: if request.auth != null 
+                  && purchaseId.matches(request.auth.uid + '_.*');
+      allow write: if false;
+    }
+
+    // ── USERS (authenticated owner only) ─────────────────────────────────
+    // A logged-in user can only read and write their own profile document.
+    match /users/{userId} {
+      allow read, write: if request.auth != null 
+                         && request.auth.uid == userId;
+    }
+
+    // ── EVERYTHING ELSE: DENY ─────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -5,7 +5,8 @@ import {
   Scale, Mail, Lock, Eye, EyeOff, ArrowRight,
   Chrome, UserPlus 
 } from 'lucide-react';
-import { useUserStore } from '@/store';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,34 +15,40 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const navigate = useNavigate();
-  const { login } = useUserStore();
+  const { signInWithGoogle, loginWithEmail, signupWithEmail } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login/signup
-    login({
-      id: '1',
-      name: name || 'John Doe',
-      email: email,
-      subscriptionStatus: 'none',
-      downloadQuotaRemaining: 0,
-      createdAt: new Date().toISOString(),
-    });
-    navigate('/dashboard');
+    setIsLoading(true);
+    
+    try {
+      if (isLogin) {
+        await loginWithEmail(email, password);
+        toast.success("Welcome back!");
+      } else {
+        await signupWithEmail(email, password);
+        toast.success("Account created successfully!");
+      }
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast.error(error.message || "Failed to authenticate");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    // Mock Google login
-    login({
-      id: '1',
-      name: 'John Doe',
-      email: 'john.doe@gmail.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-      subscriptionStatus: 'none',
-      downloadQuotaRemaining: 0,
-      createdAt: new Date().toISOString(),
-    });
-    navigate('/dashboard');
+  const handleGoogleLogin = async () => {
+    try {
+      setIsLoading(true);
+      await signInWithGoogle();
+      toast.success("Successfully logged in with Google!");
+      navigate('/dashboard');
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign in with Google");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,7 +84,8 @@ export function Login() {
           {/* Google Login */}
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-parchment-dark rounded-xl font-ui font-medium text-ink hover:bg-parchment-dark transition-colors mb-4"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-parchment-dark rounded-xl font-ui font-medium text-ink hover:bg-parchment-dark transition-colors mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Chrome className="w-5 h-5" />
             Continue with Google
@@ -162,9 +170,10 @@ export function Login() {
 
             <button
               type="submit"
-              className="w-full py-4 bg-burgundy text-parchment rounded-xl font-ui font-semibold hover:bg-burgundy-light transition-colors flex items-center justify-center gap-2"
+              disabled={isLoading}
+              className="w-full py-4 bg-burgundy text-parchment rounded-xl font-ui font-semibold hover:bg-burgundy-light transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLogin ? 'Sign In' : 'Create Account'}
+              {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
               <ArrowRight className="w-5 h-5" />
             </button>
           </form>

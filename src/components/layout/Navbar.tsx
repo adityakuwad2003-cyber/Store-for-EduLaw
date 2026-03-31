@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ShoppingCart, User, ChevronDown, LogOut, FileQuestion, FileText, MessageSquare, Gift, Building2, Store, Layers, Crown, Scale } from 'lucide-react';
-import { useCartStore, useUserStore } from '@/store';
+import { useCartStore } from '@/store';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navLinks = [
   { name: 'Marketplace', href: '/marketplace', icon: Store },
@@ -22,7 +23,9 @@ export function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const location = useLocation();
   const { getTotalItems } = useCartStore();
-  const { user, isAuthenticated, logout } = useUserStore();
+  const { currentUser, logout } = useAuth();
+  
+  const isAuthenticated = !!currentUser;
 
   const cartItemCount = getTotalItems();
 
@@ -114,9 +117,17 @@ export function Navbar() {
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center gap-2 p-2 hover:bg-[#6B1E2E]/10 rounded-xl transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#6B1E2E] to-[#8B2E42] flex items-center justify-center">
-                    <User className="w-4 h-4 text-parchment" />
-                  </div>
+                  {currentUser?.photoURL ? (
+                    <img 
+                      src={currentUser.photoURL} 
+                      alt="Profile" 
+                      className="w-8 h-8 rounded-full border border-parchment-dark object-cover" 
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#6B1E2E] to-[#8B2E42] flex items-center justify-center">
+                      <User className="w-4 h-4 text-parchment" />
+                    </div>
+                  )}
                   <ChevronDown className="w-4 h-4 text-mutedgray hidden lg:block" />
                 </button>
 
@@ -129,8 +140,8 @@ export function Navbar() {
                       className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-parchment-dark overflow-hidden z-50"
                     >
                       <div className="p-3 border-b border-parchment-dark bg-gradient-to-r from-[#6B1E2E]/5 to-transparent">
-                        <p className="font-ui font-medium text-ink">{user?.name}</p>
-                        <p className="text-xs text-mutedgray truncate">{user?.email}</p>
+                        <p className="font-ui font-medium text-ink">{currentUser?.displayName || 'Student'}</p>
+                        <p className="text-xs text-mutedgray truncate">{currentUser?.email || 'No email provided'}</p>
                       </div>
                       <Link
                         to="/dashboard"

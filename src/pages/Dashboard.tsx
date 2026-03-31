@@ -1,300 +1,232 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
-  User, BookOpen, Package, CreditCard, Settings,
-  Download, Eye, LogOut, Crown
+  BookOpen, Download, LogOut, User, ArrowRight,
+  ShoppingBag, Shield, Loader2, AlertCircle, Clock
 } from 'lucide-react';
-import { useUserStore } from '@/store';
-import { notesData, bundles } from '@/data/notes';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { toast } from 'sonner';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
+import { getSecureDownloadUrl } from '@/lib/storage';
 
-const tabs = [
-  { id: 'notes', name: 'My Notes', icon: BookOpen },
-  { id: 'bundles', name: 'My Bundles', icon: Package },
-  { id: 'subscription', name: 'Subscription', icon: Crown },
-  { id: 'orders', name: 'Orders', icon: CreditCard },
-  { id: 'profile', name: 'Profile', icon: Settings },
-];
-
-// Mock purchased notes
-const purchasedNotes = [notesData[0], notesData[1], notesData[4]];
-const purchasedBundles = [bundles[0]];
+interface Purchase {
+  id: string;
+  productId: string;
+  title: string;
+  fileKey: string;
+  price: number;
+  razorpay_payment_id: string;
+  purchasedAt: any;
+}
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState('notes');
-  const { logout } = useUserStore();
+  const { currentUser, logout } = useAuth();
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'notes':
-        return (
-          <div className="space-y-4">
-            <h2 className="font-display text-xl text-ink mb-4">My Notes</h2>
-            {purchasedNotes.length > 0 ? (
-              <div className="grid sm:grid-cols-2 gap-4">
-                {purchasedNotes.map((note) => (
-                  <div key={note.id} className="bg-white rounded-xl p-4 shadow-card flex items-center gap-4">
-                    <div className="w-14 h-14 bg-parchment-dark rounded-lg flex items-center justify-center">
-                      <BookOpen className="w-7 h-7 text-burgundy" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-ui font-medium text-ink">{note.title}</h3>
-                      <p className="text-sm text-mutedgray">{note.category}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="p-2 hover:bg-parchment-dark rounded-lg text-burgundy" title="Read Online">
-                        <Eye className="w-5 h-5" />
-                      </button>
-                      <button className="p-2 hover:bg-parchment-dark rounded-lg text-burgundy" title="Download PDF">
-                        <Download className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-xl">
-                <BookOpen className="w-12 h-12 text-mutedgray mx-auto mb-4" />
-                <p className="text-mutedgray">No notes purchased yet</p>
-                <Link to="/marketplace" className="text-burgundy hover:underline mt-2 inline-block">
-                  Browse Marketplace
-                </Link>
-              </div>
-            )}
-          </div>
+  // Fetch user's purchases from Firebase
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchPurchases = async () => {
+      try {
+        const q = query(
+          collection(db, 'purchases'),
+          where('userId', '==', currentUser.uid)
         );
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Purchase[];
+        setPurchases(data);
+      } catch (err) {
+        console.error("Failed to fetch purchases:", err);
+        toast.error("Could not load your library. Please refresh.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-      case 'bundles':
-        return (
-          <div className="space-y-4">
-            <h2 className="font-display text-xl text-ink mb-4">My Bundles</h2>
-            {purchasedBundles.length > 0 ? (
-              <div className="space-y-4">
-                {purchasedBundles.map((bundle) => (
-                  <div key={bundle.id} className="bg-white rounded-xl p-6 shadow-card">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h3 className="font-display text-lg text-ink">{bundle.name}</h3>
-                        <p className="text-sm text-mutedgray">{bundle.noteIds.length} subjects</p>
-                      </div>
-                      <span className="px-3 py-1 bg-green-100 text-green-600 rounded-full text-sm font-ui">
-                        Active
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="px-4 py-2 bg-burgundy text-parchment rounded-lg font-ui text-sm hover:bg-burgundy-light transition-colors">
-                        Access All Notes
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-xl">
-                <Package className="w-12 h-12 text-mutedgray mx-auto mb-4" />
-                <p className="text-mutedgray">No bundles purchased yet</p>
-                <Link to="/bundles" className="text-burgundy hover:underline mt-2 inline-block">
-                  View Bundles
-                </Link>
-              </div>
-            )}
-          </div>
-        );
+    fetchPurchases();
+  }, [currentUser]);
 
-      case 'subscription':
-        return (
-          <div className="space-y-4">
-            <h2 className="font-display text-xl text-ink mb-4">My Subscription</h2>
-            <div className="bg-gradient-to-br from-burgundy to-burgundy-light rounded-xl p-6 text-parchment">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-gold/20 rounded-full text-sm font-ui mb-2">
-                    <Crown className="w-4 h-4 text-gold" />
-                    Monthly Plan
-                  </span>
-                  <h3 className="font-display text-2xl">Active Subscription</h3>
-                </div>
-                <div className="text-right">
-                  <p className="font-display text-3xl text-gold">₹499</p>
-                  <p className="text-sm text-parchment/70">/month</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="text-center p-3 bg-white/10 rounded-lg">
-                  <p className="font-display text-xl">3/5</p>
-                  <p className="text-xs text-parchment/70">Downloads Left</p>
-                </div>
-                <div className="text-center p-3 bg-white/10 rounded-lg">
-                  <p className="font-display text-xl">15</p>
-                  <p className="text-xs text-parchment/70">Days Left</p>
-                </div>
-                <div className="text-center p-3 bg-white/10 rounded-lg">
-                  <p className="font-display text-xl">10%</p>
-                  <p className="text-xs text-parchment/70">Service Discount</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <button className="px-4 py-2 bg-gold text-ink rounded-lg font-ui font-medium hover:bg-gold-light transition-colors">
-                  Upgrade to Annual
-                </button>
-                <button className="px-4 py-2 bg-white/10 text-parchment rounded-lg font-ui font-medium hover:bg-white/20 transition-colors">
-                  Cancel Subscription
-                </button>
-              </div>
-            </div>
-          </div>
-        );
+  const handleDownload = async (purchase: Purchase) => {
+    if (!currentUser) return;
+    if (!purchase.fileKey) {
+      toast.error("Download link not configured for this item yet.");
+      return;
+    }
 
-      case 'orders':
-        return (
-          <div className="space-y-4">
-            <h2 className="font-display text-xl text-ink mb-4">Order History</h2>
-            <div className="bg-white rounded-xl shadow-card overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-parchment-dark">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-ui text-sm">Order ID</th>
-                    <th className="px-4 py-3 text-left font-ui text-sm">Item</th>
-                    <th className="px-4 py-3 text-left font-ui text-sm">Date</th>
-                    <th className="px-4 py-3 text-left font-ui text-sm">Amount</th>
-                    <th className="px-4 py-3 text-left font-ui text-sm">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { id: 'ORD-001', item: 'BNS Complete Notes', date: '2024-03-15', amount: 199, status: 'Completed' },
-                    { id: 'ORD-002', item: 'Starter Pack Bundle', date: '2024-03-10', amount: 450, status: 'Completed' },
-                    { id: 'ORD-003', item: 'Constitution Part 1', date: '2024-03-05', amount: 199, status: 'Completed' },
-                  ].map((order) => (
-                    <tr key={order.id} className="border-t border-parchment-dark">
-                      <td className="px-4 py-3 font-ui text-sm">{order.id}</td>
-                      <td className="px-4 py-3 font-ui text-sm">{order.item}</td>
-                      <td className="px-4 py-3 font-ui text-sm text-mutedgray">{order.date}</td>
-                      <td className="px-4 py-3 font-ui text-sm">₹{order.amount}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 bg-green-100 text-green-600 rounded text-xs font-ui">
-                          {order.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-
-      case 'profile':
-        return (
-          <div className="space-y-4">
-            <h2 className="font-display text-xl text-ink mb-4">My Profile</h2>
-            <div className="bg-white rounded-xl p-6 shadow-card">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-20 h-20 bg-burgundy/10 rounded-full flex items-center justify-center">
-                  <User className="w-10 h-10 text-burgundy" />
-                </div>
-                <div>
-                  <h3 className="font-display text-xl text-ink">John Doe</h3>
-                  <p className="text-mutedgray">john.doe@example.com</p>
-                </div>
-              </div>
-              <form className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-ui text-sm text-ink mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      defaultValue="John Doe"
-                      className="w-full px-4 py-3 border border-parchment-dark rounded-lg font-ui text-sm focus:outline-none focus:border-burgundy"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-ui text-sm text-ink mb-1">Email</label>
-                    <input
-                      type="email"
-                      defaultValue="john.doe@example.com"
-                      className="w-full px-4 py-3 border border-parchment-dark rounded-lg font-ui text-sm focus:outline-none focus:border-burgundy"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block font-ui text-sm text-ink mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    defaultValue="+91 98765 43210"
-                    className="w-full px-4 py-3 border border-parchment-dark rounded-lg font-ui text-sm focus:outline-none focus:border-burgundy"
-                  />
-                  <p className="text-xs text-mutedgray mt-1">
-                    Used for PDF watermarking
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="px-6 py-3 bg-burgundy text-parchment rounded-lg font-ui font-medium hover:bg-burgundy-light transition-colors"
-                >
-                  Save Changes
-                </button>
-              </form>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
+    setDownloadingId(purchase.productId);
+    try {
+      // Get a fresh Firebase ID token and pass it to the secure backend
+      const token = await currentUser.getIdToken();
+      const url = await getSecureDownloadUrl(purchase.fileKey, purchase.productId, token);
+      
+      // Trigger the download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = purchase.title + '.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success(`Downloading "${purchase.title}"...`);
+    } catch (err) {
+      console.error("Download error:", err);
+      toast.error("Could not generate download link. Please try again.");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
+  if (!currentUser) {
+    return (
+      <div className="pt-20 min-h-screen bg-parchment flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-burgundy mx-auto mb-4" />
+          <h1 className="font-display text-2xl text-ink mb-2">Please Log In</h1>
+          <p className="text-mutedgray mb-6">You must be logged in to view your library.</p>
+          <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-burgundy text-parchment rounded-xl font-ui font-medium">
+            Go to Login <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pt-20 min-h-screen bg-parchment">
-      <div className="section-container py-8">
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-card p-4 sticky top-24">
-              {/* User Info */}
-              <div className="flex items-center gap-3 p-4 border-b border-parchment-dark mb-4">
-                <div className="w-12 h-12 bg-burgundy/10 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-burgundy" />
+      {/* Header */}
+      <div className="bg-ink py-12">
+        <div className="section-container">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {currentUser.photoURL ? (
+                <img src={currentUser.photoURL} alt="Profile" className="w-14 h-14 rounded-full border-2 border-gold" />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#6B1E2E] to-[#8B2E42] flex items-center justify-center border-2 border-gold">
+                  <User className="w-7 h-7 text-parchment" />
                 </div>
-                <div>
-                  <p className="font-ui font-medium text-ink">John Doe</p>
-                  <p className="text-xs text-mutedgray">john@example.com</p>
-                </div>
+              )}
+              <div>
+                <h1 className="font-display text-2xl text-parchment">
+                  {currentUser.displayName || 'My Library'}
+                </h1>
+                <p className="text-parchment/60 text-sm">{currentUser.email}</p>
               </div>
-
-              {/* Navigation */}
-              <nav className="space-y-1">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-ui text-sm transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-burgundy text-parchment'
-                        : 'text-ink hover:bg-parchment-dark'
-                    }`}
-                  >
-                    <tab.icon className="w-5 h-5" />
-                    {tab.name}
-                  </button>
-                ))}
-              </nav>
-
-              {/* Logout */}
-              <button
-                onClick={logout}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-ui text-sm text-red-500 hover:bg-red-50 transition-colors mt-4"
-              >
-                <LogOut className="w-5 h-5" />
-                Logout
-              </button>
             </div>
-          </div>
-
-          {/* Content */}
-          <div className="lg:col-span-3">
-            {renderContent()}
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-parchment rounded-xl hover:bg-white/20 transition-colors font-ui text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
           </div>
         </div>
+      </div>
+
+      <div className="section-container py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
+          <div className="bg-white rounded-xl p-5 shadow-card text-center">
+            <BookOpen className="w-8 h-8 text-burgundy mx-auto mb-2" />
+            <p className="font-display text-3xl text-ink">{purchases.length}</p>
+            <p className="text-mutedgray text-sm">Documents Owned</p>
+          </div>
+          <div className="bg-white rounded-xl p-5 shadow-card text-center">
+            <Shield className="w-8 h-8 text-gold mx-auto mb-2" />
+            <p className="font-display text-3xl text-ink">∞</p>
+            <p className="text-mutedgray text-sm">Lifetime Access</p>
+          </div>
+          <div className="bg-white rounded-xl p-5 shadow-card text-center col-span-2 sm:col-span-1">
+            <ShoppingBag className="w-8 h-8 text-green-600 mx-auto mb-2" />
+            <p className="font-display text-3xl text-ink">
+              ₹{purchases.reduce((sum, p) => sum + (p.price || 0), 0)}
+            </p>
+            <p className="text-mutedgray text-sm">Total Spent</p>
+          </div>
+        </div>
+
+        {/* My Documents */}
+        <h2 className="font-display text-2xl text-ink mb-6">My Documents</h2>
+
+        {isLoading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl p-5 animate-pulse">
+                <div className="h-5 bg-parchment-dark rounded w-3/4 mb-3" />
+                <div className="h-4 bg-parchment-dark rounded w-1/2 mb-6" />
+                <div className="h-10 bg-parchment-dark rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : purchases.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-2xl">
+            <BookOpen className="w-16 h-16 text-parchment-dark mx-auto mb-4" />
+            <h3 className="font-display text-xl text-ink mb-2">Your library is empty</h3>
+            <p className="text-mutedgray mb-6">Purchase notes from the marketplace to access them here.</p>
+            <Link
+              to="/marketplace"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-burgundy text-parchment rounded-xl font-ui font-medium hover:bg-burgundy-light transition-colors"
+            >
+              Browse Marketplace
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {purchases.map((purchase, index) => (
+              <motion.div
+                key={purchase.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white rounded-2xl p-5 shadow-card border border-parchment-dark hover:border-burgundy/30 transition-all"
+              >
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-burgundy/10 flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="w-5 h-5 text-burgundy" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-ui font-semibold text-ink text-sm leading-tight mb-1 line-clamp-2">
+                      {purchase.title}
+                    </h3>
+                    {purchase.purchasedAt?.toDate && (
+                      <p className="text-xs text-mutedgray flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {purchase.purchasedAt.toDate().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs text-mutedgray">ID: {purchase.razorpay_payment_id?.slice(-8) || '—'}</span>
+                  <span className="font-display text-gold text-sm">₹{purchase.price}</span>
+                </div>
+
+                <button
+                  onClick={() => handleDownload(purchase)}
+                  disabled={downloadingId === purchase.productId || !purchase.fileKey}
+                  className="w-full py-2.5 bg-gradient-to-r from-[#6B1E2E] to-[#8B2E42] text-parchment rounded-xl font-ui font-medium text-sm hover:shadow-lg hover:shadow-[#6B1E2E]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {downloadingId === purchase.productId ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" />Generating Link...</>
+                  ) : !purchase.fileKey ? (
+                    <>Coming Soon</>
+                  ) : (
+                    <><Download className="w-4 h-4" />Download PDF</>
+                  )}
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
