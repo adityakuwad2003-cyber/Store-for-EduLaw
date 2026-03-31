@@ -8,12 +8,12 @@ import { getFirestore } from "firebase/firestore";
 // 3. Click the Web (</>) icon to add an app
 // 4. Copy the keys below into this configuration block
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBhGDlwzOIGavd1m4P8Ws8ftJsJ2m9hak8",
+  authDomain: "edulaw-3b674.firebaseapp.com",
+  projectId: "edulaw-3b674",
+  storageBucket: "edulaw-3b674.firebasestorage.app",
+  messagingSenderId: "249962949619",
+  appId: "1:249962949619:web:e3bbe829ca6478131cc086"
 };
 
 // Initialize Firebase
