@@ -17,12 +17,15 @@ service cloud.firestore {
     }
 
     // ── PURCHASES (authenticated owner only) ─────────────────────────────
-    // A user can only read their OWN purchases. No one can create purchases 
-    // from the client — only the server-side Razorpay webhook creates them.
+    // A user can only read or create their OWN purchases.
+    // Update and delete are always denied.
     match /purchases/{purchaseId} {
-      allow read: if request.auth != null 
-                  && purchaseId.matches(request.auth.uid + '_.*');
-      allow write: if false;
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && purchaseId.matches(request.auth.uid + '_.*');
+      allow update, delete: if false;
     }
 
     // ── USERS (authenticated owner only) ─────────────────────────────────

@@ -9,6 +9,7 @@ import { Subscription } from '@/pages/Subscription';
 import { LegalServices } from '@/pages/LegalServices';
 import { Cart } from '@/pages/Cart';
 import { Dashboard } from '@/pages/Dashboard';
+import { Admin } from '@/pages/Admin';
 import { Login } from '@/pages/Login';
 import MockTests from '@/pages/MockTests';
 import TemplatesStore from '@/pages/TemplatesStore';
@@ -38,6 +39,7 @@ function App() {
             <Route path="/community" element={<CommunityForum />} />
             <Route path="/referral" element={<ReferralProgram />} />
             <Route path="/college-licensing" element={<CollegeLicensing />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes>
         </main>
         <Footer />

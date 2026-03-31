@@ -1,86 +1,58 @@
+/**
+ * POST /api/get-download-link
+ * 
+ * Secure download link generation. Verifies:
+ * 1. Firebase ID token (server-side)
+ * 2. Purchase record exists in Firestore
+ * 3. File path is safe (no path traversal)
+ * 
+ * Returns a 15-minute presigned Cloudflare R2 URL.
+ */
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
-
-// ── Firebase Admin SDK ─────────────────────────────────────────────────────
-// Initialize only once (Vercel may reuse the same function instance)
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Newlines must be escaped in env vars
-      privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
-    }),
-  });
-}
-const adminAuth = getAuth();
-const adminDb  = getFirestore();
-
-// ── CORS helper ────────────────────────────────────────────────────────────
-const ALLOWED_ORIGIN = "https://store.theedulaw.in";
-
-function setCorsHeaders(res: any, origin: string) {
-  if (origin === ALLOWED_ORIGIN || origin === "http://localhost:5173") {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-}
-
-// ── Input validation ───────────────────────────────────────────────────────
-// fileName must look like "category/some-file.pdf" — prevents path traversal attacks
-const FILENAME_PATTERN = /^[\w\-]+\/[\w\-]+\.pdf$/;
+import { adminDb } from "./lib/adminInit";
+import {
+  setCorsHeaders, verifyBearerToken, isRateLimited,
+  getClientIp, isSafeFilePath, cleanFilePath, isSafeId,
+} from "./lib/security";
 
 export default async function handler(req: any, res: any) {
   const origin = req.headers.origin || "";
-  setCorsHeaders(res, origin);
+  setCorsHeaders(res, origin, "POST, OPTIONS");
 
-  // Handle preflight (browser OPTIONS request)
-  if (req.method === "OPTIONS") {
-    return res.status(204).end();
+  if (req.method === "OPTIONS") return res.status(204).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
+
+  // ── Rate limit: 30 downloads/minute per IP ──────────────────────────────
+  const ip = getClientIp(req);
+  if (isRateLimited(`download:${ip}`, { windowMs: 60_000, maxRequests: 30 })) {
+    return res.status(429).json({ error: "Too many download requests. Please wait a moment." });
   }
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+  // ── 1. Verify Firebase ID token ─────────────────────────────────────────
+  let verifiedUserId: string;
+  try {
+    verifiedUserId = await verifyBearerToken(req);
+  } catch (err: any) {
+    return res.status(err.status || 401).json({ error: err.message });
   }
 
-  // ── 1. Validate inputs ──────────────────────────────────────────────────
-  const { fileName, productId } = req.body || {};
+  // ── 2. Validate inputs ──────────────────────────────────────────────────
+  const { fileName: rawFileName, productId } = req.body || {};
 
-  if (!fileName || typeof fileName !== "string" || !FILENAME_PATTERN.test(fileName)) {
-    return res.status(400).json({ error: "Invalid fileName. Must match pattern: category/file-name.pdf" });
+  const fileName = cleanFilePath(typeof rawFileName === "string" ? rawFileName : "");
+  if (!isSafeFilePath(fileName)) {
+    return res.status(400).json({ error: "Invalid fileName. Must be a path like: notes/subject/file.pdf" });
   }
 
-  if (!productId || typeof productId !== "string" || productId.trim().length === 0) {
+  if (!isSafeId(productId)) {
     return res.status(400).json({ error: "Invalid productId." });
   }
 
-  // ── 2. Verify Firebase Auth token (NEVER trust userId from client body) ──
-  const authHeader = req.headers.authorization || "";
-  const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-  if (!idToken) {
-    return res.status(401).json({ error: "Unauthorized: Missing auth token." });
-  }
-
-  let verifiedUserId: string;
+  // ── 3. Verify purchase in Firestore ────────────────────────────────────
   try {
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-    verifiedUserId = decodedToken.uid; // Trust ONLY the server-verified UID
-  } catch {
-    return res.status(401).json({ error: "Unauthorized: Invalid or expired token." });
-  }
-
-  // ── 3. Check purchase in Firestore ─────────────────────────────────────
-  try {
-    const purchaseRef = adminDb
-      .collection("purchases")
-      .doc(`${verifiedUserId}_${productId}`);
+    const purchaseRef = adminDb.collection("purchases").doc(`${verifiedUserId}_${productId}`);
     const purchaseSnap = await purchaseRef.get();
-
     if (!purchaseSnap.exists) {
       return res.status(403).json({ error: "Forbidden: You have not purchased this document." });
     }
@@ -89,9 +61,9 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: "Could not verify purchase." });
   }
 
-  // ── 4. Generate presigned Cloudflare R2 URL ────────────────────────────
+  // ── 4. Generate presigned Cloudflare R2 GET URL (expires in 15 min) ────
   try {
-    const r2Client = new S3Client({
+    const r2 = new S3Client({
       region: "auto",
       endpoint: process.env.R2_ENDPOINT || "",
       credentials: {
@@ -106,13 +78,10 @@ export default async function handler(req: any, res: any) {
       Key: fileName,
     });
 
-    // 15-minute expiring download link — even if stolen, it expires fast
-    const secureUrl = await getSignedUrl(r2Client, command, { expiresIn: 900 });
+    const secureUrl = await getSignedUrl(r2, command, { expiresIn: 900 }); // 15 minutes
     return res.status(200).json({ url: secureUrl });
-
-  } catch (error) {
-    console.error("R2 signed URL error:", error);
+  } catch (err) {
+    console.error("R2 signed URL error:", err);
     return res.status(500).json({ error: "Could not generate secure download link." });
   }
 }
-

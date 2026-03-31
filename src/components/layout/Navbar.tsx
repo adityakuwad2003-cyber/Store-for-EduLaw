@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ShoppingCart, User, ChevronDown, LogOut, FileQuestion, FileText, MessageSquare, Gift, Building2, Store, Layers, Crown, Scale } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, ChevronDown, LogOut, FileQuestion, FileText, MessageSquare, Gift, Building2, Store, Layers, Crown, Scale, ShieldCheck } from 'lucide-react';
 import { useCartStore } from '@/store';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -26,6 +26,12 @@ export function Navbar() {
   const { currentUser, logout } = useAuth();
   
   const isAuthenticated = !!currentUser;
+  const isAdmin = !!(currentUser?.email &&
+    (import.meta.env.VITE_ADMIN_EMAILS || 'adityakuwad2003@gmail.com')
+      .split(',')
+      .map((e: string) => e.trim().toLowerCase())
+      .includes(currentUser.email.toLowerCase())
+  );
 
   const cartItemCount = getTotalItems();
 
@@ -150,6 +156,15 @@ export function Navbar() {
                         <User className="w-4 h-4" />
                         Dashboard
                       </Link>
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm font-ui text-gold hover:bg-gold/5 transition-colors border-t border-parchment-dark"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                          Admin Panel
+                        </Link>
+                      )}                      
                       <button
                         onClick={() => {
                           logout();

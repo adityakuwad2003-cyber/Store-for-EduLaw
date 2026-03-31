@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  ShoppingCart, Trash2, ArrowRight, Package, FileText, 
+import {
+  ShoppingCart, Trash2, ArrowRight, Package, FileText,
   Tag, Shield, Check, AlertCircle, Loader2
 } from 'lucide-react';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useCartStore } from '@/store';
 import { CouponInput } from '@/components/ui/CouponInput';
 import { createRazorpayCheckout } from '@/lib/razorpay';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
 
 export function Cart() {
   const { items, removeItem, clearCart, couponCode, discountAmount, applyCoupon, removeCoupon, getSubtotal, getTotal } = useCartStore();
@@ -54,28 +52,36 @@ export function Cart() {
         },
         theme: { color: '#6B1E2E' },
         handler: async (response: any) => {
-          // Payment successful — write receipts to Firebase
+          // Payment successful — save receipts via secure backend API
           try {
+            const token = await currentUser.getIdToken();
+
             for (const item of items) {
               const itemData = item.item as any;
               const productId = String(itemData.id || item.id);
               const title = itemData.title || itemData.name || 'Document';
               const fileKey = itemData.fileKey || itemData.pdfUrl || '';
 
-              // Compound doc key: userId_productId prevents duplicates
-              await setDoc(
-                doc(db, 'purchases', `${currentUser.uid}_${productId}`),
-                {
-                  userId: currentUser.uid,
+              const res = await fetch('/api/save-purchase', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
                   productId,
                   title,
                   fileKey,
                   price: itemData.price,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_order_id: response.razorpay_order_id || null,
-                  purchasedAt: serverTimestamp(),
-                }
-              );
+                }),
+              });
+
+              if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to save purchase');
+              }
             }
 
             clearCart();

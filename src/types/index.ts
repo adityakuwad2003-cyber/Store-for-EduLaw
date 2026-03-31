@@ -11,6 +11,7 @@ export interface Note {
   totalPages: number;
   thumbnailUrl: string;
   pdfUrl: string;
+  fileKey?: string;
   isFeatured: boolean;
   isNew: boolean;
   language: 'English' | 'Hindi' | 'Both';
