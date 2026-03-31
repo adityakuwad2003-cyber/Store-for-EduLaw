@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   ZoomIn, ZoomOut, Lock, Eye, CheckCircle, ShoppingCart 
 } from 'lucide-react';
@@ -316,31 +316,6 @@ export function PDFPreview({
           <div className="h-20" /> {/* Bottom spacing */}
         </div>
       </div>
-
-      {/* Floating Interaction Bar */}
-      <AnimatePresence>
-        {!hasAccess && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[60] w-[95%] max-w-lg"
-          >
-            <div className="bg-ink/95 backdrop-blur-lg p-5 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.3)] border border-white/10 flex items-center gap-6">
-              <div className="hidden sm:block">
-                <p className="text-white font-display text-xl leading-none mb-1">₹{price}</p>
-                <p className="text-[10px] text-parchment/50 font-ui uppercase tracking-widest font-bold">Total Price</p>
-              </div>
-              <div className="h-10 w-[1px] bg-white/20 hidden sm:block" />
-              <button
-                onClick={onPurchase}
-                className="flex-1 py-3.5 bg-gradient-to-r from-[#C9A84C] to-[#E8C97A] text-ink rounded-2xl font-ui font-black text-sm uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all"
-              >
-                Secure Lifetime Access
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

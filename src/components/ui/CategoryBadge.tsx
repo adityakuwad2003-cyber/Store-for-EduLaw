@@ -64,26 +64,28 @@ export function CategoryChip({ name, slug, color, isActive = false, onClick }: C
 
   return (
     <motion.button
-      whileHover={{ y: -2 }}
+      whileHover={{ y: -4, rotateX: 5, rotateY: 5 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 min-w-[100px] ${
+      className={`flex flex-col flex-1 items-center justify-between gap-3 p-4 rounded-xl transition-all duration-300 min-w-[110px] min-h-[110px] h-full ${
         isActive 
-          ? 'shadow-lg' 
-          : 'hover:shadow-md bg-white'
+          ? 'shadow-lg ring-2 ring-white/20' 
+          : 'hover:shadow-xl hover:shadow-parchment-dark/50 bg-white'
       }`}
       style={{
         backgroundColor: isActive ? color : undefined,
+        perspective: '1000px',
+        transformStyle: 'preserve-3d'
       }}
     >
       <div 
-        className="w-10 h-10 rounded-lg flex items-center justify-center"
-        style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : `${color}20` }}
+        className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
+        style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : `${color}15` }}
       >
-        <Icon className="w-5 h-5" style={{ color: isActive ? 'white' : color }} />
+        <Icon className="w-6 h-6" style={{ color: isActive ? 'white' : color }} />
       </div>
       <span 
-        className="font-ui font-medium text-xs text-center"
+        className="font-ui font-medium text-[13px] text-center leading-tight mt-auto"
         style={{ color: isActive ? 'white' : '#1f2937' }}
       >
         {name}

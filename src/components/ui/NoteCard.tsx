@@ -73,12 +73,15 @@ export function NoteCard({ note, variant = 'default', index = 0 }: NoteCardProps
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
       transition={{ delay: index * 0.05 }}
-      className="doc-card group hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+      whileHover={{ y: -5, rotateX: 2, rotateY: 2 }}
+      className="doc-card group hover:shadow-[0_20px_40px_rgba(107,30,46,0.1)] transition-all duration-300 relative bg-white"
+      style={{ perspective: '1000px', transformStyle: 'preserve-3d' }}
     >
       <div 
-        className="category-bar"
+        className="category-bar absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl z-10"
         style={{ backgroundColor: categoryColor }}
       />
       

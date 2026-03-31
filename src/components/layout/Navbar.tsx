@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ShoppingCart, User, ChevronDown, LogOut, FileQuestion, FileText, MessageSquare, Gift, Building2 } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, ChevronDown, LogOut, FileQuestion, FileText, MessageSquare, Gift, Building2, Store, Layers, Crown, Scale } from 'lucide-react';
 import { useCartStore, useUserStore } from '@/store';
-import { SearchBar } from '@/components/ui/SearchBar';
 
 const navLinks = [
-  { name: 'Marketplace', href: '/marketplace' },
-  { name: 'Bundles', href: '/bundles' },
-  { name: 'Subscription', href: '/subscription' },
-  { name: 'Services', href: '/legal-services' },
-];
-
-const moreLinks = [
+  { name: 'Marketplace', href: '/marketplace', icon: Store },
+  { name: 'Bundles', href: '/bundles', icon: Layers },
+  { name: 'Subscription', href: '/subscription', icon: Crown },
+  { name: 'Services', href: '/legal-services', icon: Scale },
   { name: 'Mock Tests', href: '/mock-tests', icon: FileQuestion },
   { name: 'Templates', href: '/templates', icon: FileText },
   { name: 'Community', href: '/community', icon: MessageSquare },
@@ -24,7 +20,6 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const location = useLocation();
   const { getTotalItems } = useCartStore();
   const { user, isAuthenticated, logout } = useUserStore();
@@ -54,15 +49,15 @@ export function Navbar() {
       <div className="section-container">
         <nav className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <div className="relative w-12 h-12">
+          <Link to="/" className="flex items-center gap-3 shrink-0">
+            <div className="relative w-10 h-10 lg:w-12 lg:h-12">
               <img 
                 src="/images/edulaw-logo.png" 
                 alt="EduLaw" 
                 className="w-full h-full object-contain"
               />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col hidden sm:flex">
               <span className="font-display text-xl lg:text-2xl text-ink leading-tight">
                 Edu<span className="text-[#6B1E2E]">Law</span>
               </span>
@@ -71,71 +66,26 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.href}
-                className={`relative font-ui font-medium text-sm transition-colors hover:text-[#6B1E2E] group ${
-                  location.pathname === link.href ? 'text-[#6B1E2E]' : 'text-ink'
-                }`}
-              >
-                {link.name}
-                <span className={`absolute -bottom-1 left-0 h-0.5 bg-[#C9A84C] transition-all duration-300 ${
-                  location.pathname === link.href ? 'w-full' : 'w-0 group-hover:w-full'
-                }`} />
-              </Link>
-            ))}
-            
-            {/* More Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                onMouseEnter={() => setIsMoreMenuOpen(true)}
-                className={`flex items-center gap-1 font-ui font-medium text-sm transition-colors hover:text-[#6B1E2E] ${
-                  moreLinks.some(l => location.pathname === l.href) ? 'text-[#6B1E2E]' : 'text-ink'
-                }`}
-              >
-                More
-                <ChevronDown className={`w-4 h-4 transition-transform ${isMoreMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-              
-              <AnimatePresence>
-                {isMoreMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    onMouseLeave={() => setIsMoreMenuOpen(false)}
-                    className="absolute left-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-parchment-dark overflow-hidden z-50"
-                  >
-                    {moreLinks.map((link) => {
-                      const Icon = link.icon;
-                      return (
-                        <Link
-                          key={link.name}
-                          to={link.href}
-                          onClick={() => setIsMoreMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-3 text-sm font-ui transition-colors ${
-                            location.pathname === link.href 
-                              ? 'bg-[#6B1E2E]/10 text-[#6B1E2E]' 
-                              : 'text-ink hover:bg-[#6B1E2E]/5'
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                          {link.name}
-                        </Link>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Search - Desktop */}
-          <div className="hidden lg:block w-48 xl:w-64">
-            <SearchBar variant="compact" />
+          <div className="hidden xl:flex items-center gap-4 flex-wrap justify-center flex-1 px-4">
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              const isActive = location.pathname === link.href;
+              return (
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg relative font-ui font-medium text-[13px] transition-colors group ${
+                    isActive ? 'text-[#6B1E2E] bg-[#6B1E2E]/5' : 'text-ink hover:text-[#6B1E2E] hover:bg-parchment-dark/30'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="whitespace-nowrap">{link.name}</span>
+                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-[#C9A84C] transition-all duration-300 ${
+                    isActive ? 'w-full' : 'w-0 group-hover:w-full'
+                  }`} />
+                </Link>
+              );
+            })}
           </div>
 
           {/* Right Actions */}
@@ -238,42 +188,24 @@ export function Navbar() {
             className="lg:hidden bg-parchment border-t border-parchment-dark"
           >
             <div className="section-container py-4 space-y-4">
-              <SearchBar variant="compact" />
-              
               <div className="space-y-1">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.name}
-                    to={link.href}
-                    className={`block px-4 py-3 rounded-xl font-ui font-medium transition-colors ${
-                      location.pathname === link.href 
-                        ? 'bg-gradient-to-r from-[#6B1E2E] to-[#8B2E42] text-parchment' 
-                        : 'text-ink hover:bg-[#6B1E2E]/10'
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
-                ))}
-                <div className="pt-2 mt-2 border-t border-parchment-dark">
-                  <p className="px-4 py-2 text-xs font-ui text-mutedgray uppercase tracking-wider">More</p>
-                  {moreLinks.map((link) => {
-                    const Icon = link.icon;
-                    return (
-                      <Link
-                        key={link.name}
-                        to={link.href}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl font-ui font-medium transition-colors ${
-                          location.pathname === link.href 
-                            ? 'bg-gradient-to-r from-[#6B1E2E] to-[#8B2E42] text-parchment' 
-                            : 'text-ink hover:bg-[#6B1E2E]/10'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {link.name}
-                      </Link>
-                    );
-                  })}
-                </div>
+                {navLinks.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <Link
+                      key={link.name}
+                      to={link.href}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-ui font-medium transition-colors ${
+                        location.pathname === link.href 
+                          ? 'bg-gradient-to-r from-[#6B1E2E] to-[#8B2E42] text-parchment' 
+                          : 'text-ink hover:bg-[#6B1E2E]/10'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {link.name}
+                    </Link>
+                  );
+                })}
               </div>
 
               {!isAuthenticated && (
