@@ -92,7 +92,7 @@ export function SearchBar({ variant = 'compact', onSearch }: SearchBarProps) {
               {suggestions.map((note) => (
                 <Link
                   key={note.id}
-                  to={`/notes/${note.slug}`}
+                  to={`/product/${note.slug}`}
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-4 p-4 hover:bg-parchment/50 transition-colors border-b border-parchment-dark last:border-0"
                 >

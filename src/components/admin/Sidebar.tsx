@@ -3,26 +3,45 @@ import { useAdminStore } from '../../stores/adminStore';
 import { 
   BarChart3, BookOpen, Users,
   Settings, Layers, ShoppingCart,
-  ChevronLeft, ChevronRight, ShieldCheck
+  ChevronLeft, ChevronRight, ShieldCheck,
+  FileText, ClipboardCheck,
+  Ticket, Share2, Building2, Mail,
+  Bell, LayoutDashboard, PenTool,
+  MessageSquare,
+  UserCog, Video, Brain, Activity
 } from 'lucide-react';
 import { useAdminAuth } from '../../hooks/admin/useAdminAuth';
 
 const NAV_ITEMS = [
   { group: 'Main', items: [
-    { name: 'Overview', path: '/admin', icon: BarChart3, permission: '*' }
+    { name: 'Overview', path: '/admin', icon: LayoutDashboard, permission: '*' },
+    { name: 'Analytics', path: '/admin/analytics', icon: BarChart3, permission: 'reports' },
   ]},
-  { group: 'Products', items: [
+  { group: 'Catalogue', items: [
     { name: 'Notes', path: '/admin/notes', icon: BookOpen, permission: 'notes' },
     { name: 'Bundles', path: '/admin/bundles', icon: Layers, permission: 'bundles' },
+    { name: 'Templates', path: '/admin/templates', icon: FileText, permission: 'templates' },
+    { name: 'Mock Tests', path: '/admin/mock-tests', icon: ClipboardCheck, permission: 'mock_tests' },
+    { name: 'Video Lectures', path: '/admin/video-lectures', icon: Video, permission: 'content' },
+    { name: 'Flashcards', path: '/admin/flashcards', icon: Brain, permission: 'content' },
   ]},
-  { group: 'Sales', items: [
+  { group: 'Sales & Revenue', items: [
     { name: 'Orders', path: '/admin/orders', icon: ShoppingCart, permission: 'orders.view' },
+    { name: 'Coupons', path: '/admin/coupons', icon: Ticket, permission: 'coupons' },
+    { name: 'Referrals', path: '/admin/referrals', icon: Share2, permission: 'referral' },
   ]},
-  { group: 'Users & Community', items: [
-    { name: 'All Users', path: '/admin/users', icon: Users, permission: 'users' },
+  { group: 'CRM & Engagement', items: [
+    { name: 'Subscribers', path: '/admin/subscribers', icon: Users, permission: 'users' },
+    { name: 'Support Tickets', path: '/admin/support', icon: MessageSquare, permission: 'support' },
+    { name: 'Email Campaigns', path: '/admin/email-campaigns', icon: Mail, permission: 'email' },
+    { name: 'Push Notifications', path: '/admin/notifications', icon: Bell, permission: 'notifications' },
   ]},
-  { group: 'System', items: [
-    { name: 'Settings', path: '/admin/settings', icon: Settings, permission: 'super_admin' }
+  { group: 'Content & System', items: [
+    { name: 'Blog Manager', path: '/admin/blog', icon: PenTool, permission: 'blog' },
+    { name: 'Legal Glossary', path: '/admin/glossary', icon: Building2, permission: 'glossary' },
+    { name: 'Admin Access', path: '/admin/admins', icon: UserCog, permission: 'super_admin' },
+    { name: 'System Settings', path: '/admin/settings', icon: Settings, permission: 'super_admin' },
+    { name: 'Audit Logs', path: '/admin/activity', icon: Activity, permission: 'super_admin' },
   ]}
 ];
 

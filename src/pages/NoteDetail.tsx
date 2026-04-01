@@ -12,6 +12,8 @@ import { PriceDisplay } from '@/components/ui/PriceDisplay';
 import { TrustBadges } from '@/components/ui/TrustBadges';
 import { PDFPreview } from '@/components/ui/PDFPreview';
 import { ScalesOfJustice3D, SectionBadge } from '@/components/ui/LegalSVGs';
+import { SEO } from '@/components/SEO';
+import { StructuredData, getProductSchema } from '@/components/StructuredData';
 
 export function NoteDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -74,16 +76,34 @@ export function NoteDetail() {
 
   return (
     <div className="pt-20 min-h-screen bg-parchment">
+      <SEO 
+        title={`${note.title} | Legal Study Materials India`}
+        description={`${note.description.slice(0, 150)}... Buy ${note.title} for Law Students and Judiciary aspirants. Trusted by 1L+ legal learners in India.`}
+        canonical={`/product/${note.slug}`}
+        ogType="product"
+        ogImage={`https://store.theedulaw.in${note.thumbnailUrl}`}
+      />
+      <StructuredData data={getProductSchema(note)} />
+      <StructuredData data={{
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://store.theedulaw.in" },
+          { "@type": "ListItem", "position": 2, "name": "Marketplace", "item": "https://store.theedulaw.in/marketplace" },
+          { "@type": "ListItem", "position": 3, "name": note.title, "item": `https://store.theedulaw.in/product/${note.slug}` }
+        ]
+      }} />
+
       {/* Breadcrumb */}
       <div className="bg-parchment-dark border-b border-parchment-dark">
         <div className="section-container py-4">
-          <div className="flex items-center gap-2 text-sm font-ui">
+          <nav className="flex items-center gap-2 text-sm font-ui" aria-label="Breadcrumb">
             <Link to="/" className="text-mutedgray hover:text-[#6B1E2E] transition-colors">Home</Link>
             <ChevronLeft className="w-4 h-4 text-mutedgray rotate-180" />
             <Link to="/marketplace" className="text-mutedgray hover:text-[#6B1E2E] transition-colors">Marketplace</Link>
             <ChevronLeft className="w-4 h-4 text-mutedgray rotate-180" />
-            <span className="text-ink font-medium">{note.title}</span>
-          </div>
+            <span className="text-ink font-medium" aria-current="page">{note.title}</span>
+          </nav>
         </div>
       </div>
 
@@ -91,9 +111,10 @@ export function NoteDetail() {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left - PDF Preview */}
           <div>
-            <PDFPreview
-              totalPages={note.totalPages}
-              hasAccess={hasAccess}
+            <PDFPreview 
+              pdfUrl={note.pdfUrl}
+              totalPages={note.totalPages} 
+              hasAccess={hasAccess} 
               onPurchase={handleAddToCart}
               price={note.price}
             />
@@ -241,33 +262,39 @@ export function NoteDetail() {
           </div>
         </div>
 
-        {/* Related Notes */}
+        {/* Students Also Bought (Related Notes) */}
         {relatedNotes.length > 0 && (
-          <div className="mt-16">
-            <h2 className="font-display text-2xl text-ink mb-6 flex items-center gap-2">
-              <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6B1E2E] to-[#8B2E42] flex items-center justify-center">
-                <FileText className="w-4 h-4 text-parchment" />
+          <div className="mt-16 bg-white rounded-3xl p-8 border border-parchment-dark shadow-sm">
+            <h2 className="font-display text-2xl lg:text-3xl text-ink mb-8 flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#C9A84C] to-[#E8C97A] flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-ink" />
               </span>
-              Related Notes
+              Students Also <span className="text-gold">Bought</span>
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {relatedNotes.map((relatedNote) => (
                 <Link
                   key={relatedNote.id}
-                  to={`/notes/${relatedNote.slug}`}
-                  className="bg-white rounded-xl p-4 shadow-card hover:shadow-xl transition-all hover:-translate-y-1 flex items-center gap-4 border border-parchment-dark group"
+                  to={`/product/${relatedNote.slug}`}
+                  className="group bg-parchment/30 rounded-2xl p-5 hover:bg-white hover:shadow-xl transition-all duration-300 border border-transparent hover:border-parchment-dark"
                 >
-                  <div 
-                    className="w-14 h-14 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                    style={{ backgroundColor: `${categoryColor}15` }}
-                  >
-                    <FileText className="w-7 h-7" style={{ color: categoryColor }} />
+                  <div className="flex items-center gap-4">
+                    <div 
+                      className="w-16 h-16 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 shadow-sm"
+                      style={{ backgroundColor: `${categoryColor}15` }}
+                    >
+                      <FileText className="w-8 h-8" style={{ color: categoryColor }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-ui font-semibold text-ink truncate group-hover:text-[#6B1E2E] transition-colors">
+                        {relatedNote.title}
+                      </h3>
+                      <p className="text-gold font-display text-lg">₹{relatedNote.price}</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                      <ChevronLeft className="w-4 h-4 text-[#6B1E2E] rotate-180" />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-ui font-medium text-ink line-clamp-1 group-hover:text-[#6B1E2E] transition-colors">{relatedNote.title}</h3>
-                    <p className="text-gold font-display">₹{relatedNote.price}</p>
-                  </div>
-                  <ChevronLeft className="w-5 h-5 text-mutedgray rotate-180 group-hover:text-[#6B1E2E] transition-colors" />
                 </Link>
               ))}
             </div>

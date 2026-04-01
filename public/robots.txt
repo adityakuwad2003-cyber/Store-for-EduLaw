@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /checkout
+Disallow: /cart
+Disallow: /account
+Sitemap: https://store.theedulaw.in/sitemap.xml

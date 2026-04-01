@@ -74,14 +74,16 @@ export default async function handler(req: any, res: any) {
       const docRef = adminDb.collection("bundles").doc(bundle.id);
       bundlesBatch.set(docRef, {
         id: bundle.id,
-        title: bundle.title,
+        title: (bundle as any).name || (bundle as any).title,
+        slug: bundle.slug,
         description: bundle.description,
         price: bundle.price,
         originalPrice: bundle.originalPrice,
-        savings: bundle.savings,
-        features: bundle.features,
-        popular: bundle.popular || false,
-        noteSlugs: bundle.notes.map((n: any) => n.slug), // Map out what notes it includes
+        savings: (bundle as any).savingsPercent || (bundle as any).savings,
+        features: (bundle as any).includes || (bundle as any).features || [],
+        popular: (bundle as any).tag === "Popular" || (bundle as any).popular || false,
+        noteSlugs: bundle.noteIds?.length > 0 ? bundle.noteIds : [], // Store IDs as slugs if applicable, or keep IDs
+        isActive: bundle.isActive !== false,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });

@@ -135,7 +135,7 @@ export function NoteCard({ note, variant = 'default', index = 0 }: NoteCardProps
           </div>
           <div className="flex items-center gap-2">
             <Link
-              to={`/notes/${note.slug}`}
+              to={`/product/${note.slug}`}
               className="px-3 py-1.5 text-sm font-ui font-medium text-slate hover:text-burgundy transition-colors"
             >
               Preview

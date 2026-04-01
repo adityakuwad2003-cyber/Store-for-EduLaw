@@ -43,7 +43,7 @@ export default async function handler(req: any, res: any) {
     // Prepare note IDs to fetch corresponding fresh note data
     const noteIds = new Set<string>();
     const purchasesData = purchasesSnapshot.docs.map(doc => {
-      const data = doc.data();
+      const data = doc.data() as any;
       if (data.productId) noteIds.add(data.productId);
       return { id: doc.id, ...data };
     });

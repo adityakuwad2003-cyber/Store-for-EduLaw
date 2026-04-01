@@ -15,8 +15,8 @@ interface AdminStore {
   sidebarCollapsed: boolean;
   activePath: string;
   
-  // Admin user
-  adminUser: any | null; 
+  // Admin user (populated by AdminGuard)
+  adminUser: any | null;
   adminRole: AdminRole | null;
   
   // Global admin notifications
@@ -27,7 +27,6 @@ interface AdminStore {
   
   // Actions
   setSidebarCollapsed: (v: boolean) => void;
-  setActivePath: (path: string) => void;
   setAdminUser: (user: any, role: AdminRole | null) => void;
   addNotification: (n: Omit<Notification, 'id'>) => void;
   removeNotification: (id: number) => void;
@@ -39,19 +38,18 @@ export const useAdminStore = create<AdminStore>((set) => ({
   sidebarCollapsed: false,
   activePath: '',
   
-  // Admin user (populated by AdminGuard)
+  // Admin user
   adminUser: null,
   adminRole: null,
   
   // Global admin notifications
   notifications: [],
   
-  // Pending action tracking
+  // Pending action tracking (for optimistic updates)
   pendingActions: {},
   
   // Actions
   setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
-  setActivePath: (path) => set({ activePath: path }),
   setAdminUser: (user, role) => set({ adminUser: user, adminRole: role }),
   addNotification: (n) => set(s => ({ 
     notifications: [...s.notifications, { ...n, id: Date.now() }] 

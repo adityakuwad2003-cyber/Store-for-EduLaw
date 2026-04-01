@@ -15,6 +15,9 @@ import TemplatesStore from '@/pages/TemplatesStore';
 import CommunityForum from '@/pages/CommunityForum';
 import ReferralProgram from '@/pages/ReferralProgram';
 import CollegeLicensing from '@/pages/CollegeLicensing';
+import { PrivacyPolicy } from '@/pages/PrivacyPolicy';
+import { TermsOfService } from '@/pages/TermsOfService';
+import { RefundPolicy } from '@/pages/RefundPolicy';
 import { Toaster } from '@/components/ui/sonner';
 
 import { lazy, Suspense } from 'react';
@@ -23,24 +26,53 @@ import { lazy, Suspense } from 'react';
 const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'));
 const AdminGuard = lazy(() => import('@/pages/admin/AdminGuard'));
 const Overview = lazy(() => import('@/pages/admin/Overview'));
+
+// Catalogue
 const NotesManager = lazy(() => import('@/pages/admin/products/NotesManager'));
 const BundlesManager = lazy(() => import('@/pages/admin/products/BundlesManager'));
+const TemplatesManager = lazy(() => import('@/pages/admin/products/TemplatesManager'));
+const MockTestsManager = lazy(() => import('@/pages/admin/products/MockTestsManager'));
+
+// Content
+const BlogManager = lazy(() => import('@/pages/admin/content/BlogManager'));
+const VideoLectures = lazy(() => import('@/pages/admin/content/VideoLectures'));
+const FlashcardsManager = lazy(() => import('@/pages/admin/content/FlashcardsManager'));
+
+// Sales
+const OrdersManager = lazy(() => import('@/pages/admin/sales/OrdersManager'));
+const CouponManager = lazy(() => import('@/pages/admin/sales/CouponManager'));
+
+// CRM
+const SubscribersManager = lazy(() => import('@/pages/admin/crm/SubscribersManager'));
+const EmailCampaigns = lazy(() => import('@/pages/admin/crm/EmailCampaigns'));
+const PushNotifications = lazy(() => import('@/pages/admin/crm/PushNotifications'));
+const SupportTickets = lazy(() => import('@/pages/admin/crm/SupportTickets'));
+const ReferralsManager = lazy(() => import('@/pages/admin/crm/ReferralsManager'));
+
+// System
+const RevenueAnalytics = lazy(() => import('@/pages/admin/system/RevenueAnalytics'));
+const LegalGlossary = lazy(() => import('@/pages/admin/system/LegalGlossary'));
+const AdminAccess = lazy(() => import('@/pages/admin/system/AdminAccess'));
+const Settings = lazy(() => import('@/pages/admin/system/Settings'));
+const ActivityLogs = lazy(() => import('@/pages/admin/system/ActivityLogs'));
 
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-parchment">
+      <div className="min-h-screen bg-parchment font-ui">
         <Navbar />
         <main>
           <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-ink">
+            <div className="min-h-screen flex items-center justify-center bg-ink text-gold">
               <div className="w-8 h-8 rounded-full border-2 border-gold border-t-transparent animate-spin"></div>
             </div>
           }>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/category/:categorySlug" element={<Marketplace />} />
               <Route path="/notes/:slug" element={<NoteDetail />} />
+              <Route path="/product/:slug" element={<NoteDetail />} />
               <Route path="/bundles" element={<Bundles />} />
               <Route path="/subscription" element={<Subscription />} />
               <Route path="/legal-services" element={<LegalServices />} />
@@ -52,8 +84,11 @@ function App() {
               <Route path="/community" element={<CommunityForum />} />
               <Route path="/referral" element={<ReferralProgram />} />
               <Route path="/college-licensing" element={<CollegeLicensing />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
               
-              {/* Admin Routes */}
+              {/* Admin Suite 2.0 */}
               <Route 
                 path="/admin" 
                 element={
@@ -63,14 +98,42 @@ function App() {
                 }
               >
                 <Route index element={<Overview />} />
+                
+                {/* Catalogue */}
                 <Route path="notes" element={<NotesManager />} />
                 <Route path="bundles" element={<BundlesManager />} />
+                <Route path="templates" element={<TemplatesManager />} />
+                <Route path="mock-tests" element={<MockTestsManager />} />
+                
+                {/* Content */}
+                <Route path="blog" element={<BlogManager />} />
+                <Route path="video-lectures" element={<VideoLectures />} />
+                <Route path="flashcards" element={<FlashcardsManager />} />
+                
+                {/* Sales */}
+                <Route path="orders" element={<OrdersManager />} />
+                <Route path="coupons" element={<CouponManager />} />
+                <Route path="analytics" element={<RevenueAnalytics />} />
+                
+                {/* CRM */}
+                <Route path="subscribers" element={<SubscribersManager />} />
+                <Route path="email-campaigns" element={<EmailCampaigns />} />
+                <Route path="notifications" element={<PushNotifications />} />
+                <Route path="support" element={<SupportTickets />} />
+                <Route path="referrals" element={<ReferralsManager />} />
+                
+                {/* System */}
+                <Route path="glossary" element={<LegalGlossary />} />
+                <Route path="admins" element={<AdminAccess />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="activity" element={<ActivityLogs />} />
+                
               </Route>
             </Routes>
           </Suspense>
         </main>
         <Footer />
-        <Toaster position="bottom-right" />
+        <Toaster position="top-center" expand={true} richColors />
       </div>
     </Router>
   );

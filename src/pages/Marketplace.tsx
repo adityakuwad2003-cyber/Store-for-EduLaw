@@ -1,19 +1,24 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Grid3X3, List, SlidersHorizontal, X, ShoppingCart } from 'lucide-react';
+import { Link, useSearchParams, useParams } from 'react-router-dom';
+import { Search, Grid3X3, List, SlidersHorizontal, X, ShoppingCart, HelpCircle } from 'lucide-react';
 import { categories } from '@/data/notes';
 import { getAllNotes } from '@/lib/db';
 import type { Note } from '@/types';
 import { NoteCard } from '@/components/ui/NoteCard';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { useCartStore } from '@/store';
+import { SEO } from '@/components/SEO';
+import { StructuredData, getOrganizationSchema } from '@/components/StructuredData';
 
 export function Marketplace() {
+  const { categorySlug: routeCategorySlug } = useParams<{ categorySlug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(
-    searchParams.get('category')
-  );
+  
+  // Priority: URL Path (:categorySlug) > Search Params (?category=)
+  const initialCategory = routeCategorySlug || searchParams.get('category');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
+  
   const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'price-low' | 'price-high'>('popular');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
@@ -23,6 +28,13 @@ export function Marketplace() {
 
   const cartCount = getTotalItems();
 
+  // Sync state if route changes
+  useEffect(() => {
+    if (routeCategorySlug) {
+      setSelectedCategory(routeCategorySlug);
+    }
+  }, [routeCategorySlug]);
+
   // Fetch from Firebase on mount
   useEffect(() => {
     getAllNotes().then((notes) => {
@@ -30,6 +42,11 @@ export function Marketplace() {
       setIsLoading(false);
     });
   }, []);
+
+  const categoryData = useMemo(() => 
+    categories.find(c => c.slug === selectedCategory),
+    [selectedCategory]
+  );
 
   // Filter and sort notes
   const filteredNotes = useMemo(() => {
@@ -48,9 +65,8 @@ export function Marketplace() {
 
     // Category filter
     if (selectedCategory) {
-      const category = categories.find(c => c.slug === selectedCategory);
-      if (category) {
-        notes = notes.filter(note => note.category === category.name);
+      if (categoryData) {
+        notes = notes.filter(note => note.category === categoryData.name);
       }
     }
 
@@ -70,7 +86,7 @@ export function Marketplace() {
     }
 
     return notes;
-  }, [searchQuery, selectedCategory, sortBy, allNotes]);
+  }, [searchQuery, selectedCategory, sortBy, allNotes, categoryData]);
 
   const handleCategorySelect = (slug: string | null) => {
     setSelectedCategory(slug);
@@ -88,17 +104,39 @@ export function Marketplace() {
     setSearchParams({});
   };
 
+  const pageTitle = categoryData 
+    ? `${categoryData.name} for Law Students India`
+    : "Legal Study Materials, Notes & Courses India";
+  
+  const pageDescription = categoryData
+    ? `Browse ${categoryData.name} resources from The EduLaw — India's top legal education brand. High-quality study materials designed for CLAT, LLB, and judiciary aspirants.`
+    : "Shop India's most trusted legal notes and study materials. Expertly crafted resources for law students, judiciary exams, and legal practitioners.";
+
   return (
     <div className="pt-20 min-h-screen bg-parchment">
+      <SEO 
+        title={pageTitle}
+        description={pageDescription}
+        canonical={selectedCategory ? `/category/${selectedCategory}` : '/marketplace'}
+      />
+      <StructuredData data={getOrganizationSchema()} />
+      
       {/* Header */}
       <div className="bg-ink py-12">
-        <div className="section-container">
-          <div>
-            <h1 className="font-display text-3xl lg:text-4xl text-parchment mb-2">
-              Browse All <span className="text-gold">Notes</span>
+        <div className="section-container text-center lg:text-left">
+          <div className="max-w-3xl">
+            <h1 className="font-display text-3xl lg:text-5xl text-parchment mb-4 leading-tight">
+              {categoryData ? (
+                <>Buy <span className="text-gold">{categoryData.name}</span> Online India</>
+              ) : (
+                <>Browse All <span className="text-gold">Legal Notes</span></>
+              )}
             </h1>
-            <p className="font-body text-parchment/70">
-              {isLoading ? 'Loading...' : `${allNotes.length}+ legal subjects crafted for law students`}
+            <p className="font-body text-parchment/70 text-lg">
+              {categoryData 
+                ? `Prepare for CLAT, Judiciary, and LLB exams with our premium ${categoryData.name.toLowerCase()} resources. Expertly curated for performance and clarity.`
+                : `${allNotes.length}+ comprehensive legal subjects crafted for law students and practitioners across India.`
+              }
             </p>
           </div>
         </div>
@@ -118,6 +156,7 @@ export function Marketplace() {
                     className={`w-full text-left px-3 py-2 rounded-lg font-ui text-sm transition-colors ${
                       !selectedCategory ? 'bg-burgundy text-parchment' : 'text-ink hover:bg-parchment-dark'
                     }`}
+                    title="All Categories"
                   >
                     All Categories ({allNotes.length})
                   </button>
@@ -168,11 +207,13 @@ export function Marketplace() {
               </div>
 
               <div className="flex items-center gap-2">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-4 py-3 bg-white rounded-xl border border-parchment-dark font-ui text-sm focus:outline-none focus:border-burgundy"
-                >
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="bg-parchment-dark text-ink px-4 py-2 rounded-xl font-ui text-sm border-none focus:ring-1 focus:ring-gold"
+                    title="Sort notes by"
+                    aria-label="Sort notes by"
+                  >
                   <option value="popular">Most Popular</option>
                   <option value="newest">Newest First</option>
                   <option value="price-low">Price: Low to High</option>
@@ -308,6 +349,47 @@ export function Marketplace() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* SEO Content & FAQs */}
+      <div className="bg-white py-16 border-t border-parchment-dark">
+        <div className="section-container">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="font-display text-3xl text-ink mb-8 text-center">
+              Frequently Asked Questions about <span className="text-gold">Legal Study Materials</span>
+            </h2>
+            <div className="grid md:grid-cols-2 gap-8">
+              {[
+                {
+                  q: "Are these notes suitable for CLAT 2025?",
+                  a: "Yes, all our notes, especially the new criminal laws (BNS, BNSS, BSA), are updated for current and upcoming 2025 examinations."
+                },
+                {
+                  q: "Can I download the notes after purchase?",
+                  a: "Absolutely. Once the payment is successful, you can download the full PDF from your dashboard's 'My Library' section."
+                },
+                {
+                  q: "Are these notes written by legal experts?",
+                  a: "The EduLaw materials are drafted by a team of experienced lawyers and top-tier law students under strict academic supervision."
+                },
+                {
+                  q: "Do you offer discounts on bulk orders?",
+                  a: "We recommend using our 'Build Your Bundle' feature to save up to 40% when buying multiple subjects together."
+                }
+              ].map((faq, i) => (
+                <div key={i} className="space-y-2">
+                  <h3 className="font-display text-lg text-ink flex items-center gap-2">
+                    <HelpCircle className="w-5 h-5 text-gold shrink-0" />
+                    {faq.q}
+                  </h3>
+                  <p className="font-body text-mutedgray text-sm leading-relaxed">
+                    {faq.a}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
