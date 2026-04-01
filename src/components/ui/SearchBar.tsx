@@ -32,7 +32,7 @@ export function SearchBar({ variant = 'compact', onSearch }: SearchBarProps) {
       const filtered = notesData.filter(note => 
         note.title.toLowerCase().includes(query.toLowerCase()) ||
         note.category.toLowerCase().includes(query.toLowerCase()) ||
-        note.subjectCode.toLowerCase().includes(query.toLowerCase())
+        ( note.subjectCode ?? '').toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5);
       setSuggestions(filtered);
       setIsOpen(true);
@@ -74,9 +74,10 @@ export function SearchBar({ variant = 'compact', onSearch }: SearchBarProps) {
             <button
               type="button"
               onClick={clearSearch}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-parchment-dark rounded-full transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-100 rounded-xl transition-all group/clear"
+              aria-label="Clear search"
             >
-              <X className="w-4 h-4 text-mutedgray" />
+              <X className="w-4 h-4 text-slate-300 group-hover:text-slate-900" />
             </button>
           )}
         </form>
@@ -87,23 +88,23 @@ export function SearchBar({ variant = 'compact', onSearch }: SearchBarProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-parchment-dark overflow-hidden z-50"
+              className="absolute top-full left-0 right-0 mt-4 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-[60]"
             >
               {suggestions.map((note) => (
                 <Link
                   key={note.id}
                   to={`/product/${note.slug}`}
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-4 p-4 hover:bg-parchment/50 transition-colors border-b border-parchment-dark last:border-0"
+                  className="flex items-center gap-5 p-5 hover:bg-slate-50 transition-all border-b border-slate-100 last:border-0 group/result"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-burgundy/10 flex items-center justify-center">
-                    <Search className="w-4 h-4 text-burgundy" />
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 group-hover/result:border-gold/30 transition-all">
+                    <Search className="w-5 h-5 text-slate-300 group-hover/result:text-gold transition-colors" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-ui font-medium text-ink">{note.title}</p>
-                    <p className="text-sm text-mutedgray">{note.category}</p>
+                    <p className="font-ui font-bold text-slate-900 group-hover/result:text-gold transition-colors">{note.title}</p>
+                    <p className="text-xs text-slate-400 font-ui uppercase tracking-widest font-black mt-0.5">{note.category}</p>
                   </div>
-                  <span className="text-gold font-display">₹{note.price}</span>
+                  <span className="text-gold font-display font-bold">₹{note.price}</span>
                 </Link>
               ))}
             </motion.div>
@@ -129,9 +130,10 @@ export function SearchBar({ variant = 'compact', onSearch }: SearchBarProps) {
           <button
             type="button"
             onClick={clearSearch}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-parchment-dark rounded transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-lg transition-colors group/mini"
+            aria-label="Clear search"
           >
-            <X className="w-3 h-3 text-mutedgray" />
+            <X className="w-3 h-3 text-slate-400 group-hover:text-slate-900" />
           </button>
         )}
       </form>

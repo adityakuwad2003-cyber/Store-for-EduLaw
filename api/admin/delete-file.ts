@@ -4,8 +4,8 @@
  * Does NOT delete from R2 (files are cheap, deletion is irreversible).
  */
 import { FieldValue } from "firebase-admin/firestore";
-import { adminDb } from "../lib/adminInit";
-import { setCorsHeaders, verifyAdmin, isRateLimited, getClientIp, isSafeFilePath } from "../lib/security";
+import { adminDb } from "../_lib/adminInit";
+import { setCorsHeaders, verifyAdmin, isRateLimited, getClientIp, isSafeFilePath } from "../_lib/security";
 
 export default async function handler(req: any, res: any) {
   try {

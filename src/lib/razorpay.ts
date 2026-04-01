@@ -1,7 +1,7 @@
 // Razorpay Frontend Integration
 
 // Learn How To Get Your Keys: https://razorpay.com/docs/payments/dashboard/account-settings/api-keys/
-const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || "YOUR_KEY_HERE";
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_SYDe7YrQ4oRFim";
 
 interface CheckoutOptions {
   amount: number; // in paise (e.g., 50000 for ₹500.00)

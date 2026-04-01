@@ -1,14 +1,15 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { User } from "firebase/auth";
-import { 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../lib/firebase";
 
 interface AuthContextType {
   currentUser: User | null;
@@ -21,70 +22,79 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-// Custom hook to use Auth Context
 export function useAuth() {
   return useContext(AuthContext);
+}
+
+/**
+ * Upserts a minimal Firestore user document on every sign-in.
+ * Uses merge:true so existing data (subscription, isBanned, etc.) is never overwritten.
+ */
+async function upsertUserDoc(user: User) {
+  try {
+    await setDoc(
+      doc(db, "users", user.uid),
+      {
+        uid: user.uid,
+        email: user.email || "",
+        displayName: user.displayName || "",
+        photoURL: user.photoURL || "",
+        lastLoginAt: serverTimestamp(),
+        // createdAt is only written on first document creation via merge
+      },
+      { merge: true }
+    );
+    // Only set createdAt if the document is brand new (won't overwrite existing)
+    await setDoc(
+      doc(db, "users", user.uid),
+      { createdAt: serverTimestamp() },
+      { merge: true }
+    );
+  } catch (err) {
+    // Non-fatal — app works fine even if this Firestore write fails
+    console.warn("Could not upsert user doc:", err);
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Subscribe to Firebase Auth State Changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);
+      // Create/update Firestore record whenever auth state resolves to a real user
+      if (user) upsertUserDoc(user);
     });
-    
-    // Cleanup subscription on unmount
     return unsubscribe;
   }, []);
 
   const signInWithGoogle = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Error signing in with Google:", error);
-      throw error;
-    }
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+    // upsertUserDoc is called by onAuthStateChanged above
   };
 
   const loginWithEmail = async (email: string, pass: string) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-    } catch (error) {
-      console.error("Error signing in with email:", error);
-      throw error;
-    }
+    await signInWithEmailAndPassword(auth, email, pass);
   };
 
   const signupWithEmail = async (email: string, pass: string) => {
-    try {
-      await createUserWithEmailAndPassword(auth, email, pass);
-    } catch (error) {
-      console.error("Error signing up:", error);
-      throw error;
-    }
+    await createUserWithEmailAndPassword(auth, email, pass);
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Error signing out:", error);
-      throw error;
-    }
+    await signOut(auth);
   };
 
-  const value = {
+  const value: AuthContextType = {
     currentUser,
     loading,
     signInWithGoogle,
     loginWithEmail,
     signupWithEmail,
-    logout
+    logout,
   };
 
   return (

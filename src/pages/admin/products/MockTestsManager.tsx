@@ -137,8 +137,8 @@ export default function MockTestsManager() {
       sortable: true,
       render: (row) => (
         <div>
-          <p className="font-bold text-parchment">{row.title}</p>
-          <p className="text-[10px] text-parchment/40 uppercase tracking-widest mt-1">{row.subject} · {row.duration} Mins</p>
+          <p className="font-bold text-slate-900">{row.title}</p>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">{row.subject} · {row.duration} Mins</p>
         </div>
       )
     },
@@ -146,7 +146,7 @@ export default function MockTestsManager() {
       key: 'questions',
       label: 'Questions',
       render: (row) => (
-        <div className="flex items-center gap-2 text-xs text-parchment/60">
+        <div className="flex items-center gap-2 text-xs text-slate-500">
           <HelpCircle className="w-4 h-4" />
           {row.questions?.length || 0} Items
         </div>
@@ -171,13 +171,13 @@ export default function MockTestsManager() {
       label: 'Avg. Score',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <div className="w-16 h-1.5 bg-white/5 rounded-full overflow-hidden">
+          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gold" 
-              style={{ width: `${(row.stats?.avgScore || 0) / (row.totalMarks || 1) * 100}%` }} 
+              className="h-full bg-gold transition-all duration-500 progress-bar-fill" 
+              style={{ '--progress': `${(row.stats?.avgScore || 0) / (row.totalMarks || 1) * 100}%` } as React.CSSProperties} 
             />
           </div>
-          <span className="text-[10px] font-mono text-parchment/40">{row.stats?.avgScore || 0} pts</span>
+          <span className="text-[10px] font-mono text-slate-400">{(row.stats?.avgScore || 0).toFixed(1)} pts</span>
         </div>
       )
     },
@@ -189,7 +189,8 @@ export default function MockTestsManager() {
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
             onClick={(e) => { e.stopPropagation(); setEditingTest(row); setIsEditorOpen(true); }}
-            className="p-2 hover:bg-gold/10 text-parchment/40 hover:text-gold rounded-lg transition-all"
+            className="p-2 hover:bg-gold/10 text-slate-400 hover:text-gold rounded-lg transition-all"
+            aria-label="Edit mock test"
           >
             <Edit className="w-4 h-4" />
           </button>
@@ -201,20 +202,20 @@ export default function MockTestsManager() {
   return (
     <div className="space-y-6">
       {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-gold to-[#b8922a] flex items-center justify-center shadow-lg shadow-gold/20">
-            <ClipboardCheck className="w-7 h-7 text-ink" />
+            <ClipboardCheck className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="font-display text-2xl text-parchment">Mock Tests Manager</h1>
-            <p className="text-sm text-parchment/40 font-ui tracking-wide">Build interactive law exams and track student performance</p>
+            <h1 className="font-display text-2xl text-slate-900">Mock Tests Manager</h1>
+            <p className="text-sm text-slate-500 font-ui tracking-wide">Build interactive law exams and track student performance</p>
           </div>
         </div>
 
         <button 
           onClick={() => { setEditingTest({ questions: [], duration: 60, status: 'draft', isFree: false }); setIsEditorOpen(true); }}
-          className="flex items-center gap-2 px-6 py-3 bg-gold text-ink font-ui font-bold rounded-xl shadow-xl shadow-gold/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
         >
           <Plus className="w-5 h-5" /> Create New Test
         </button>
@@ -237,16 +238,16 @@ export default function MockTestsManager() {
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsEditorOpen(false)}
-              className="absolute inset-0 bg-ink/60 backdrop-blur-md" 
+              className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" 
             />
             <motion.div
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-3xl bg-[#0F0F0F] border-l border-white/10 shadow-2xl flex flex-col"
+              className="relative w-full max-w-3xl bg-white border-l border-slate-200 shadow-2xl flex flex-col"
             >
-              <div className="px-8 py-6 bg-ink border-b border-white/10 flex items-center justify-between shrink-0">
+              <div className="px-8 py-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
                 <div>
-                  <h2 className="font-display text-xl text-parchment">{editingTest?.id ? 'Edit Mock Test' : 'New Exam Suite'}</h2>
+                  <h2 className="font-display text-xl text-slate-900">{editingTest?.id ? 'Edit Mock Test' : 'New Exam Suite'}</h2>
                   <div className="flex gap-4 mt-3">
                     {['info', 'questions', 'analytics'].map((tab) => (
                       <button
@@ -254,7 +255,7 @@ export default function MockTestsManager() {
                         type="button"
                         onClick={() => setActiveTab(tab as any)}
                         className={`text-[10px] uppercase font-black tracking-[0.2em] transition-all ${
-                          activeTab === tab ? 'text-gold border-b border-gold pb-1' : 'text-parchment/30 hover:text-parchment/60'
+                          activeTab === tab ? 'text-gold border-b border-gold pb-1' : 'text-slate-400 hover:text-slate-600'
                         }`}
                       >
                         {tab}
@@ -262,7 +263,7 @@ export default function MockTestsManager() {
                     ))}
                   </div>
                 </div>
-                <button onClick={() => setIsEditorOpen(false)} className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-parchment/40">
+                <button onClick={() => setIsEditorOpen(false)} className="p-3 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-400" aria-label="Close editor">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -298,29 +299,31 @@ export default function MockTestsManager() {
                       <div>
                         <label className="input-label">Duration (Minutes)</label>
                         <div className="relative">
-                          <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-parchment/30" />
+                          <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                           <input 
+                            id="test-duration"
                             type="number" required
                             value={editingTest?.duration || ''}
                             onChange={e => setEditingTest(v => ({ ...v, duration: Number(e.target.value) }))}
                             className="admin-input pl-10" 
+                            aria-label="Test Duration in Minutes"
                           />
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-6">
+                    <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-6">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">Monetization & Status</h3>
+                        <h3 className="text-slate-900 font-ui text-[10px] uppercase tracking-[0.2em] font-black">Monetization & Status</h3>
                         <div className="flex gap-4">
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input 
                               type="checkbox" 
                               checked={editingTest?.isFree}
                               onChange={e => setEditingTest(v => ({ ...v, isFree: e.target.checked }))}
-                              className="w-4 h-4 rounded border-white/10 bg-white/5 text-gold focus:ring-gold"
+                              className="w-4 h-4 rounded border-slate-200 bg-slate-50 text-gold focus:ring-gold"
                             />
-                            <span className="text-xs text-parchment/60 font-bold uppercase tracking-widest">Free Test</span>
+                            <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">Free Test</span>
                           </label>
                         </div>
                       </div>
@@ -328,23 +331,27 @@ export default function MockTestsManager() {
                       {!editingTest?.isFree && (
                         <div className="grid grid-cols-2 gap-6">
                            <div>
-                            <label className="input-label">Price (₹)</label>
+                            <label htmlFor="test-price" className="input-label">Price (₹)</label>
                             <input 
+                              id="test-price"
                               type="number" 
                               value={editingTest?.price || ''}
                               onChange={e => setEditingTest(v => ({ ...v, price: Number(e.target.value) }))}
-                              className="admin-input border-gold/20" 
+                              className="admin-input border-gold/20 bg-white" 
+                              aria-label="Test Price"
                             />
                           </div>
                         </div>
                       )}
 
                       <div>
-                        <label className="input-label">Publishing Status</label>
+                        <label htmlFor="test-status" className="input-label">Publishing Status</label>
                         <select 
+                          id="test-status"
                           value={editingTest?.status}
                           onChange={e => setEditingTest(v => ({ ...v, status: e.target.value as any }))}
                           className="admin-input"
+                          aria-label="Test Status"
                         >
                           <option value="draft">Draft (Private)</option>
                           <option value="published">Published (Live)</option>
@@ -360,7 +367,7 @@ export default function MockTestsManager() {
                     <div className="flex items-center justify-between">
                       <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">Question Bank ({editingTest?.questions?.length || 0})</h3>
                       <div className="flex gap-2">
-                        <label className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-parchment/60 hover:text-gold cursor-pointer transition-all">
+                        <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 hover:text-gold cursor-pointer transition-all">
                           <FileUp className="w-4 h-4" />
                           Import CSV
                           <input type="file" accept=".csv" onChange={handleCsvImport} className="hidden" />
@@ -376,7 +383,7 @@ export default function MockTestsManager() {
                             };
                             setEditingTest(v => ({ ...v, questions: [...(v?.questions || []), newQ] }));
                           }}
-                          className="flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/20 rounded-xl text-xs text-gold font-bold hover:bg-gold hover:text-ink transition-all"
+                          className="flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/20 rounded-xl text-xs text-gold font-bold hover:bg-gold hover:text-white transition-all"
                         >
                           <Plus className="w-4 h-4" /> Add Question
                         </button>
@@ -385,13 +392,14 @@ export default function MockTestsManager() {
 
                     <div className="space-y-6">
                       {editingTest?.questions?.map((q, idx) => (
-                        <div key={q.id} className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                        <div key={q.id} className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
                           <div className="flex items-start justify-between">
-                            <span className="text-xs font-mono text-gold/40"># {idx + 1}</span>
+                            <span className="text-xs font-mono text-gold/60"># {idx + 1}</span>
                             <button 
                               type="button" 
                               onClick={() => setEditingTest(v => ({ ...v, questions: v?.questions?.filter(item => item.id !== q.id) }))}
-                              className="text-parchment/20 hover:text-red-500"
+                              className="text-slate-300 hover:text-red-500"
+                              aria-label="Delete question"
                             >
                               <Archive className="w-4 h-4" />
                             </button>
@@ -403,7 +411,7 @@ export default function MockTestsManager() {
                                 newQs[idx].questionText = e.target.value;
                                 setEditingTest(v => ({ ...v, questions: newQs }));
                             }}
-                            className="admin-input min-h-[80px]" 
+                            className="admin-input min-h-[80px] bg-white" 
                             placeholder="Type question text here..."
                           />
                           <div className="grid grid-cols-2 gap-4">
@@ -418,7 +426,8 @@ export default function MockTestsManager() {
                                     newQs[idx].correctAnswer = optIdx;
                                     setEditingTest(v => ({ ...v, questions: newQs }));
                                   }}
-                                  className="text-gold focus:ring-gold bg-transparent border-white/20"
+                                  className="text-gold focus:ring-gold bg-transparent border-slate-300"
+                                  aria-label={`Option ${optIdx + 1} is correct`}
                                 />
                                 <input 
                                   type="text" 
@@ -428,8 +437,9 @@ export default function MockTestsManager() {
                                       newQs[idx].options[optIdx] = e.target.value;
                                       setEditingTest(v => ({ ...v, questions: newQs }));
                                   }}
-                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-parchment/80 focus:border-gold/30 outline-none"
+                                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 focus:border-gold/30 outline-none"
                                   placeholder={`Option ${optIdx + 1}`}
+                                  aria-label={`Option ${optIdx + 1} text`}
                                 />
                               </div>
                             ))}
@@ -441,12 +451,12 @@ export default function MockTestsManager() {
                 )}
               </form>
 
-              <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-ink via-ink/95 to-transparent border-t border-white/10 flex items-center justify-end gap-4">
-                <button type="button" onClick={() => setIsEditorOpen(false)} className="text-sm font-ui text-parchment/40 hover:text-parchment">Discard</button>
+              <div className="absolute bottom-0 left-0 right-0 p-8 bg-white border-t border-slate-200 flex items-center justify-end gap-4 shadow-[0_-12px_40px_rgba(0,0,0,0.05)]">
+                <button type="button" onClick={() => setIsEditorOpen(false)} className="text-sm font-ui text-slate-400 hover:text-slate-900">Discard</button>
                 <button 
                   type="button"
                   onClick={() => handleSave(editingTest || {})}
-                  className="px-10 py-3.5 bg-gold text-ink font-ui font-black rounded-xl shadow-xl shadow-gold/10 hover:scale-[1.02] flex items-center gap-2"
+                  className="px-10 py-3.5 bg-slate-900 text-white font-ui font-black rounded-xl shadow-lg hover:bg-slate-800 active:scale-[1.02] flex items-center gap-2"
                 >
                   <Save className="w-5 h-5" /> Save Test Profile
                 </button>
@@ -458,11 +468,13 @@ export default function MockTestsManager() {
 
       <style>{`
         .admin-input {
-          @apply w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-parchment font-ui placeholder:text-parchment/20 focus:outline-none focus:border-gold/50 transition-all;
+          @apply w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-900 font-ui placeholder:text-slate-300 focus:outline-none focus:border-gold/50 transition-all;
         }
         .input-label {
-          @apply block text-[10px] font-ui text-parchment/40 uppercase tracking-widest font-black mb-2 ml-1;
+          @apply block text-[10px] font-ui text-slate-400 uppercase tracking-widest font-black mb-2 ml-1;
         }
+        .bar-anim { animation-delay: var(--delay); }
+        .progress-bar-fill { width: var(--progress); }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.2); border-radius: 10px; }
       `}</style>

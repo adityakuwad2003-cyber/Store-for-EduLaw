@@ -60,16 +60,16 @@ export default function ActivityLogs() {
       render: (row) => (
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-            row.action === 'CREATE' ? 'bg-green-500/10 text-green-500' :
-            row.action === 'DELETE' ? 'bg-red-500/10 text-red-500' :
-            row.action === 'UPDATE' ? 'bg-blue-500/10 text-blue-400' :
-            row.action === 'LOGIN' ? 'bg-gold/10 text-gold' : 'bg-white/5 text-parchment/40'
+            row.action === 'CREATE' ? 'bg-green-50 text-green-600 border border-green-100' :
+            row.action === 'DELETE' ? 'bg-red-50 text-red-600 border border-red-100' :
+            row.action === 'UPDATE' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+            row.action === 'LOGIN' ? 'bg-gold/10 text-gold border border-gold/20' : 'bg-slate-100 text-slate-400'
           }`}>
-             {row.action === 'LOGIN' ? <Zap className="w-4 h-4" /> : <Database className="w-4 h-4" />}
+            {row.action === 'LOGIN' ? <Zap className="w-4 h-4" /> : <Database className="w-4 h-4" />}
           </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-parchment/80">{row.action}</p>
-            <p className="text-[10px] text-parchment/40 font-mono mt-0.5">{row.module}</p>
+            <p className="text-xs font-black uppercase tracking-widest text-slate-700">{row.action}</p>
+            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{row.module}</p>
           </div>
         </div>
       )
@@ -79,8 +79,8 @@ export default function ActivityLogs() {
       label: 'Event Details',
       render: (row) => (
         <div className="min-w-0">
-          <p className="text-xs text-parchment font-ui line-clamp-1">{row.description}</p>
-          <p className="text-[10px] text-parchment/30 truncate mt-1">Target: {row.targetName} ({row.targetId.slice(0, 8)}...)</p>
+          <p className="text-xs text-slate-900 font-ui line-clamp-1">{row.description}</p>
+          <p className="text-[10px] text-slate-400 truncate mt-1">Target: {row.targetName} ({row.targetId.slice(0, 8)}...)</p>
         </div>
       )
     },
@@ -89,10 +89,10 @@ export default function ActivityLogs() {
       label: 'Initiator',
       render: (row) => (
         <div className="flex items-center gap-2">
-           <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center">
-              <User className="w-3 h-3 text-parchment/40" />
+           <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
+              <User className="w-3 h-3 text-slate-400" />
            </div>
-           <span className="text-xs text-parchment/60 font-bold">{row.adminName}</span>
+           <span className="text-xs text-slate-600 font-bold">{row.adminName}</span>
         </div>
       )
     },
@@ -102,10 +102,10 @@ export default function ActivityLogs() {
       sortable: true,
       render: (row) => (
         <div className="flex flex-col text-right">
-           <span className="text-xs font-mono text-parchment/60">
+           <span className="text-xs font-mono text-slate-500 font-bold">
               {row.timestamp?.toDate ? format(row.timestamp.toDate(), 'HH:mm:ss') : 'Just now'}
            </span>
-           <span className="text-[10px] text-parchment/20 uppercase tracking-widest font-black mt-0.5">
+           <span className="text-[10px] text-slate-300 uppercase tracking-widest font-black mt-0.5">
               {row.timestamp?.toDate ? format(row.timestamp.toDate(), 'MMM dd, yyyy') : ''}
            </span>
         </div>
@@ -116,14 +116,14 @@ export default function ActivityLogs() {
   return (
     <div className="space-y-6">
       {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-3xl shadow-sm relative overflow-hidden">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-gold to-[#b8922a] flex items-center justify-center shadow-lg shadow-gold/20">
-            <History className="w-7 h-7 text-ink" />
+            <History className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="font-display text-2xl text-parchment">Audit Logs</h1>
-            <p className="text-sm text-parchment/40 font-ui tracking-wide">Comprehensive immutable record of all administrative system interactions</p>
+            <h1 className="font-display text-2xl text-slate-900">Audit Logs</h1>
+            <p className="text-sm text-slate-500 font-ui tracking-wide">Comprehensive immutable record of all administrative system interactions</p>
           </div>
         </div>
 
@@ -131,7 +131,8 @@ export default function ActivityLogs() {
           <select 
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] text-parchment font-black uppercase tracking-widest outline-none focus:border-gold transition-all"
+            className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[10px] text-slate-900 font-bold uppercase tracking-widest outline-none focus:border-gold transition-all"
+            aria-label="Filter activity logs"
           >
              <option value="ALL">All Operations</option>
              <option value="CREATE">Creation Only</option>
@@ -140,7 +141,8 @@ export default function ActivityLogs() {
           </select>
           <button 
             onClick={fetchLogs}
-            className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-parchment/40 transition-all"
+            className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-400 transition-all"
+            aria-label="Refresh logs"
           >
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -154,9 +156,9 @@ export default function ActivityLogs() {
         keyField="id"
       />
 
-      <div className="flex items-center gap-3 p-6 rounded-3xl bg-gold/5 border border-gold/10">
+      <div className="flex items-center gap-3 p-6 rounded-3xl bg-slate-50 border border-slate-100">
          <Shield className="w-5 h-5 text-gold shrink-0" />
-         <p className="text-xs text-parchment/40 leading-relaxed font-ui">
+         <p className="text-xs text-slate-400 leading-relaxed font-ui">
            Activity logs are stored for 180 days by default. For compliance audits, export the ledger as a signed PDF or CSV from the Reports Center.
          </p>
       </div>

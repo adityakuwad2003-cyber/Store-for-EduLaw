@@ -13,9 +13,9 @@ export default function AdminGuard({ children }: AdminGuardProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-ink flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-gold" />
-        <p className="text-parchment/60 font-ui text-sm animate-pulse">Authenticating secure session...</p>
+        <p className="text-slate-500 font-ui text-sm animate-pulse">Authenticating secure session...</p>
       </div>
     );
   }

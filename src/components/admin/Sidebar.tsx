@@ -52,23 +52,23 @@ export function Sidebar() {
 
   return (
     <aside 
-      className={`fixed top-0 left-0 h-screen bg-ink border-r border-white/10 flex flex-col transition-all duration-300 z-50 ${
+      className={`fixed top-0 left-0 h-screen bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-50 ${
         sidebarCollapsed ? 'w-20' : 'w-64'
       }`}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 shrink-0">
         {!sidebarCollapsed && (
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="w-8 h-8 rounded bg-gradient-to-br from-gold to-[#b8922a] flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-5 h-5 text-ink" />
+              <ShieldCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="font-display text-parchment whitespace-nowrap">EduLaw Admin</span>
+            <span className="font-display text-slate-900 whitespace-nowrap">EduLaw Admin</span>
           </div>
         )}
         <button 
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="p-1.5 hover:bg-white/10 rounded-lg text-parchment/60 hover:text-gold transition-colors ml-auto shrink-0"
+          className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-gold transition-colors ml-auto shrink-0"
         >
           {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </button>
@@ -84,7 +84,7 @@ export function Sidebar() {
           return (
             <div key={idx}>
               {!sidebarCollapsed && (
-                <div className="px-3 mb-2 text-[10px] font-ui font-semibold text-parchment/40 uppercase tracking-widest">
+                <div className="px-3 mb-2 text-[10px] font-ui font-semibold text-slate-400 uppercase tracking-widest">
                   {group.group}
                 </div>
               )}
@@ -100,11 +100,11 @@ export function Sidebar() {
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-ui transition-all ${
                         isActive 
                           ? 'bg-gold/10 text-gold border-r-2 border-gold font-medium' 
-                          : 'text-parchment/60 hover:bg-white/5 hover:text-parchment'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                       }`}
                       title={sidebarCollapsed ? item.name : undefined}
                     >
-                      <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-gold' : 'text-parchment/40'}`} />
+                      <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-gold' : 'text-slate-400'}`} />
                       {!sidebarCollapsed && <span className="truncate">{item.name}</span>}
                     </Link>
                   )
@@ -116,7 +116,7 @@ export function Sidebar() {
       </div>
 
       {/* User Footer */}
-      <div className="p-4 border-t border-white/10 shrink-0">
+      <div className="p-4 border-t border-slate-200 shrink-0">
         <div className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <div className="w-10 h-10 rounded-full bg-burgundy flex items-center justify-center shrink-0">
             <span className="text-gold font-display text-sm">
@@ -125,8 +125,8 @@ export function Sidebar() {
           </div>
           {!sidebarCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-ui text-parchment truncate">{user?.email}</p>
-              <p className="text-[10px] text-parchment/40 uppercase tracking-wider font-semibold">{role?.replace('_', ' ') || 'Admin'}</p>
+              <p className="text-sm font-ui text-slate-900 truncate">{user?.email}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{role?.replace('_', ' ') || 'Admin'}</p>
             </div>
           )}
         </div>

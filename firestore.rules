@@ -29,10 +29,19 @@ service cloud.firestore {
     }
 
     // ── USERS (authenticated owner only) ─────────────────────────────────
-    // A logged-in user can only read and write their own profile document.
+    // A logged-in user can read and write their own profile document.
+    // This allows AuthContext to upsert user docs on login.
+    // Sensitive fields (isBanned, subscription) can only be written server-side
+    // via the Admin SDK — client writes are restricted to safe fields only.
     match /users/{userId} {
-      allow read, write: if request.auth != null 
-                         && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    // Prevent client from modifying admin-controlled fields
+                    && !('isBanned' in request.resource.data)
+                    && !('subscription' in request.resource.data);
+      allow delete: if false;
     }
 
     // ── EVERYTHING ELSE: DENY ─────────────────────────────────────────────

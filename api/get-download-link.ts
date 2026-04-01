@@ -10,18 +10,61 @@
  */
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { adminDb } from "./lib/adminInit";
+import { adminDb } from "./_lib/adminInit";
 import {
   setCorsHeaders, verifyBearerToken, isRateLimited,
   getClientIp, isSafeFilePath, cleanFilePath, isSafeId,
-} from "./lib/security";
+} from "./_lib/security";
+
+function isSafePreviewKey(v: unknown): v is string {
+  return typeof v === "string" &&
+    /^previews\/[\w\-]{1,128}\.(jpg|jpeg|png)$/.test(v) &&
+    !v.includes("..");
+}
+
+async function getR2SignedUrl(key: string, expiresIn: number) {
+  const r2 = new S3Client({
+    region: "auto",
+    endpoint: process.env.R2_ENDPOINT || "",
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+    },
+    forcePathStyle: true,
+  });
+  const command = new GetObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME || "edulaw-pdfs",
+    Key: key,
+  });
+  return getSignedUrl(r2, command, { expiresIn });
+}
 
 export default async function handler(req: any, res: any) {
   try {
   const origin = req.headers.origin || "";
-  setCorsHeaders(res, origin, "POST, OPTIONS");
+  setCorsHeaders(res, origin, "GET, POST, OPTIONS");
 
   if (req.method === "OPTIONS") return res.status(204).end();
+
+  // ── GET /api/get-download-link?previewKey=previews/... ──────────────────
+  // Public, no auth — only serves files from the previews/ prefix.
+  if (req.method === "GET") {
+    const previewKey = req.query?.previewKey as string | undefined;
+    if (!isSafePreviewKey(previewKey)) {
+      return res.status(400).json({ error: "Invalid previewKey." });
+    }
+    const ip = getClientIp(req);
+    if (isRateLimited(`preview:${ip}`, { windowMs: 60_000, maxRequests: 60 })) {
+      return res.status(429).json({ error: "Too many requests." });
+    }
+    try {
+      const url = await getR2SignedUrl(previewKey, 3600); // 1 hour
+      return res.status(200).json({ url });
+    } catch {
+      return res.status(500).json({ error: "Could not generate preview link." });
+    }
+  }
+
   if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
 
   // ── Rate limit: 30 downloads/minute per IP ──────────────────────────────
@@ -64,22 +107,7 @@ export default async function handler(req: any, res: any) {
 
   // ── 4. Generate presigned Cloudflare R2 GET URL (expires in 15 min) ────
   try {
-    const r2 = new S3Client({
-      region: "auto",
-      endpoint: process.env.R2_ENDPOINT || "",
-      credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
-      },
-      forcePathStyle: true,
-    });
-
-    const command = new GetObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME || "edulaw-pdfs",
-      Key: fileName,
-    });
-
-    const secureUrl = await getSignedUrl(r2, command, { expiresIn: 900 }); // 15 minutes
+    const secureUrl = await getR2SignedUrl(fileName, 900); // 15 minutes
     return res.status(200).json({ url: secureUrl });
   } catch (err) {
     console.error("R2 signed URL error:", err);

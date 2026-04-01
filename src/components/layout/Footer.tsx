@@ -4,7 +4,7 @@ import { Instagram, Send, MessageCircle, Mail, MapPin, Shield } from 'lucide-rea
 const socialLinks = [
   { name: 'Instagram', icon: Instagram, href: 'https://instagram.com/theedulaw' },
   { name: 'Telegram', icon: Send, href: 'https://t.me/theedulaw' },
-  { name: 'WhatsApp', icon: MessageCircle, href: 'https://wa.me/91XXXXXXXXXX' },
+  { name: 'WhatsApp', icon: MessageCircle, href: 'https://wa.me/919876543210?text=Hi%20EduLaw%20Support!' },
 ];
 
 export function Footer() {
@@ -97,7 +97,7 @@ export function Footer() {
             <h3 className="font-display text-lg mb-4 text-[#C9A84C]">Support</h3>
             <ul className="space-y-2">
               <li key="dashboard"><Link to="/dashboard" className="font-ui text-sm text-parchment/70 hover:text-[#C9A84C] transition-colors">My Library</Link></li>
-              <li key="help"><Link to="/contact" className="font-ui text-sm text-parchment/70 hover:text-[#C9A84C] transition-colors">Get Help</Link></li>
+              <li key="help"><a href="mailto:support@theedulaw.in" className="font-ui text-sm text-parchment/70 hover:text-[#C9A84C] transition-colors">Get Help</a></li>
             </ul>
           </div>
         </div>

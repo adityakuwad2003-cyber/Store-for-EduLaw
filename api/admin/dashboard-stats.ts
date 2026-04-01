@@ -7,8 +7,8 @@
  * - Total notes count
  * - Recent 10 orders
  */
-import { adminDb } from "../lib/adminInit";
-import { setCorsHeaders, verifyAdmin, isRateLimited, getClientIp } from "../lib/security";
+import { adminDb } from "../_lib/adminInit";
+import { setCorsHeaders, verifyAdmin, isRateLimited, getClientIp } from "../_lib/security";
 
 export default async function handler(req: any, res: any) {
   try {

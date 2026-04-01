@@ -15,7 +15,7 @@ export default function AdminLayout() {
         }`}
       >
         <TopBar />
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto w-full max-w-7xl mx-auto">
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto w-full max-w-7xl mx-auto bg-slate-50">
           <Outlet />
         </main>
       </div>

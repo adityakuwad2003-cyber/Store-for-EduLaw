@@ -127,8 +127,8 @@ export default function EmailCampaigns() {
       sortable: true,
       render: (row) => (
         <div>
-          <p className="font-bold text-parchment">{row.title}</p>
-          <p className="text-[10px] text-parchment/40 uppercase tracking-widest mt-1">{row.subject}</p>
+          <p className="font-bold text-slate-900">{row.title}</p>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">{row.subject}</p>
         </div>
       )
     },
@@ -136,7 +136,7 @@ export default function EmailCampaigns() {
       key: 'audience',
       label: 'Recipient Group',
       render: (row) => (
-        <div className="flex items-center gap-2 px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-parchment/60 font-bold uppercase tracking-widest">
+        <div className="flex items-center gap-2 px-2 py-1 rounded bg-slate-50 border border-slate-200 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
           <Target className="w-3 h-3 text-gold" />
           {row.audience.replace('_', ' ')}
         </div>
@@ -153,12 +153,12 @@ export default function EmailCampaigns() {
       render: (row) => (
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
-            <span className="text-xs font-mono text-parchment font-bold">{row.sentCount}</span>
-            <span className="text-[8px] text-parchment/30 uppercase font-black">Sent</span>
+            <span className="text-xs font-mono text-slate-900 font-bold">{row.sentCount}</span>
+            <span className="text-[8px] text-slate-400 uppercase font-black">Sent</span>
           </div>
-          <div className="flex flex-col border-l border-white/10 pl-4">
+          <div className="flex flex-col border-l border-slate-200 pl-4">
             <span className="text-xs font-mono text-gold font-bold">{row.openRate}%</span>
-            <span className="text-[8px] text-parchment/30 uppercase font-black">Open Rate</span>
+            <span className="text-[8px] text-slate-400 uppercase font-black">Open Rate</span>
           </div>
         </div>
       )
@@ -171,7 +171,7 @@ export default function EmailCampaigns() {
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
             onClick={(e) => { e.stopPropagation(); setEditingCampaign(row); setIsEditorOpen(true); }}
-            className="p-2 hover:bg-gold/10 text-parchment/40 hover:text-gold rounded-lg transition-all"
+            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-gold rounded-lg transition-all"
             title="Edit Campaign"
           >
             <Edit className="w-4 h-4" />
@@ -179,7 +179,7 @@ export default function EmailCampaigns() {
           {row.status === 'draft' && (
             <button 
               onClick={(e) => { e.stopPropagation(); handleSendCampaign(row); }}
-              className="p-2 hover:bg-green-500/10 text-green-500 rounded-lg transition-all"
+              className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-all"
               title="Launch Now"
             >
               <Play className="w-4 h-4" />
@@ -193,20 +193,20 @@ export default function EmailCampaigns() {
   return (
     <div className="space-y-6">
       {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-gold to-[#b8922a] flex items-center justify-center shadow-lg shadow-gold/20">
-            <Mail className="w-7 h-7 text-ink" />
+            <Mail className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="font-display text-2xl text-parchment">Email Campaigns</h1>
-            <p className="text-sm text-parchment/40 font-ui tracking-wide">Design, schedule, and analyze your legal outreach broadcasts</p>
+            <h1 className="font-display text-2xl text-slate-900">Email Campaigns</h1>
+            <p className="text-sm text-slate-500 font-ui tracking-wide">Design, schedule, and analyze your legal outreach broadcasts</p>
           </div>
         </div>
 
         <button 
           onClick={() => { setEditingCampaign({ audience: 'all_students', content: '', status: 'draft' }); setIsEditorOpen(true); }}
-          className="flex items-center gap-2 px-6 py-3 bg-gold text-ink font-ui font-bold rounded-xl shadow-xl shadow-gold/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
         >
           <Plus className="w-5 h-5" /> New Campaign
         </button>
@@ -218,15 +218,15 @@ export default function EmailCampaigns() {
           { label: 'Total Sent', value: '45.2K', change: '+5.2%', icon: Send, color: 'text-blue-400' },
           { label: 'Avg. Open Rate', value: '24.8%', change: '+1.4%', icon: Eye, color: 'text-gold' },
           { label: 'CTR', value: '12.4%', change: '-0.8%', icon: Layout, color: 'text-green-500' },
-          { label: 'Campaigns', value: campaigns.length, change: 'Active', icon: History, color: 'text-parchment/40' },
+          { label: 'Campaigns', value: campaigns.length, change: 'Active', icon: History, color: 'text-slate-400' },
         ].map((stat, i) => (
-          <div key={i} className="bg-white/5 border border-white/10 p-5 rounded-2xl">
-            <div className="flex items-center justify-between mb-3 text-xs font-bold uppercase tracking-widest text-parchment/30">
+          <div key={i} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+            <div className="flex items-center justify-between mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">
               {stat.label}
               <stat.icon className={`w-4 h-4 ${stat.color}`} />
             </div>
-            <p className="text-2xl font-display text-parchment">{stat.value}</p>
-            <p className="text-[10px] font-bold text-green-500 mt-1">{stat.change}</p>
+            <p className="text-2xl font-display text-slate-900">{stat.value}</p>
+            <p className="text-[10px] font-bold text-green-600 mt-1">{stat.change}</p>
           </div>
         ))}
       </div>
@@ -246,19 +246,19 @@ export default function EmailCampaigns() {
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsEditorOpen(false)}
-              className="absolute inset-0 bg-ink/60 backdrop-blur-md" 
+              className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" 
             />
             <motion.div
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-3xl bg-[#0F0F0F] border-l border-white/10 shadow-2xl flex flex-col"
+              className="relative w-full max-w-3xl bg-white border-l border-slate-200 shadow-2xl flex flex-col"
             >
-              <div className="px-8 py-6 bg-ink border-b border-white/10 flex items-center justify-between shrink-0">
+              <div className="px-8 py-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
                 <div>
-                  <h2 className="font-display text-xl text-parchment">{editingCampaign?.id ? 'Edit Campaign Draft' : 'New Broadcast Designer'}</h2>
+                  <h2 className="font-display text-xl text-slate-900">{editingCampaign?.id ? 'Edit Campaign Draft' : 'New Broadcast Designer'}</h2>
                   <p className="text-[10px] text-gold uppercase tracking-[0.2em] font-black mt-1">Marketing Suite</p>
                 </div>
-                <button onClick={() => setIsEditorOpen(false)} className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-parchment/40">
+                <button onClick={() => setIsEditorOpen(false)} className="p-3 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-400" aria-label="Close editor">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -281,8 +281,9 @@ export default function EmailCampaigns() {
                       />
                     </div>
                     <div className="col-span-2 md:col-span-1">
-                      <label className="input-label">Target Audience</label>
+                      <label htmlFor="target-audience" className="input-label">Target Audience</label>
                       <select 
+                        id="target-audience"
                         value={editingCampaign?.audience}
                         onChange={e => setEditingCampaign(v => ({ ...v, audience: e.target.value as any }))}
                         className="admin-input"
@@ -299,7 +300,7 @@ export default function EmailCampaigns() {
                         type="text" required
                         value={editingCampaign?.subject || ''}
                         onChange={e => setEditingCampaign(v => ({ ...v, subject: e.target.value }))}
-                        className="admin-input border-gold/10" 
+                        className="admin-input border-gold/20" 
                         placeholder="e.g. BIG NEWS: Master the New Criminal Laws (BNS) with EduLaw"
                       />
                     </div>
@@ -315,17 +316,17 @@ export default function EmailCampaigns() {
                 </div>
               </form>
 
-              <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-ink via-ink/95 to-transparent border-t border-white/10 flex items-center justify-between">
+              <div className="absolute bottom-0 left-0 right-0 p-8 bg-white border-t border-slate-200 flex items-center justify-between shadow-[0_-12px_40px_rgba(0,0,0,0.05)]">
                 <div className="flex gap-4">
-                  <button type="button" className="p-3 bg-white/5 hover:bg-white/10 rounded-xl text-parchment/40" title="Send Test Email">
+                  <button type="button" className="p-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-400" title="Send Test Email">
                     <History className="w-5 h-5" />
                   </button>
-                  <button type="button" className="text-xs font-ui text-parchment/40 hover:text-parchment">Save as Draft</button>
+                  <button type="button" className="text-xs font-ui text-slate-400 hover:text-slate-900">Save as Draft</button>
                 </div>
                 <button 
                   type="button"
                   onClick={() => handleSave(editingCampaign || {})}
-                  className="px-10 py-3.5 bg-gold text-ink font-ui font-black rounded-xl shadow-xl shadow-gold/10 hover:scale-[1.02] flex items-center gap-2"
+                  className="px-10 py-3.5 bg-slate-900 text-white font-ui font-black rounded-xl shadow-lg hover:bg-slate-800 active:scale-[1.02] flex items-center gap-2"
                 >
                    <Save className="w-5 h-5" /> Confirm Campaign Design
                 </button>
@@ -337,13 +338,13 @@ export default function EmailCampaigns() {
 
       <style>{`
         .admin-input {
-          @apply w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-parchment font-ui placeholder:text-parchment/20 focus:outline-none focus:border-gold/50 transition-all;
+          @apply w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-900 font-ui placeholder:text-slate-300 focus:outline-none focus:border-gold/50 transition-all;
         }
         .input-label {
-          @apply block text-[10px] font-ui text-parchment/40 uppercase tracking-widest font-black mb-2 ml-1;
+          @apply block text-[10px] font-ui text-slate-400 uppercase tracking-widest font-black mb-2 ml-1;
         }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.2); border-radius: 10px; }
       `}</style>
     </div>
   );

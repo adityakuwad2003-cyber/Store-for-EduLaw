@@ -75,6 +75,7 @@ export function Cart() {
                   price: itemData.price,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_order_id: response.razorpay_order_id || null,
+                  razorpay_signature: response.razorpay_signature,
                 }),
               });
 

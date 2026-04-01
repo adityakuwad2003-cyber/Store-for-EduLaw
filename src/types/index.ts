@@ -1,22 +1,24 @@
 export interface Note {
-  id: number;
+  id: number | string;
   title: string;
   slug: string;
   description: string;
   category: string;
-  subjectCode: string;
+  subjectCode?: string;
   price: number;
   originalPrice?: number;
-  previewPages: number;
+  previewPages?: number;
   totalPages: number;
-  thumbnailUrl: string;
-  pdfUrl: string;
+  thumbnailUrl?: string;
+  pdfUrl?: string;
   fileKey?: string;
+  fileKeys?: { name: string; key: string }[];
+  previewImageKey?: string;   // R2 key for the admin-uploaded preview image
   isFeatured: boolean;
   isNew: boolean;
-  language: 'English' | 'Hindi' | 'Both';
-  tableOfContents: string[];
-  createdAt: string;
+  language?: 'English' | 'Hindi' | 'Both';
+  tableOfContents?: string[];
+  createdAt?: string;
 }
 
 export interface Category {

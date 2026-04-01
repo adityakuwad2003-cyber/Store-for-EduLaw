@@ -89,7 +89,7 @@ export function DataTable<T>({
       {/* Table Toolbar */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between px-1">
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-parchment/30" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder={searchPlaceholder}
@@ -98,7 +98,7 @@ export function DataTable<T>({
               setLocalSearch(e.target.value);
               onSearch?.(e.target.value);
             }}
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-parchment placeholder:text-parchment/30 focus:outline-none focus:border-gold/50 focus:ring-1 focus:ring-gold/20 transition-all shadow-inner"
+            className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-gold/50 focus:ring-1 focus:ring-gold/20 transition-all shadow-inner"
           />
         </div>
 
@@ -119,16 +119,16 @@ export function DataTable<T>({
       </div>
 
       {/* Main Table Container */}
-      <div className="relative group/table bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.2)] backdrop-blur-sm">
+      <div className="relative group/table bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.05)] backdrop-blur-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse">
             <thead>
-              <tr className="bg-white/[0.03] border-b border-white/10">
+              <tr className="bg-slate-50/50 border-b border-slate-200">
                 {onSelectionChange && (
                   <th className="w-12 px-4 py-4 text-center">
                     <button 
                       onClick={handleSelectAll}
-                      className="text-parchment/30 hover:text-gold transition-colors"
+                      className="text-slate-300 hover:text-gold transition-colors"
                     >
                       {selectedIds.length === data.length && data.length > 0 ? (
                         <CheckSquare className="w-5 h-5 text-gold" />
@@ -141,9 +141,9 @@ export function DataTable<T>({
                 {columns.map((col) => (
                   <th
                     key={col.key}
-                    style={{ width: col.width }}
-                    className={`px-4 py-4 text-[10px] font-ui font-bold text-parchment/40 uppercase tracking-widest whitespace-nowrap select-none ${
-                      col.sortable ? "cursor-pointer hover:text-parchment transition-colors" : ""
+                    style={{ "--width": col.width } as React.CSSProperties}
+                    className={`px-4 py-4 text-[10px] font-ui font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap select-none dt-col-width ${
+                      col.sortable ? "cursor-pointer hover:text-slate-900 transition-colors" : ""
                     } ${col.className || ""}`}
                   >
                     <div className="flex items-center gap-2">
@@ -159,14 +159,14 @@ export function DataTable<T>({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.05]">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    {onSelectionChange && <td className="p-4 bg-white/5 border-r border-white/5" />}
+                    {onSelectionChange && <td className="p-4 bg-slate-50 border-r border-slate-100" />}
                     {columns.map((col) => (
                       <td key={col.key} className="px-4 py-6">
-                        <div className="h-2 bg-white/10 rounded w-full" />
+                        <div className="h-2 bg-slate-100 rounded w-full" />
                       </td>
                     ))}
                   </tr>
@@ -175,10 +175,10 @@ export function DataTable<T>({
                 <tr>
                   <td colSpan={columns.length + (onSelectionChange ? 1 : 0)} className="px-4 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
-                        <Filter className="w-6 h-6 text-parchment/20" />
+                      <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center">
+                        <Filter className="w-6 h-6 text-slate-300" />
                       </div>
-                      <p className="text-parchment/40 font-ui text-sm">{emptyMessage}</p>
+                      <p className="text-slate-400 font-ui text-sm">{emptyMessage}</p>
                     </div>
                   </td>
                 </tr>
@@ -193,21 +193,21 @@ export function DataTable<T>({
                       className={`group transition-all duration-200 border-l-2 ${
                         isSelected 
                           ? 'bg-gold/5 border-gold shadow-inner' 
-                          : 'border-transparent hover:bg-white/[0.03] hover:border-white/10'
+                          : 'border-transparent hover:bg-slate-50 hover:border-slate-200'
                       } ${onRowClick ? "cursor-pointer" : ""}`}
                     >
                       {onSelectionChange && (
                         <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <button 
                             onClick={() => handleSelectOne(id)}
-                            className={`transition-colors ${isSelected ? 'text-gold' : 'text-parchment/20 group-hover:text-parchment/40'}`}
+                            className={`transition-colors ${isSelected ? 'text-gold' : 'text-slate-300 group-hover:text-slate-400'}`}
                           >
                             {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
                           </button>
                         </td>
                       )}
                       {columns.map((col) => (
-                        <td key={col.key} className={`px-4 py-4 text-sm font-ui text-parchment/80 ${col.className || ""}`}>
+                        <td key={col.key} className={`px-4 py-4 text-sm font-ui text-slate-700 ${col.className || ""}`}>
                           {col.render ? col.render(row) : String((row as any)[col.key] ?? "—")}
                         </td>
                       ))}
@@ -221,8 +221,8 @@ export function DataTable<T>({
 
         {/* Pagination Overlay for loading */}
         {loading && data.length > 0 && (
-          <div className="absolute inset-0 bg-ink/20 backdrop-blur-[1px] flex items-center justify-center z-10 transition-all duration-300">
-            <div className="bg-ink/80 border border-gold/20 p-4 rounded-2xl flex items-center gap-3 shadow-2xl">
+          <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px] flex items-center justify-center z-10 transition-all duration-300">
+            <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center gap-3 shadow-2xl">
               <Loader2 className="w-5 h-5 animate-spin text-gold" />
               <span className="text-gold font-ui text-xs font-bold uppercase tracking-widest">Updating Dashboard...</span>
             </div>
@@ -233,14 +233,14 @@ export function DataTable<T>({
       {/* Pagination Footer */}
       {(isServerSide || totalPages > 1) && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4">
-          <div className="text-xs font-ui text-parchment/40 uppercase tracking-widest font-bold">
-            Showing <span className="text-parchment/80">{(currentPage - 1) * rowsPerPage + 1}</span> to <span className="text-parchment/80">{Math.min(currentPage * rowsPerPage, totalCount || data.length)}</span> of <span className="text-gold">{totalCount || data.length}</span> results
+          <div className="text-xs font-ui text-slate-400 uppercase tracking-widest font-bold">
+            Showing <span className="text-slate-900">{(currentPage - 1) * rowsPerPage + 1}</span> to <span className="text-slate-900">{Math.min(currentPage * rowsPerPage, totalCount || data.length)}</span> of <span className="text-gold">{totalCount || data.length}</span> results
           </div>
           <div className="flex items-center gap-2">
             <button
               disabled={currentPage === 1 || loading}
               onClick={() => onPageChange?.(currentPage - 1)}
-              className="p-2 rounded-xl border border-white/10 text-parchment/40 hover:text-gold hover:border-gold/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-gold hover:border-gold/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               title="Previous Page"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -254,7 +254,7 @@ export function DataTable<T>({
             <button
               disabled={currentPage >= totalPages || loading}
               onClick={() => onPageChange?.(currentPage + 1)}
-              className="p-2 rounded-xl border border-white/10 text-parchment/40 hover:text-gold hover:border-gold/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-gold hover:border-gold/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               title="Next Page"
             >
               <ChevronRight className="w-5 h-5" />

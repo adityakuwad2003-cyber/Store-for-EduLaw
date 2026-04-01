@@ -15,10 +15,17 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   setCorsHeaders, verifyAdmin, isRateLimited,
   getClientIp, isSafeFilePath, cleanFilePath,
-} from "../lib/security";
+} from "../_lib/security";
 
-// Allowed file types — only PDFs
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+const MAX_PDF_BYTES   = 50 * 1024 * 1024; // 50 MB
+const MAX_IMAGE_BYTES =  5 * 1024 * 1024; //  5 MB
+
+// Validates a preview image path: previews/<slug>.jpg|jpeg|png
+function isSafePreviewPath(v: unknown): v is string {
+  return typeof v === "string" &&
+    /^previews\/[\w\-]{1,128}\.(jpg|jpeg|png)$/.test(v) &&
+    !v.includes("..");
+}
 
 export default async function handler(req: any, res: any) {
   // Top-level safety net — ensures we ALWAYS return JSON, never a plain-text crash page
@@ -46,19 +53,30 @@ export default async function handler(req: any, res: any) {
   const { fileName: rawFileName, noteId, fileSize } = req.body || {};
 
   const fileName = typeof rawFileName === "string" ? cleanFilePath(rawFileName) : "";
-  if (!isSafeFilePath(fileName)) {
+  const isPreview = isSafePreviewPath(fileName);
+  const isPdf     = isSafeFilePath(fileName);
+
+  if (!isPreview && !isPdf) {
     return res.status(400).json({
-      error: "Invalid file name. Use format: notes/subject-slug/filename.pdf",
+      error: "Invalid file path. Use notes/slug/file.pdf or previews/slug.jpg",
     });
   }
 
-  if (typeof fileSize === "number" && fileSize > MAX_FILE_SIZE_BYTES) {
-    return res.status(400).json({ error: "File too large. Maximum size is 50 MB." });
+  const maxSize = isPreview ? MAX_IMAGE_BYTES : MAX_PDF_BYTES;
+  if (typeof fileSize === "number" && fileSize > maxSize) {
+    return res.status(400).json({
+      error: isPreview ? "Image too large. Max 5 MB." : "File too large. Max 50 MB.",
+    });
   }
 
-  if (!noteId || typeof noteId !== "string" || !/^[\w\-]{1,128}$/.test(noteId)) {
+  // noteId only required for PDF uploads
+  if (isPdf && (!noteId || typeof noteId !== "string" || !/^[\w\-]{1,128}$/.test(noteId))) {
     return res.status(400).json({ error: "Invalid noteId." });
   }
+
+  const contentType = isPreview
+    ? (fileName.endsWith(".png") ? "image/png" : "image/jpeg")
+    : "application/pdf";
 
   // ── Generate presigned PUT URL ──────────────────────────────────────────
   try {
@@ -75,7 +93,7 @@ export default async function handler(req: any, res: any) {
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME || "edulaw-pdfs",
       Key: fileName,
-      ContentType: "application/pdf",
+      ContentType: contentType,
     });
 
     // 5-minute upload window

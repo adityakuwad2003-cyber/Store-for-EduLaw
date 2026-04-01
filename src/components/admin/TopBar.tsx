@@ -8,13 +8,11 @@ export function TopBar() {
   const { logout } = useAuth();
 
   return (
-    <header
-      className={`h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 transition-all duration-300 sticky top-0 z-40`}
-    >
+    <header className="h-16 bg-white/80 border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40 backdrop-blur-md">
       <div className="flex items-center gap-4">
         {/* Mobile menu toggle */}
         <button
-          className="lg:hidden p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+          className="lg:hidden p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           title="Toggle sidebar"
           aria-label="Toggle sidebar"
@@ -30,7 +28,7 @@ export function TopBar() {
             placeholder="Search orders, notes, users..."
             title="Search admin"
             aria-label="Search admin"
-            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-[#7b2d42]/40 focus:ring-1 focus:ring-[#7b2d42]/20 w-64 transition-all placeholder:text-slate-400"
+            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-gold/50 focus:ring-1 focus:ring-gold/20 w-64 transition-all placeholder:text-slate-400"
           />
         </div>
       </div>
@@ -39,19 +37,19 @@ export function TopBar() {
         {/* View Storefront */}
         <Link
           to="/"
-          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-600 transition-colors border border-slate-200"
+          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors border border-slate-200"
         >
           ↗ View Storefront
         </Link>
 
         {/* Notifications */}
         <button
-          className="relative p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-700 transition-colors"
+          className="relative p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition-colors"
           title="Notifications"
           aria-label="Notifications"
         >
           <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white"></span>
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold border-2 border-white"></span>
         </button>
 
         <div className="h-6 w-px bg-slate-200 mx-1" />
@@ -59,7 +57,7 @@ export function TopBar() {
         {/* Logout */}
         <button
           onClick={logout}
-          className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 rounded-lg text-slate-500 hover:text-red-500 transition-colors text-sm font-medium border border-transparent hover:border-red-100"
+          className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors text-sm font-medium border border-transparent hover:border-red-200"
           title="Sign out"
           aria-label="Sign out"
         >

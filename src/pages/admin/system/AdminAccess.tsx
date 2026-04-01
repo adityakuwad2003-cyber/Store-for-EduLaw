@@ -95,12 +95,12 @@ export default function AdminAccess() {
       label: 'Administrator',
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-             <UserCheck className={`w-5 h-5 ${row.role === 'super_admin' ? 'text-gold' : 'text-parchment/40'}`} />
+          <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0">
+             <UserCheck className={`w-5 h-5 ${row.role === 'super_admin' ? 'text-gold' : 'text-slate-300'}`} />
           </div>
           <div>
-            <p className="font-bold text-parchment">{row.name}</p>
-            <p className="text-[10px] text-parchment/40 uppercase tracking-widest mt-0.5">{row.email}</p>
+            <p className="font-bold text-slate-900">{row.name}</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">{row.email}</p>
           </div>
         </div>
       )
@@ -111,7 +111,7 @@ export default function AdminAccess() {
       render: (row) => (
         <div className="flex items-center gap-2">
           {row.role === 'super_admin' && <ShieldCheck className="w-3.5 h-3.5 text-gold" />}
-          <span className="text-[10px] font-bold uppercase tracking-widest text-parchment/60">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
              {row.role.replace('_', ' ')}
           </span>
         </div>
@@ -126,7 +126,7 @@ export default function AdminAccess() {
       key: 'lastLogin',
       label: 'Last Access',
       render: (row) => (
-        <span className="text-[10px] text-parchment/30 font-mono">
+        <span className="text-[10px] text-slate-400 font-mono">
            {row.lastLogin?.toDate ? format(row.lastLogin.toDate(), 'MMM dd, HH:mm') : 'Never'}
         </span>
       )
@@ -138,7 +138,8 @@ export default function AdminAccess() {
       render: (row) => (
         <button 
           onClick={(e) => { e.stopPropagation(); setEditingAdmin(row); setIsEditorOpen(true); }}
-          className="p-2 hover:bg-gold/10 text-parchment/40 hover:text-gold rounded-lg transition-all"
+          className="p-2 hover:bg-slate-100 text-slate-400 hover:text-gold rounded-lg transition-all"
+          aria-label="Manage access"
         >
           <Key className="w-4 h-4" />
         </button>
@@ -149,22 +150,23 @@ export default function AdminAccess() {
   return (
     <div className="space-y-6">
       {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-md relative overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-3xl shadow-sm relative overflow-hidden">
         <div className="absolute top-0 left-0 w-32 h-32 bg-gold/5 blur-[60px] rounded-full -ml-16 -mt-16" />
         
         <div className="flex items-center gap-4 relative z-10">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-gold to-[#b8922a] flex items-center justify-center shadow-lg shadow-gold/20">
-            <Shield className="w-7 h-7 text-ink" />
+            <Shield className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="font-display text-2xl text-parchment">Admin Access</h1>
-            <p className="text-sm text-parchment/40 font-ui tracking-wide">Manage internal team roles, permissions, and security protocols</p>
+            <h1 className="font-display text-2xl text-slate-900">Admin Access</h1>
+            <p className="text-sm text-slate-500 font-ui tracking-wide">Manage internal team roles, permissions, and security protocols</p>
           </div>
         </div>
 
         <button 
           onClick={() => { setEditingAdmin({ role: 'editor', status: 'active' }); setIsEditorOpen(true); }}
-          className="flex items-center gap-2 px-6 py-3 bg-gold text-ink font-ui font-bold rounded-xl shadow-xl shadow-gold/10 hover:scale-[1.02] active:scale-[0.98] transition-all relative z-10"
+          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all relative z-10"
+          aria-label="Grant access"
         >
           <Plus className="w-5 h-5" /> Grant Access
         </button>
@@ -185,19 +187,19 @@ export default function AdminAccess() {
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsEditorOpen(false)}
-              className="absolute inset-0 bg-ink/60 backdrop-blur-md" 
+              className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" 
             />
             <motion.div
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-xl bg-ink border-l border-white/10 shadow-2xl flex flex-col h-screen"
+              className="relative w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl flex flex-col h-screen"
             >
-              <div className="px-8 py-6 bg-ink border-b border-white/10 flex items-center justify-between shrink-0">
+              <div className="px-8 py-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
                 <div>
-                  <h2 className="font-display text-xl text-parchment">{editingAdmin?.id ? 'Adjust Privileges' : 'Invite Administrator'}</h2>
+                  <h2 className="font-display text-xl text-slate-900">{editingAdmin?.id ? 'Adjust Privileges' : 'Invite Administrator'}</h2>
                   <p className="text-[10px] text-gold uppercase tracking-[0.2em] font-black mt-1">Access Control List</p>
                 </div>
-                <button onClick={() => setIsEditorOpen(false)} className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-parchment/40">
+                <button onClick={() => setIsEditorOpen(false)} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400" aria-label="Close editor">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -207,8 +209,9 @@ export default function AdminAccess() {
                 className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar"
               >
                 <div className="space-y-4">
-                  <label className="input-label">Full Name</label>
+                  <label htmlFor="admin-name" className="input-label">Full Name</label>
                   <input 
+                    id="admin-name"
                     type="text" required
                     value={editingAdmin?.name || ''}
                     onChange={e => setEditingAdmin(v => ({ ...v, name: e.target.value }))}
@@ -218,10 +221,11 @@ export default function AdminAccess() {
                 </div>
 
                 <div className="space-y-4">
-                  <label className="input-label">Work Email</label>
+                  <label htmlFor="admin-email" className="input-label">Work Email</label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-parchment/30" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     <input 
+                      id="admin-email"
                       type="email" required
                       value={editingAdmin?.email || ''}
                       onChange={e => setEditingAdmin(v => ({ ...v, email: e.target.value }))}
@@ -231,7 +235,7 @@ export default function AdminAccess() {
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-white/5">
+                <div className="space-y-4 pt-4 border-t border-slate-100">
                   <label className="input-label">Security Role</label>
                   <div className="grid grid-cols-1 gap-3">
                     {ROLES.map(role => (
@@ -241,17 +245,17 @@ export default function AdminAccess() {
                         className={`p-4 rounded-2xl border text-left transition-all flex items-center gap-4 ${
                           editingAdmin?.role === role.id 
                             ? 'bg-gold/5 border-gold shadow-[0_0_20px_rgba(201,168,76,0.1)]' 
-                            : 'bg-white/2 border-white/5 hover:border-white/10'
+                            : 'bg-slate-50 border-slate-200 hover:border-gold/30'
                         }`}
                       >
                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                            editingAdmin?.role === role.id ? 'bg-gold text-ink' : 'bg-white/5 text-parchment/20'
+                            editingAdmin?.role === role.id ? 'bg-gold text-white' : 'bg-slate-100 text-slate-400'
                          }`}>
                            <Lock className="w-4 h-4" />
                          </div>
                          <div>
-                           <p className={`text-xs font-bold uppercase tracking-widest ${editingAdmin?.role === role.id ? 'text-gold' : 'text-parchment/60'}`}>{role.label}</p>
-                           <p className="text-[10px] text-parchment/30 mt-0.5">{role.desc}</p>
+                           <p className={`text-xs font-bold uppercase tracking-widest ${editingAdmin?.role === role.id ? 'text-gold' : 'text-slate-400'}`}>{role.label}</p>
+                           <p className="text-[10px] text-slate-400 mt-0.5">{role.desc}</p>
                          </div>
                          {editingAdmin?.role === role.id && <BadgeCheck className="w-5 h-5 text-gold ml-auto" />}
                       </button>
@@ -259,31 +263,33 @@ export default function AdminAccess() {
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-white/5">
+                <div className="space-y-4 pt-4 border-t border-slate-100">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-parchment font-bold">Account Integrity</p>
-                        <p className="text-xs text-parchment/30 mt-1">Suspended users cannot access the dashboard</p>
+                        <p className="text-sm text-slate-900 font-bold">Account Integrity</p>
+                        <p className="text-xs text-slate-400 mt-1">Suspended users cannot access the dashboard</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input 
+                          id="admin-status-toggle"
                           type="checkbox" 
                           checked={editingAdmin?.status === 'active'}
                           onChange={e => setEditingAdmin(v => ({ ...v, status: e.target.checked ? 'active' : 'inactive' }))}
                           className="sr-only peer" 
+                          aria-label="Toggle account status"
                         />
-                        <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold transition-colors"></div>
                       </label>
                     </div>
                 </div>
               </form>
 
-              <div className="p-8 border-t border-white/10 flex items-center justify-end gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-                <button type="button" onClick={() => setIsEditorOpen(false)} className="text-sm font-ui text-parchment/40 hover:text-parchment">Cancel</button>
+              <div className="p-8 border-t border-slate-200 bg-white flex items-center justify-end gap-4 shadow-[0_-12px_40px_rgba(0,0,0,0.05)]">
+                <button type="button" onClick={() => setIsEditorOpen(false)} className="text-sm font-ui text-slate-400 hover:text-slate-900 font-bold">Cancel</button>
                 <button 
                   type="button"
                   onClick={() => handleSave(editingAdmin || {})}
-                  className="px-10 py-3.5 bg-gold text-ink font-ui font-black rounded-xl shadow-xl shadow-gold/10 hover:scale-[1.02] flex items-center gap-2"
+                  className="px-10 py-3.5 bg-slate-900 text-white font-ui font-black rounded-xl shadow-lg hover:bg-slate-800 active:scale-[1.02] flex items-center gap-2"
                 >
                   <Save className="w-5 h-5" /> Commit Permissions
                 </button>
@@ -295,13 +301,13 @@ export default function AdminAccess() {
 
       <style>{`
         .admin-input {
-          @apply w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-parchment font-ui placeholder:text-parchment/20 focus:outline-none focus:border-gold/50 transition-all;
+          @apply w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-900 font-ui placeholder:text-slate-300 focus:outline-none focus:border-gold/50 transition-all;
         }
         .input-label {
-          @apply block text-[10px] font-ui text-parchment/40 uppercase tracking-widest font-black mb-2 ml-1;
+          @apply block text-[10px] font-ui text-slate-400 uppercase tracking-widest font-black mb-2 ml-1;
         }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.2); border-radius: 10px; }
       `}</style>
     </div>
   );

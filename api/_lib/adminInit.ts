@@ -32,6 +32,9 @@ function getApp() {
 // try/catch and returned as a proper JSON response.
 export const adminAuth = {
   verifyIdToken: (token: string) => getAuth(getApp()).verifyIdToken(token),
+  listUsers:     (maxResults?: number) => getAuth(getApp()).listUsers(maxResults),
+  updateUser:    (uid: string, props: Record<string, unknown>) => getAuth(getApp()).updateUser(uid, props),
+  getUser:       (uid: string) => getAuth(getApp()).getUser(uid),
 };
 
 export const adminDb = new Proxy({} as ReturnType<typeof getFirestore>, {

@@ -3,8 +3,8 @@
  * Returns the authenticated user's purchases. Includes fileKeys array 
  * so Dashboard can offer per-file downloads.
  */
-import { adminDb } from "./lib/adminInit";
-import { setCorsHeaders, verifyBearerToken, isRateLimited, getClientIp } from "./lib/security";
+import { adminDb } from "./_lib/adminInit";
+import { setCorsHeaders, verifyBearerToken, isRateLimited, getClientIp } from "./_lib/security";
 
 export default async function handler(req: any, res: any) {
   try {
@@ -29,11 +29,10 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // Get all completed purchases for this user
+    // Get all purchases for this user (no status filter — old purchases pre-date the status field)
     const purchasesSnapshot = await adminDb
       .collection("purchases")
       .where("userId", "==", verifiedUserId)
-      .where("status", "==", "completed")
       .get();
 
     if (purchasesSnapshot.empty) {

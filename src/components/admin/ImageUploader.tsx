@@ -72,7 +72,7 @@ export function ImageUploader({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className="text-sm font-ui text-parchment/60 uppercase tracking-widest font-semibold ml-1">
+      <label htmlFor="image-upload" className="text-sm font-ui text-slate-500 uppercase tracking-widest font-semibold ml-1">
         {label}
       </label>
 
@@ -80,8 +80,8 @@ export function ImageUploader({
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
-        className={`relative ${aspectRatio} rounded-2xl border-2 border-dashed transition-all overflow-hidden bg-white/5 flex flex-col items-center justify-center group ${
-          isDragging ? 'border-gold bg-gold/10 scale-[0.99]' : 'border-white/10 hover:border-gold/30'
+        className={`relative ${aspectRatio} rounded-2xl border-2 border-dashed transition-all overflow-hidden bg-slate-50 flex flex-col items-center justify-center group ${
+          isDragging ? 'border-gold bg-gold/5 scale-[0.99]' : 'border-slate-200 hover:border-gold/30'
         } ${error ? 'border-red-500/50 bg-red-500/5' : ''}`}
       >
         <AnimatePresence mode="wait">
@@ -97,7 +97,7 @@ export function ImageUploader({
                 alt="Upload preview" 
                 className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500"
               />
-              <div className="absolute inset-0 bg-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+              <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
                 <button
                   type="button"
                   onClick={() => onChange('')}
@@ -115,23 +115,25 @@ export function ImageUploader({
               exit={{ opacity: 0, scale: 0.95 }}
               className="flex flex-col items-center gap-4 text-center px-6"
             >
-              <div className={`p-4 rounded-2xl ${isDragging ? 'bg-gold text-ink' : 'bg-white/10 text-gold'} transition-all`}>
+              <div className={`p-4 rounded-2xl ${isDragging ? 'bg-gold text-slate-900' : 'bg-slate-100 text-gold'} transition-all`}>
                 {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
               </div>
               <div>
-                <p className="text-sm font-ui font-medium text-parchment">
+                <p className="text-sm font-ui font-medium text-slate-900">
                   {isDragging ? 'Drop to upload' : 'Click or Drag image here'}
                 </p>
-                <p className="text-xs text-parchment/40 mt-1 uppercase tracking-widest font-semibold font-ui">
+                <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-semibold font-ui">
                   PNG, JPG, WEBP (MAX {maxSizeMB}MB)
                 </p>
               </div>
               <input
+                id="image-upload"
                 type="file"
                 accept="image/*"
                 onChange={onFileSelect}
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 disabled={uploading}
+                aria-label={label}
               />
             </motion.div>
           )}
@@ -145,7 +147,7 @@ export function ImageUploader({
         )}
 
         {uploading && (
-          <div className="absolute inset-0 bg-ink/60 flex flex-col items-center justify-center backdrop-blur-sm z-10">
+          <div className="absolute inset-0 bg-white/60 flex flex-col items-center justify-center backdrop-blur-sm z-10">
             <Loader2 className="w-10 h-10 animate-spin text-gold mb-3" />
             <p className="text-gold font-ui text-xs uppercase tracking-widest font-bold">Uploading Assets...</p>
           </div>

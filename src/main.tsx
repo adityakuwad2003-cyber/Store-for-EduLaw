@@ -7,7 +7,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { pdfjs } from 'react-pdf';
 
 // Use a high-performance CDN for the PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

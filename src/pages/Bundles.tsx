@@ -144,11 +144,11 @@ export function Bundles() {
               {/* Notes Selection */}
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                 {notesData.map((note) => {
-                  const isSelected = selectedNotes.includes(note.id);
+                  const isSelected = selectedNotes.includes(Number(note.id));
                   return (
                     <button
                       key={note.id}
-                      onClick={() => toggleNote(note.id)}
+                      onClick={() => toggleNote(Number(note.id))}
                       className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
                         isSelected 
                           ? 'border-burgundy bg-burgundy/5' 

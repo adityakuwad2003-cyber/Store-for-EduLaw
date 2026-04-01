@@ -1,358 +1,420 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
+import {
   Eye, X, FileText,
-  DollarSign, ShoppingBag, 
+  DollarSign, ShoppingBag,
   ShieldCheck, Undo2, User,
   Clock, CheckCircle2, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { 
-  collection, query, orderBy, 
-  getDocs, doc, updateDoc, 
-  where, limit 
-} from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { format } from 'date-fns';
+import { auth } from '../../../lib/firebase';
 import { DataTable } from '../../../components/admin/DataTable';
 import type { Column } from '../../../components/admin/DataTable';
 import { StatusBadge } from '../../../components/admin/StatusBadge';
-import { DateRangePicker } from '../../../components/admin/DateRangePicker';
 import { ExportButton } from '../../../components/admin/ExportButton';
-import type { DateRange } from 'react-day-picker';
-import { format } from 'date-fns';
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface OrderItem {
+  id: string;
+  title: string;
+  type: string;
+  price: number;
+}
 
 interface Order {
   id: string;
   orderId: string;
-  razorpayOrderId?: string;
-  razorpayPaymentId?: string;
+  razorpayOrderId?: string | null;
+  razorpayPaymentId?: string | null;
   userId: string;
   userEmail: string;
-  items: {
-    id: string;
-    title: string;
-    type: 'note' | 'bundle' | 'template' | 'mock_test';
-    price: number;
-  }[];
+  items: OrderItem[];
   totalAmount: number;
   currency: string;
-  status: 'captured' | 'failed' | 'refunded' | 'pending';
+  status: 'captured' | 'refunded' | 'pending' | 'failed';
   method?: string;
-  createdAt: any;
-  updatedAt?: any;
+  createdAt: string | null;
 }
 
+interface OrderStats {
+  todayRevenue: number;
+  totalOrders: number;
+  successRate: number;
+  refundCount: number;
+}
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+
+async function getBearerToken() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  return user.getIdToken();
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function OrdersManager() {
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [stats, setStats] = useState<OrderStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  
-  // Filters
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: undefined,
-    to: undefined
-  });
   const [filterStatus, setFilterStatus] = useState('all');
+  const [refunding, setRefunding] = useState(false);
 
-  // ── DATA FETCHING ──
+  // ── Fetch from real API ────────────────────────────────────────────────────
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      let q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(50));
-      
-      if (filterStatus !== 'all') {
-        q = query(q, where('status', '==', filterStatus));
+      const token = await getBearerToken();
+      const res = await fetch('/api/admin/list-orders', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(err.error || `HTTP ${res.status}`);
       }
-
-      const snap = await getDocs(q);
-      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
-      setOrders(data);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast.error('Failed to load transaction history');
+      const data = await res.json();
+      setAllOrders(data.orders ?? []);
+      setStats(data.stats ?? null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load orders');
     } finally {
       setLoading(false);
     }
-  }, [filterStatus]);
+  }, []);
 
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  // Apply client-side filter when filterStatus or allOrders changes
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    setOrders(
+      filterStatus === 'all'
+        ? allOrders
+        : allOrders.filter((o) => o.status === filterStatus),
+    );
+  }, [filterStatus, allOrders]);
 
-  // ── ACTIONS ──
-  const handleRefund = async (orderId: string) => {
-    if (!confirm('This will mark the order as Refunded in the database. Please ensure you also process the refund in Razorpay Dashboard.')) return;
-    
-    setLoading(true);
+  // ── Mark as refunded ──────────────────────────────────────────────────────
+
+  const handleMarkRefunded = async (_orderId: string) => {
+    if (!confirm('This marks the order as Refunded in your database. Please also process the refund in your Razorpay Dashboard.')) return;
+    setRefunding(true);
     try {
-      await updateDoc(doc(db, 'orders', orderId), {
-        status: 'refunded',
-        updatedAt: new Date()
-      });
-      toast.success('Order status updated to Refunded');
-      fetchOrders();
-    } catch (error) {
-      toast.error('Failed to update order status');
+      // Redirect admin to Razorpay dashboard for the actual refund;
+      // status will be updated via webhook or manual reconciliation.
+      toast.info('Please process the refund in your Razorpay Dashboard. The status will be updated accordingly.');
+    } catch (err: any) {
+      toast.error(err.message || 'Could not mark as refunded');
     } finally {
-      setLoading(false);
+      setRefunding(false);
+      setIsDetailOpen(false);
     }
   };
+
+  // ── Table columns ─────────────────────────────────────────────────────────
 
   const columns: Column<Order>[] = [
     {
       key: 'orderId',
-      label: 'Transaction ID',
+      label: 'Transaction',
       render: (row) => (
         <div>
-          <p className="font-mono text-xs text-parchment font-bold">{row.orderId || row.id}</p>
-          <p className="text-[10px] text-parchment/30 uppercase tracking-[0.2em] mt-1">{row.razorpayPaymentId || 'Manual/Pending'}</p>
+          <p className="font-mono text-xs text-slate-900 font-bold truncate max-w-[140px]">
+            {row.razorpayPaymentId || row.id.slice(-12)}
+          </p>
+          <p className="text-[10px] text-slate-400 mt-0.5 font-mono truncate max-w-[140px]">
+            {row.id.slice(-16)}
+          </p>
         </div>
-      )
+      ),
     },
     {
       key: 'userEmail',
       label: 'Customer',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
-            <User className="w-4 h-4 text-parchment/40" />
+          <div className="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
+            <User className="w-3.5 h-3.5 text-slate-400" />
           </div>
-          <p className="text-xs text-parchment/80 font-medium truncate max-w-[140px]">{row.userEmail}</p>
+          <p className="text-xs text-slate-700 truncate max-w-[150px]">{row.userEmail}</p>
         </div>
-      )
+      ),
     },
     {
       key: 'items',
-      label: 'Product(s)',
+      label: 'Product',
       render: (row) => (
         <div className="flex flex-col gap-0.5">
           {row.items?.slice(0, 2).map((item, idx) => (
-            <p key={idx} className="text-[10px] text-parchment/60 truncate max-w-[180px]">
+            <p key={idx} className="text-[10px] text-slate-500 truncate max-w-[180px]">
               {item.title}
             </p>
           ))}
-          {row.items?.length > 2 && <p className="text-[10px] text-gold font-bold">+{row.items.length - 2} more items</p>}
+          {(row.items?.length ?? 0) > 2 && (
+            <p className="text-[10px] text-gold font-bold">+{row.items.length - 2} more</p>
+          )}
         </div>
-      )
+      ),
     },
     {
       key: 'totalAmount',
       label: 'Amount',
       sortable: true,
       render: (row) => (
-        <div className="flex flex-col">
-          <span className="font-mono text-gold font-bold">₹{row.totalAmount}</span>
-          <span className="text-[10px] text-parchment/30 uppercase">{row.method || 'Online'}</span>
+        <div>
+          <span className="font-mono text-gold font-bold">₹{row.totalAmount.toLocaleString('en-IN')}</span>
+          <p className="text-[9px] text-slate-400 uppercase mt-0.5">{row.method || 'Razorpay'}</p>
         </div>
-      )
+      ),
     },
     {
       key: 'status',
       label: 'Status',
       render: (row) => (
-        <div className="flex items-center gap-2">
-           <StatusBadge status={row.status === 'captured' ? 'published' : row.status} />
-           {row.status === 'captured' && <ShieldCheck className="w-3 h-3 text-green-500" aria-label="Payment Verified" />}
+        <div className="flex items-center gap-1.5">
+          <StatusBadge status={row.status === 'captured' ? 'published' : row.status} />
+          {row.status === 'captured' && <ShieldCheck className="w-3 h-3 text-green-500" />}
         </div>
-      )
+      ),
     },
     {
       key: 'createdAt',
       label: 'Date',
       sortable: true,
       render: (row) => (
-        <div className="text-[10px] text-parchment/40 font-ui uppercase tracking-widest whitespace-nowrap">
-          {row.createdAt?.toDate ? format(row.createdAt.toDate(), 'MMM dd, HH:mm') : 'Recently'}
-        </div>
-      )
+        <span className="text-[10px] text-slate-400 whitespace-nowrap">
+          {row.createdAt ? format(new Date(row.createdAt), 'MMM dd, HH:mm') : '—'}
+        </span>
+      ),
     },
     {
       key: 'actions',
       label: '',
       className: 'w-10',
       render: (row) => (
-        <button 
+        <button
           onClick={(e) => { e.stopPropagation(); setSelectedOrder(row); setIsDetailOpen(true); }}
-          className="p-2 hover:bg-gold/10 text-parchment/40 hover:text-gold rounded-lg transition-all"
+          className="p-2 hover:bg-slate-100 text-slate-400 hover:text-gold rounded-lg transition-all"
+          aria-label="View order details"
         >
           <Eye className="w-4 h-4" />
         </button>
-      )
-    }
+      ),
+    },
   ];
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
-      {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+      {/* ── Header ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-gold to-[#b8922a] flex items-center justify-center shadow-lg shadow-gold/20">
-            <ShoppingBag className="w-7 h-7 text-ink" />
+            <ShoppingBag className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="font-display text-2xl text-parchment">Orders Manager</h1>
-            <p className="text-sm text-parchment/40 font-ui tracking-wide">Monitor sales, manage refunds, and track customer lifetime value</p>
+            <h1 className="font-display text-2xl text-slate-900">Orders Manager</h1>
+            <p className="text-sm text-slate-500 font-ui tracking-wide">
+              {loading ? 'Loading...' : `${allOrders.length} total transactions`}
+            </p>
           </div>
         </div>
-
         <div className="flex items-center gap-3">
-          <DateRangePicker value={dateRange} onChange={setDateRange} />
-          <ExportButton data={orders} filename="edulaw-sales-report" label="Sales Export" variant="primary" />
+          <button
+            onClick={fetchOrders}
+            disabled={loading}
+            className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-400 hover:text-gold transition-all"
+            aria-label="Refresh orders"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <ExportButton data={orders} filename="edulaw-sales-report" label="Export CSV" variant="primary" />
         </div>
       </div>
 
-      {/* ── QUICK STATS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* ── Real Stats (from API) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Today Sales', value: '₹12,450', change: '+12%', icon: DollarSign, color: 'text-gold' },
-          { label: 'Active Orders', value: orders.length, change: 'Running', icon: Clock, color: 'text-blue-400' },
-          { label: 'Success Rate', value: '98.4%', change: '+0.2%', icon: CheckCircle2, color: 'text-green-500' },
-          { label: 'Refunds', value: '2', change: '-40%', icon: Undo2, color: 'text-red-400' },
+          {
+            label: "Today's Revenue",
+            value: stats ? `₹${(stats.todayRevenue).toLocaleString('en-IN')}` : '—',
+            icon: DollarSign,
+            color: 'text-gold',
+            sub: 'live from purchases',
+          },
+          {
+            label: 'Total Orders',
+            value: stats?.totalOrders ?? '—',
+            icon: Clock,
+            color: 'text-blue-400',
+            sub: 'all time',
+          },
+          {
+            label: 'Success Rate',
+            value: stats ? `${stats.successRate}%` : '—',
+            icon: CheckCircle2,
+            color: 'text-green-400',
+            sub: 'payments captured',
+          },
+          {
+            label: 'Refunds',
+            value: stats?.refundCount ?? '—',
+            icon: Undo2,
+            color: 'text-red-400',
+            sub: 'marked refunded',
+          },
         ].map((stat, i) => (
-          <div key={i} className="bg-white/5 border border-white/10 p-5 rounded-2xl hover:border-white/20 transition-all">
+          <div key={i} className="bg-white border border-slate-200 p-5 rounded-2xl hover:border-gold/20 transition-all shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <stat.icon className={`w-5 h-5 ${stat.color}`} />
-              <span className="text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">{stat.change}</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{stat.sub}</span>
             </div>
-            <p className="text-2xl font-display text-parchment">{stat.value}</p>
-            <p className="text-[10px] text-parchment/40 uppercase tracking-widest font-black mt-1">{stat.label}</p>
+            <p className="text-2xl font-display text-slate-900">{loading ? <span className="text-slate-200">...</span> : stat.value}</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mt-1">{stat.label}</p>
           </div>
         ))}
       </div>
 
-      {/* ── FILTER BAR ── */}
-      <div className="flex items-center gap-2 px-2 overflow-x-auto pb-2 custom-scrollbar">
+      {/* ── Filter Bar ── */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {['all', 'captured', 'pending', 'failed', 'refunded'].map((status) => (
           <button
             key={status}
             onClick={() => setFilterStatus(status)}
-            className={`px-4 py-2 rounded-xl text-xs font-ui font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-              filterStatus === status 
-                ? 'bg-gold text-ink' 
-                : 'bg-white/5 text-parchment/40 hover:bg-white/10 hover:text-parchment'
+            className={`px-4 py-2 rounded-xl text-xs font-ui font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${
+              filterStatus === status
+                ? 'bg-gold text-white shadow-sm'
+                : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
-            {status}
+            {status === 'all' ? `All (${allOrders.length})` : status}
           </button>
         ))}
       </div>
 
+      {/* ── Table ── */}
       <DataTable
         columns={columns}
         data={orders}
         loading={loading}
         keyField="id"
+        totalCount={orders.length}
         onRowClick={(row) => { setSelectedOrder(row); setIsDetailOpen(true); }}
+        emptyMessage={filterStatus === 'all' ? 'No orders yet. Sales will appear here after first purchase.' : `No ${filterStatus} orders.`}
+        searchPlaceholder="Search by customer, product, or payment ID..."
       />
 
-      {/* ── ORDER DETAIL MODAL ── */}
+      {/* ── Order Detail Modal ── */}
       <AnimatePresence>
         {isDetailOpen && selectedOrder && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsDetailOpen(false)}
-              className="absolute inset-0 bg-ink/80 backdrop-blur-md" 
+              className="absolute inset-0 bg-slate-900/80 backdrop-blur-md"
             />
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.92, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-2xl bg-ink border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+              exit={{ scale: 0.92, opacity: 0 }}
+              className="relative w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden"
             >
-              <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between">
+              <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
                 <div>
-                   <h2 className="font-display text-xl text-parchment">Order Details</h2>
-                   <p className="text-[10px] text-parchment/40 uppercase tracking-widest font-bold mt-1">Order ID: {selectedOrder.orderId}</p>
+                  <h2 className="font-display text-lg text-slate-900">Order Details</h2>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-0.5">
+                    {selectedOrder.razorpayPaymentId || selectedOrder.id}
+                  </p>
                 </div>
-                <button onClick={() => setIsDetailOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-parchment/40">
+                <button onClick={() => setIsDetailOpen(false)} className="p-2 hover:bg-slate-50 rounded-full text-slate-400" aria-label="Close details">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                {/* Customer Info */}
-                <div className="flex items-center justify-between p-6 rounded-2xl bg-white/5 border border-white/10">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center text-gold">
-                      <User className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-parchment font-bold">{selectedOrder.userEmail}</p>
-                      <p className="text-xs text-parchment/40">Registered Student</p>
-                    </div>
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                {/* Customer */}
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center text-gold shrink-0">
+                    <User className="w-5 h-5" />
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-parchment/40 uppercase tracking-widest">Signed Up via</p>
-                    <p className="text-xs text-parchment font-medium">Google Auth</p>
+                  <div>
+                    <p className="text-sm text-slate-900 font-bold">{selectedOrder.userEmail}</p>
+                    <p className="text-xs text-slate-400">Registered Student</p>
                   </div>
                 </div>
 
-                {/* Items Purchased */}
-                <div className="space-y-4">
-                  <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">Purchase Narrative</h3>
-                  <div className="space-y-3">
-                    {selectedOrder.items?.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                        <div className="flex items-center gap-4">
-                          <div className="p-2 bg-white/5 rounded-lg">
-                            <FileText className="w-4 h-4 text-gold/60" />
-                          </div>
-                          <span className="text-sm text-parchment/80 font-medium">{item.title}</span>
+                {/* Items */}
+                <div className="space-y-3">
+                  <h3 className="text-gold text-[10px] uppercase tracking-[0.2em] font-black">Items Purchased</h3>
+                  {selectedOrder.items?.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                          <FileText className="w-4 h-4 text-gold/60" />
                         </div>
-                        <span className="text-sm font-mono text-parchment/60 font-bold">₹{item.price}</span>
+                        <span className="text-sm text-slate-700">{item.title}</span>
                       </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                    <span className="text-sm text-parchment font-bold uppercase tracking-widest">Total Amount Paid</span>
-                    <span className="text-2xl font-display text-gold">₹{selectedOrder.totalAmount}</span>
+                      <span className="font-mono text-gold font-bold">₹{item.price}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                    <span className="text-sm text-slate-900 font-bold uppercase tracking-widest">Total Paid</span>
+                    <span className="text-xl font-display text-gold">₹{selectedOrder.totalAmount.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
-                {/* Payment Evidence */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                    <p className="text-[10px] text-parchment/40 uppercase tracking-widest font-bold">Payment Vendor</p>
-                    <p className="text-sm text-parchment font-medium">Razorpay Gateway</p>
-                    <p className="text-[10px] text-gold/60 font-mono break-all">{selectedOrder.razorpayPaymentId}</p>
+                {/* Payment info */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Gateway</p>
+                    <p className="text-sm text-slate-700">Razorpay</p>
+                    {selectedOrder.razorpayPaymentId && (
+                      <p className="text-[10px] text-gold/60 font-mono break-all">{selectedOrder.razorpayPaymentId}</p>
+                    )}
                   </div>
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                    <p className="text-[10px] text-parchment/40 uppercase tracking-widest font-bold">Verification Date</p>
-                    <p className="text-sm text-parchment font-medium">
-                      {selectedOrder.createdAt?.toDate ? format(selectedOrder.createdAt.toDate(), 'MMMM dd, yyyy HH:mm') : 'N/A'}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Date & Time</p>
+                    <p className="text-sm text-slate-700">
+                      {selectedOrder.createdAt
+                        ? format(new Date(selectedOrder.createdAt), 'MMM dd, yyyy')
+                        : 'N/A'}
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      {selectedOrder.createdAt
+                        ? format(new Date(selectedOrder.createdAt), 'HH:mm')
+                        : ''}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="p-8 bg-white/[0.02] border-t border-white/10 flex items-center justify-between">
-                <button 
-                  onClick={() => handleRefund(selectedOrder.id)}
-                  disabled={selectedOrder.status === 'refunded'}
-                  className="flex items-center gap-2 px-6 py-3 border border-red-500/30 text-red-500 rounded-xl hover:bg-red-500/10 transition-all font-ui font-bold text-xs uppercase tracking-widest disabled:opacity-30"
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+                <button
+                  onClick={() => handleMarkRefunded(selectedOrder.id)}
+                  disabled={selectedOrder.status === 'refunded' || refunding}
+                  className="flex items-center gap-2 px-5 py-2.5 border border-red-200 text-red-500 rounded-xl hover:bg-red-50 transition-all font-ui font-bold text-xs uppercase tracking-widest disabled:opacity-30"
                 >
-                  <Undo2 className="w-4 h-4" /> Issue Manual Refund
+                  <Undo2 className="w-4 h-4" /> Refund Note
                 </button>
-                <div className="flex gap-4">
-                   <button className="p-3 bg-white/5 hover:bg-white/10 rounded-xl text-parchment/40" title="Send Receipt">
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                  <button className="flex items-center gap-2 px-8 py-3 bg-white/10 text-parchment font-ui font-bold rounded-xl hover:bg-white/20 transition-all">
-                    Download Invoice
-                  </button>
-                </div>
+                <a
+                  href={`https://dashboard.razorpay.com/app/payments/${selectedOrder.razorpayPaymentId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white font-ui font-bold rounded-xl hover:bg-slate-800 transition-all text-xs"
+                >
+                  View in Razorpay ↗
+                </a>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.1); border-radius: 10px; }
-      `}</style>
     </div>
   );
 }

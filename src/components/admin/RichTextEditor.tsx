@@ -35,8 +35,8 @@ const MenuButton = ({
     title={title}
     className={`p-2 rounded-lg transition-all ${
       isActive 
-        ? 'bg-gold text-ink shadow-sm' 
-        : 'text-parchment/60 hover:bg-white/10 hover:text-parchment'
+        ? 'bg-gold text-white shadow-sm' 
+        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
     } disabled:opacity-30`}
   >
     {children}
@@ -55,7 +55,7 @@ export function RichTextEditor({ value, onChange, className = '' }: RichTextEdit
       }),
       Image.configure({
         HTMLAttributes: {
-          class: 'rounded-xl border border-white/10 shadow-lg max-w-full h-auto my-6',
+          class: 'rounded-xl border border-slate-200 shadow-lg max-w-full h-auto my-6',
         },
       }),
     ],
@@ -65,7 +65,7 @@ export function RichTextEditor({ value, onChange, className = '' }: RichTextEdit
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-invert prose-gold max-w-none focus:outline-none min-h-[200px] font-body text-parchment/90 leading-relaxed p-4',
+        class: 'prose prose-gold max-w-none focus:outline-none min-h-[200px] font-body text-slate-700 leading-relaxed p-4',
       },
     },
   });
@@ -93,9 +93,9 @@ export function RichTextEditor({ value, onChange, className = '' }: RichTextEdit
   };
 
   return (
-    <div className={`rounded-2xl border border-white/10 bg-white/5 overflow-hidden focus-within:border-gold/50 transition-all ${className}`}>
+    <div className={`rounded-2xl border border-slate-200 bg-white overflow-hidden focus-within:border-gold/50 transition-all ${className}`}>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-1 p-2 border-b border-white/10 bg-white/5">
+      <div className="flex flex-wrap items-center gap-1 p-2 border-b border-slate-200 bg-slate-50">
         <MenuButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive('bold')}
@@ -111,7 +111,7 @@ export function RichTextEditor({ value, onChange, className = '' }: RichTextEdit
           <Italic className="w-4 h-4" />
         </MenuButton>
         
-        <div className="w-px h-6 bg-white/10 mx-1" />
+        <div className="w-px h-6 bg-slate-200 mx-1" />
 
         <MenuButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -135,7 +135,7 @@ export function RichTextEditor({ value, onChange, className = '' }: RichTextEdit
           <Type className="w-4 h-4" />
         </MenuButton>
 
-        <div className="w-px h-6 bg-white/10 mx-1" />
+        <div className="w-px h-6 bg-slate-200 mx-1" />
 
         <MenuButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -159,7 +159,7 @@ export function RichTextEditor({ value, onChange, className = '' }: RichTextEdit
           <Quote className="w-4 h-4" />
         </MenuButton>
 
-        <div className="w-px h-6 bg-white/10 mx-1" />
+        <div className="w-px h-6 bg-slate-200 mx-1" />
 
         <MenuButton onClick={setLink} isActive={editor.isActive('link')} title="Insert Link">
           <LinkIcon className="w-4 h-4" />
@@ -190,11 +190,11 @@ export function RichTextEditor({ value, onChange, className = '' }: RichTextEdit
       <EditorContent editor={editor} />
 
       {/* Footer Area */}
-      <div className="px-4 py-2 border-t border-white/10 bg-white/5 flex items-center justify-between">
-        <div className="text-[10px] font-ui text-parchment/40 uppercase tracking-widest font-semibold">
+      <div className="px-4 py-2 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div className="text-[10px] font-ui text-slate-400 uppercase tracking-widest font-semibold">
           TipTap Editor Engine
         </div>
-        <div className="text-[10px] font-ui text-parchment/40 uppercase tracking-widest font-semibold">
+        <div className="text-[10px] font-ui text-slate-400 uppercase tracking-widest font-semibold">
           Characters: {editor.storage.characterCount?.characters?.() || 0}
         </div>
       </div>

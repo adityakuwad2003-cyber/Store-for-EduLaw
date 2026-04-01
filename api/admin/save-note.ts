@@ -12,11 +12,11 @@
  * - All string fields sanitized to prevent injection
  */
 import { FieldValue } from "firebase-admin/firestore";
-import { adminDb } from "../lib/adminInit";
+import { adminDb } from "../_lib/adminInit";
 import {
   setCorsHeaders, verifyAdmin, isRateLimited,
   getClientIp, isSafeFilePath, isSafeId,
-} from "../lib/security";
+} from "../_lib/security";
 
 // Max string length for text fields
 const MAX_STR = 512;
@@ -96,6 +96,10 @@ export default async function handler(req: any, res: any) {
   };
 
   if (body.title) metadata.title = sanitize(body.title);
+  // Preview image key — stored as-is if it matches the safe pattern
+  if (typeof body.previewImageKey === "string" && /^previews\/[\w\-]{1,128}\.(jpg|jpeg|png)$/.test(body.previewImageKey)) {
+    metadata.previewImageKey = body.previewImageKey;
+  }
   if (body.description) metadata.description = sanitize(body.description, 2000);
   if (body.category) metadata.category = sanitize(body.category);
   if (body.subjectCode) metadata.subjectCode = sanitize(body.subjectCode, 32);

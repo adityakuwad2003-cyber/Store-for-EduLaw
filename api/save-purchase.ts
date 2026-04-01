@@ -4,11 +4,12 @@
  * Token-verified — never trusts client-provided userId.
  */
 import { FieldValue } from "firebase-admin/firestore";
-import { adminDb } from "./lib/adminInit";
+import { adminDb } from "./_lib/adminInit";
 import {
   setCorsHeaders, verifyBearerToken, isRateLimited,
   getClientIp, isSafeId, cleanFilePath,
-} from "./lib/security";
+} from "./_lib/security";
+import { verifyRazorpaySignature } from "./_lib/config";
 
 function sanitize(val: unknown, max = 512): string {
   if (typeof val !== "string") return "";
@@ -48,6 +49,18 @@ export default async function handler(req: any, res: any) {
   const price = Number.isFinite(Number(body.price)) ? Number(body.price) : 0;
   const razorpay_payment_id = sanitize(body.razorpay_payment_id, 128);
   const razorpay_order_id = sanitize(body.razorpay_order_id, 128) || null;
+  const razorpay_signature = sanitize(body.razorpay_signature, 256);
+
+  // ── Signature Verification (Critical for Live payments) ───────────────────
+  if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+    return res.status(400).json({ error: "Missing Razorpay payment details." });
+  }
+
+  const isValid = verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+  if (!isValid) {
+    console.error("Invalid Razorpay signature for order:", razorpay_order_id);
+    return res.status(400).json({ error: "Invalid payment signature." });
+  }
 
   try {
     const docId = `${verifiedUserId}_${productId}`;

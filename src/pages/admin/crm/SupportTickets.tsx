@@ -134,11 +134,11 @@ export default function SupportTickets() {
           <div className={`w-2 h-10 rounded-full ${
             row.priority === 'urgent' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
             row.priority === 'high' ? 'bg-orange-500' :
-            row.priority === 'medium' ? 'bg-gold' : 'bg-parchment/20'
+            row.priority === 'medium' ? 'bg-gold' : 'bg-slate-200'
           }`} />
           <div>
-            <p className="font-bold text-parchment truncate max-w-[200px]">{row.subject}</p>
-            <p className="text-[10px] text-parchment/40 uppercase tracking-widest mt-1">{row.userName} · {row.category}</p>
+            <p className="font-bold text-slate-900 truncate max-w-[200px]">{row.subject}</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">{row.userName} · {row.category}</p>
           </div>
         </div>
       )
@@ -151,9 +151,9 @@ export default function SupportTickets() {
           <Flag className={`w-3 h-3 ${
             row.priority === 'urgent' ? 'text-red-500' :
             row.priority === 'high' ? 'text-orange-500' :
-            row.priority === 'medium' ? 'text-gold' : 'text-parchment/40'
+            row.priority === 'medium' ? 'text-gold' : 'text-slate-300'
           }`} />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-parchment/60">{row.priority}</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{row.priority}</span>
         </div>
       )
     },
@@ -167,7 +167,7 @@ export default function SupportTickets() {
       label: 'Last Response',
       sortable: true,
       render: (row) => (
-        <span className="text-[10px] text-parchment/30 font-mono">
+        <span className="text-[10px] text-slate-400 font-mono">
            {row.lastMessageAt?.toDate ? format(row.lastMessageAt.toDate(), 'MMM dd, HH:mm') : 'Recently'}
         </span>
       )
@@ -179,7 +179,8 @@ export default function SupportTickets() {
       render: (row) => (
         <button 
           onClick={(e) => { e.stopPropagation(); setSelectedTicket(row); setIsChatOpen(true); }}
-          className="p-2 hover:bg-gold/10 text-parchment/40 hover:text-gold rounded-lg transition-all"
+          className="p-2 hover:bg-slate-100 text-slate-400 hover:text-gold rounded-lg transition-all"
+          aria-label="Reply to ticket"
         >
           <Reply className="w-4 h-4" />
         </button>
@@ -190,21 +191,21 @@ export default function SupportTickets() {
   return (
     <div className="space-y-6">
       {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-gold to-[#b8922a] flex items-center justify-center shadow-lg shadow-gold/20">
-            <LifeBuoy className="w-7 h-7 text-ink" />
+            <LifeBuoy className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="font-display text-2xl text-parchment">Support Tickets</h1>
-            <p className="text-sm text-parchment/40 font-ui tracking-wide">Manage Student queries, billing disputes, and technical assistance</p>
+            <h1 className="font-display text-2xl text-slate-900">Support Tickets</h1>
+            <p className="text-sm text-slate-500 font-ui tracking-wide">Manage Student queries, billing disputes, and technical assistance</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button 
             onClick={fetchTickets}
-            className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-parchment/40 transition-all font-bold text-xs uppercase tracking-widest flex items-center gap-2"
+            className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-500 transition-all font-bold text-xs uppercase tracking-widest flex items-center gap-2"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Sync Desk
           </button>
@@ -226,53 +227,54 @@ export default function SupportTickets() {
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsChatOpen(false)}
-              className="absolute inset-0 bg-ink/70 backdrop-blur-md" 
+              className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" 
             />
             <motion.div
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-2xl bg-[#0A0A0A] border-l border-white/10 shadow-2xl flex flex-col h-screen"
+              className="relative w-full max-w-2xl bg-white border-l border-slate-200 shadow-2xl flex flex-col h-screen"
             >
               {/* Chat Header */}
-              <div className="px-8 py-6 bg-ink border-b border-white/10 flex items-center justify-between shrink-0">
+              <div className="px-8 py-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-4">
                   <div className={`w-3 h-3 rounded-full ${
                     selectedTicket.priority === 'urgent' ? 'bg-red-500 animate-pulse' : 'bg-gold'
                   }`} />
                   <div>
-                    <h2 className="font-display text-lg text-parchment leading-tight truncate max-w-[300px]">{selectedTicket.subject}</h2>
-                    <p className="text-[10px] text-parchment/40 uppercase tracking-widest font-bold mt-1">Ticket #{selectedTicket.id.slice(0, 8)} · {selectedTicket.userName}</p>
+                    <h2 className="font-display text-lg text-slate-900 leading-tight truncate max-w-[300px]">{selectedTicket.subject}</h2>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">Ticket #{selectedTicket.id.slice(0, 8)} · {selectedTicket.userName}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                    <select 
                     value={selectedTicket.status}
                     onChange={(e) => updateTicketStatus(selectedTicket.id, e.target.value as any)}
-                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-[10px] text-gold font-bold uppercase outline-none"
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] text-gold font-bold uppercase outline-none"
+                    aria-label="Change ticket status"
                    >
                      <option value="open">Open</option>
                      <option value="in_progress">In Progress</option>
                      <option value="resolved">Resolved</option>
                      <option value="closed">Closed</option>
                    </select>
-                   <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-parchment/40">
+                   <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-slate-50 rounded-full text-slate-400" aria-label="Close chat">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar bg-[#0D0D0D]">
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar bg-slate-50">
                  {messages.map((msg) => (
                    <div key={msg.id} className={`flex flex-col ${msg.isAdmin ? 'items-end' : 'items-start'}`}>
                       <div className={`max-w-[85%] p-4 rounded-2xl ${
                         msg.isAdmin 
-                          ? 'bg-gold text-ink rounded-tr-none shadow-lg shadow-gold/10' 
-                          : 'bg-white/5 border border-white/10 text-parchment rounded-tl-none'
+                          ? 'bg-slate-900 text-white rounded-tr-none shadow-lg' 
+                          : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none shadow-sm'
                       }`}>
                         <p className="text-sm font-ui leading-relaxed">{msg.text}</p>
                       </div>
-                      <span className="text-[8px] text-parchment/30 uppercase tracking-widest font-black mt-2 px-1">
+                      <span className="text-[8px] text-slate-400 uppercase tracking-widest font-black mt-2 px-1">
                         {msg.isAdmin ? 'Support Agent' : msg.senderName} · {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'HH:mm') : 'Sent'}
                       </span>
                    </div>
@@ -286,7 +288,7 @@ export default function SupportTickets() {
               </div>
 
               {/* Chat Input */}
-              <div className="p-6 bg-ink border-t border-white/10">
+              <div className="p-6 bg-white border-t border-slate-200 shadow-[0_-12px_40px_rgba(0,0,0,0.05)]">
                 <form onSubmit={handleReply} className="relative">
                   <textarea 
                     rows={1}
@@ -294,25 +296,26 @@ export default function SupportTickets() {
                     onChange={e => setReplyText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(e); } }}
                     placeholder="Type your professional response..."
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 pr-16 text-sm text-parchment font-ui placeholder:text-parchment/20 focus:outline-none focus:border-gold/30 transition-all resize-none"
+                    className="w-full bg-slate-100 border border-slate-200 rounded-2xl px-6 py-4 pr-16 text-sm text-slate-900 font-ui placeholder:text-slate-400 focus:outline-none focus:border-gold/30 transition-all resize-none"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                     <button type="button" className="p-2 text-parchment/20 hover:text-parchment transition-all">
+                     <button type="button" className="p-2 text-slate-400 hover:text-slate-900 transition-all" aria-label="Attach file">
                        <Paperclip className="w-4 h-4" />
                      </button>
                      <button 
                         type="submit" 
                         disabled={!replyText.trim()}
-                        className="p-3 bg-gold text-ink rounded-xl shadow-lg shadow-gold/20 disabled:opacity-30 hover:scale-105 transition-all"
+                        className="p-3 bg-slate-900 text-white rounded-xl shadow-lg disabled:opacity-30 hover:scale-105 transition-all"
+                        aria-label="Send reply"
                      >
-                       <Send className="w-4 h-4 fill-ink" />
+                       <Send className="w-4 h-4 fill-white" />
                      </button>
                   </div>
                 </form>
                 <div className="flex items-center gap-4 mt-4">
-                  <p className="text-[10px] text-parchment/20 uppercase tracking-[0.2em] font-black">Pre-sets:</p>
-                  <button onClick={() => setReplyText('Thank you for reaching out. We have received your query regarding billing and are looking into it.')} className="text-[9px] text-gold/40 hover:text-gold font-bold uppercase px-2 py-1 rounded bg-gold/5 border border-gold/10">Billing Fix</button>
-                  <button onClick={() => setReplyText('The requested PDF notes have been manually assigned to your account. Please check your library.')} className="text-[9px] text-gold/40 hover:text-gold font-bold uppercase px-2 py-1 rounded bg-gold/5 border border-gold/10">Manual Access</button>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-black">Pre-sets:</p>
+                  <button onClick={() => setReplyText('Thank you for reaching out. We have received your query regarding billing and are looking into it.')} className="text-[9px] text-gold/60 hover:text-gold font-bold uppercase px-2 py-1 rounded bg-gold/5 border border-gold/10">Billing Fix</button>
+                  <button onClick={() => setReplyText('The requested PDF notes have been manually assigned to your account. Please check your library.')} className="text-[9px] text-gold/60 hover:text-gold font-bold uppercase px-2 py-1 rounded bg-gold/5 border border-gold/10">Manual Access</button>
                 </div>
               </div>
             </motion.div>
@@ -322,7 +325,7 @@ export default function SupportTickets() {
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(201, 168, 76, 0.2); border-radius: 10px; }
       `}</style>
     </div>
   );
