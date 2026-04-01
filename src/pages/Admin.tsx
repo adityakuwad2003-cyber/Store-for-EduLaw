@@ -58,6 +58,22 @@ export function Admin() {
     if (!isAdmin) { navigate('/'); toast.error('Access denied.'); }
   }, [currentUser, isAdmin, navigate]);
 
+  // Pre-fill form when note is selected
+  useEffect(() => {
+    if (selectedNote) {
+      setNoteId(selectedNote.id);
+      setNoteTitle(selectedNote.title || '');
+      setNoteDescription((selectedNote as any).description || ''); // Support legacy/extra fields
+      setNoteCategory(selectedNote.category || CATEGORIES[0]);
+      setNotePrice(selectedNote.price?.toString() || '');
+      setNotePages(selectedNote.totalPages?.toString() || '');
+      setNoteLanguage((selectedNote as any).language || 'English');
+      setNoteSubjectCode((selectedNote as any).subjectCode || '');
+    } else {
+      setNoteId(''); setNoteTitle(''); setNoteDescription(''); setNotePrice(''); setNotePages(''); setNoteSubjectCode(''); setNoteLanguage('English');
+    }
+  }, [selectedNote]);
+
   const getToken = async () => {
     if (!currentUser) throw new Error('Not authenticated');
     return currentUser.getIdToken(true);
@@ -148,39 +164,46 @@ export function Admin() {
     }
   };
 
-  const handleUpload = async () => {
+  const handleSaveNote = async () => {
     const targetNoteId = (selectedNote?.id || noteId).trim();
     if (!targetNoteId) { toast.error('Please select a note or enter a Note ID.'); return; }
-    if (uploadFiles.length === 0) { toast.error('Please add at least one PDF file.'); return; }
     if (!selectedNote && !noteTitle) { toast.error('Please enter a title for the new note.'); return; }
+    if (!selectedNote && uploadFiles.length === 0) { toast.error('Please add at least one PDF file for a new note.'); return; }
 
     setIsUploading(true);
     try {
       const token = await getToken();
-      const results = await Promise.all(
-        uploadFiles.map((f, i) => uploadSingleFile(f, i, token, targetNoteId))
-      );
-      const uploaded = results.filter(Boolean) as { name: string; key: string }[];
+      
+      let uploaded: {name: string, key: string}[] = [];
+      if (uploadFiles.length > 0) {
+        const results = await Promise.all(
+          uploadFiles.map((f, i) => uploadSingleFile(f, i, token, targetNoteId))
+        );
+        uploaded = results.filter(Boolean) as { name: string; key: string }[];
 
-      if (uploaded.length === 0) {
-        toast.error('All uploads failed. Check your R2 configuration.');
-        return;
+        if (uploaded.length === 0) {
+          toast.error('All uploads failed. Check your R2 configuration.');
+          setIsUploading(false);
+          return;
+        }
       }
 
       // Save metadata to Firestore
       const saveBody: Record<string, unknown> = {
         noteId: targetNoteId,
         files: uploaded,
+        isUpdateOnly: uploaded.length === 0 && !!selectedNote,
+        title: noteTitle,
+        description: noteDescription || 'No description provided.',
+        category: noteCategory,
+        price: Number(notePrice) || 0,
+        totalPages: Number(notePages) || 1,
+        language: noteLanguage,
+        subjectCode: noteSubjectCode,
+        slug: targetNoteId,
       };
+
       if (!selectedNote) {
-        saveBody.title = noteTitle;
-        saveBody.description = noteDescription || 'No description provided.';
-        saveBody.category = noteCategory;
-        saveBody.price = Number(notePrice) || 0;
-        saveBody.totalPages = Number(notePages) || 1;
-        saveBody.language = noteLanguage;
-        saveBody.subjectCode = noteSubjectCode;
-        saveBody.slug = targetNoteId;
         saveBody.isNew = true;
         saveBody.isFeatured = false;
       }
@@ -192,12 +215,21 @@ export function Admin() {
       });
       if (!saveRes.ok) throw new Error((await saveRes.json()).error);
 
-      toast.success(`${uploaded.length} file(s) uploaded successfully!`);
+      if (uploaded.length > 0) {
+        toast.success(`${uploaded.length} file(s) uploaded and details saved!`);
+      } else {
+        toast.success(`Note details updated successfully!`);
+      }
+      
       setUploadFiles([]);
-      setNoteId(''); setNoteTitle(''); setNoteDescription(''); setNotePrice(''); setNotePages(''); setNoteSubjectCode('');
+      if (!selectedNote) {
+        setNoteId(''); setNoteTitle(''); setNoteDescription(''); setNotePrice(''); setNotePages(''); setNoteSubjectCode(''); setNoteLanguage('English');
+      }
       fetchNotes();
+      // Unselect if updated successfully
+      setSelectedNote(null);
     } catch (err: any) {
-      toast.error(err.message || 'Upload failed.');
+      toast.error(err.message || 'Save failed.');
     } finally {
       setIsUploading(false);
     }
@@ -217,6 +249,23 @@ export function Admin() {
       fetchNotes();
     } catch (err: any) {
       toast.error(err.message || 'Failed to remove file.');
+    }
+  };
+
+  const handleMigrateStatic = async () => {
+    if (!confirm('WARNING: This will migrate all hardcoded notes into your Firebase Database permanently. Continue?')) return;
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/seed-database', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      const data = await res.json();
+      toast.success(data.message || 'Migration complete!');
+      fetchNotes();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to migrate.');
     }
   };
 
@@ -267,7 +316,18 @@ export function Admin() {
                   onChange={e => {
                     const found = notes.find(n => n.id === e.target.value) || null;
                     setSelectedNote(found);
-                    if (found) { setNoteId(''); setNoteTitle(''); setNoteDescription(''); }
+                    if (found) {
+                      setNoteId(found.id);
+                      setNoteTitle(found.title || '');
+                      setNoteDescription(found.description || '');
+                      setNoteCategory(found.category || 'General');
+                      setNotePrice(found.price?.toString() || '0');
+                      setNotePages(found.totalPages?.toString() || '1');
+                      setNoteLanguage(found.language || 'English');
+                      setNoteSubjectCode(found.subjectCode || '');
+                    } else {
+                      setNoteId(''); setNoteTitle(''); setNoteDescription(''); setNotePrice(''); setNotePages(''); setNoteSubjectCode(''); setNoteLanguage('English');
+                    }
                   }}
                   className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm appearance-none focus:outline-none focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
                   title="Select existing note"
@@ -281,66 +341,63 @@ export function Admin() {
               </div>
             </div>
 
-            {/* New Note Fields (only when no existing note selected) */}
-            <AnimatePresence>
-              {!selectedNote && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-3 mb-5 overflow-hidden">
-                  <div>
-                    <label className="block text-xs font-ui text-parchment/60 mb-1">Note ID (slug) *</label>
-                    <input type="text" value={noteId} onChange={e => setNoteId(e.target.value.toLowerCase().replace(/[^a-z0-9\-]/g, '-'))}
-                      placeholder="e.g. bns-complete-notes" maxLength={128}
-                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-ui text-parchment/60 mb-1">Note Title *</label>
-                    <input type="text" value={noteTitle} onChange={e => setNoteTitle(e.target.value)} placeholder="BNS Complete Notes"
-                      maxLength={512} className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-ui text-parchment/60 mb-1">Description</label>
-                    <textarea 
-                      value={noteDescription} onChange={e => setNoteDescription(e.target.value)} 
-                      placeholder="Comprehensive notes covering..." rows={3}
-                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50 resize-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-ui text-parchment/60 mb-1">Category</label>
-                      <select value={noteCategory} onChange={e => setNoteCategory(e.target.value)} title="Category"
-                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-3 text-parchment font-ui text-sm appearance-none focus:outline-none focus:border-gold/50">
-                        {CATEGORIES.map(c => <option key={c} value={c} className="bg-ink">{c}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-ui text-parchment/60 mb-1">Price (₹)</label>
-                      <input type="number" value={notePrice} onChange={e => setNotePrice(e.target.value)} min={0} max={99999}
-                        placeholder="299" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-ui text-parchment/60 mb-1">Total Pages</label>
-                      <input type="number" value={notePages} onChange={e => setNotePages(e.target.value)} min={1} max={9999}
-                        placeholder="120" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-ui text-parchment/60 mb-1">Language</label>
-                      <select value={noteLanguage} onChange={e => setNoteLanguage(e.target.value)} title="Language"
-                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-3 text-parchment font-ui text-sm appearance-none focus:outline-none focus:border-gold/50">
-                        <option value="English" className="bg-ink">English</option>
-                        <option value="Hindi" className="bg-ink">Hindi</option>
-                        <option value="Both" className="bg-ink">Both</option>
-                      </select>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Note Metadata Fields (Always shown, populated internally if editing) */}
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="block text-xs font-ui text-parchment/60 mb-1">Note ID (slug) *</label>
+                <input type="text" value={noteId} onChange={e => setNoteId(e.target.value.toLowerCase().replace(/[^a-z0-9\-]/g, '-'))}
+                  placeholder="e.g. bns-complete-notes" maxLength={128} disabled={!!selectedNote}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50 disabled:opacity-50"
+                  title={!!selectedNote ? 'Cannot change ID of existing note' : ''}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-ui text-parchment/60 mb-1">Note Title *</label>
+                <input type="text" value={noteTitle} onChange={e => setNoteTitle(e.target.value)} placeholder="BNS Complete Notes"
+                  maxLength={512} className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-ui text-parchment/60 mb-1">Description</label>
+                <textarea 
+                  value={noteDescription} onChange={e => setNoteDescription(e.target.value)} 
+                  placeholder="Comprehensive notes covering..." rows={3}
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50 resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-ui text-parchment/60 mb-1">Category</label>
+                  <select value={noteCategory} onChange={e => setNoteCategory(e.target.value)} title="Category"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-3 text-parchment font-ui text-sm appearance-none focus:outline-none focus:border-gold/50">
+                    {CATEGORIES.map(c => <option key={c} value={c} className="bg-ink">{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-ui text-parchment/60 mb-1">Price (₹)</label>
+                  <input type="number" value={notePrice} onChange={e => setNotePrice(e.target.value)} min={0} max={99999}
+                    placeholder="299" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-ui text-parchment/60 mb-1">Total Pages</label>
+                  <input type="number" value={notePages} onChange={e => setNotePages(e.target.value)} min={1} max={9999}
+                    placeholder="120" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-ui text-parchment/60 mb-1">Language</label>
+                  <select value={noteLanguage} onChange={e => setNoteLanguage(e.target.value)} title="Language"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-3 text-parchment font-ui text-sm appearance-none focus:outline-none focus:border-gold/50">
+                    <option value="English" className="bg-ink">English</option>
+                    <option value="Hindi" className="bg-ink">Hindi</option>
+                    <option value="Both" className="bg-ink">Both</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
             {/* Drag & Drop Zone */}
             <div
@@ -393,14 +450,16 @@ export function Admin() {
             )}
 
             <button
-              onClick={handleUpload}
-              disabled={isUploading || uploadFiles.length === 0}
+              onClick={handleSaveNote}
+              disabled={isUploading || (!selectedNote && uploadFiles.length === 0)}
               className="w-full py-3.5 bg-gradient-to-r from-gold to-[#b8922a] text-ink font-ui font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+              ) : uploadFiles.length > 0 ? (
+                <><Upload className="w-4 h-4" /> Save & Upload {uploadFiles.length} File{uploadFiles.length !== 1 ? 's' : ''}</>
               ) : (
-                <><Upload className="w-4 h-4" /> Upload {uploadFiles.length || ''} File{uploadFiles.length !== 1 ? 's' : ''}</>
+                <><CheckCircle className="w-4 h-4" /> Save Details</>
               )}
             </button>
           </div>
@@ -413,9 +472,14 @@ export function Admin() {
               <h2 className="font-display text-lg text-parchment flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-gold" /> Note Library
               </h2>
-              <button onClick={fetchNotes} title="Refresh" className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                <RefreshCw className="w-4 h-4 text-parchment/40" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={handleMigrateStatic} title="Migrate Static Data to Firebase" className="p-2 bg-burgundy hover:bg-burgundy-light rounded-lg transition-colors text-parchment flex items-center gap-2 text-xs font-ui px-4">
+                   Migrate Catalog
+                </button>
+                <button onClick={fetchNotes} title="Refresh" className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                  <RefreshCw className="w-4 h-4 text-parchment/40" />
+                </button>
+              </div>
             </div>
 
             {isLoadingNotes ? (

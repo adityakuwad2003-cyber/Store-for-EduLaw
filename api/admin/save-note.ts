@@ -63,36 +63,36 @@ export default async function handler(req: any, res: any) {
 
   // ── File array validation ───────────────────────────────────────────────
   const rawFiles: unknown[] = Array.isArray(body.files) ? body.files : [];
-  if (rawFiles.length === 0) {
-    return res.status(400).json({ error: "At least one file must be provided." });
+  const isUpdateOnly = body.isUpdateOnly === true;
+
+  if (!isUpdateOnly && rawFiles.length === 0) {
+    return res.status(400).json({ error: "At least one file must be provided for a new note." });
   }
   if (rawFiles.length > 20) {
     return res.status(400).json({ error: "Maximum 20 files per note." });
   }
 
   const files: { name: string; key: string }[] = [];
-  for (const f of rawFiles) {
-    if (typeof f !== "object" || f === null) continue;
-    const ff = f as Record<string, unknown>;
-    const name = sanitize(ff.name, 255);
-    const key = typeof ff.key === "string" ? ff.key.replace(/^\/+/, "") : "";
-    if (!name || !isSafeFilePath(key)) {
-      return res.status(400).json({ error: `Invalid file entry: ${JSON.stringify(f)}` });
+  if (!isUpdateOnly) {
+    for (const f of rawFiles) {
+      if (typeof f !== "object" || f === null) continue;
+      const ff = f as Record<string, unknown>;
+      const name = sanitize(ff.name, 255);
+      const key = typeof ff.key === "string" ? ff.key.replace(/^\/+/, "") : "";
+      if (!name || !isSafeFilePath(key)) {
+        return res.status(400).json({ error: `Invalid file entry: ${JSON.stringify(f)}` });
+      }
+      files.push({ name, key });
     }
-    files.push({ name, key });
-  }
 
-  if (files.length === 0) {
-    return res.status(400).json({ error: "No valid files provided after validation." });
+    if (files.length === 0) {
+      return res.status(400).json({ error: "No valid files provided after validation." });
+    }
   }
 
   // ── Optional metadata fields ────────────────────────────────────────────
   const metadata: Record<string, unknown> = {
     updatedAt: FieldValue.serverTimestamp(),
-    // Always store the FIRST file as the legacy fileKey for backward compat
-    fileKey: files[0].key,
-    // Store all files as an array
-    fileKeys: files,
   };
 
   if (body.title) metadata.title = sanitize(body.title);
@@ -123,17 +123,21 @@ export default async function handler(req: any, res: any) {
     const existing = await noteRef.get();
 
     if (existing.exists) {
-      // Merge files with existing ones (avoid duplicates by key)
-      const existingFiles: { name: string; key: string }[] = existing.data()?.fileKeys || [];
-      const existingKeys = new Set(existingFiles.map((f) => f.key));
-      const newFiles = files.filter((f) => !existingKeys.has(f.key));
-      const mergedFiles = [...existingFiles, ...newFiles];
+      if (isUpdateOnly) {
+        await noteRef.update(metadata);
+      } else {
+        // Merge files with existing ones (avoid duplicates by key)
+        const existingFiles: { name: string; key: string }[] = existing.data()?.fileKeys || [];
+        const existingKeys = new Set(existingFiles.map((f) => f.key));
+        const newFiles = files.filter((f) => !existingKeys.has(f.key));
+        const mergedFiles = [...existingFiles, ...newFiles];
 
-      await noteRef.update({
-        ...metadata,
-        fileKey: mergedFiles[0]?.key || "",
-        fileKeys: mergedFiles,
-      });
+        await noteRef.update({
+          ...metadata,
+          fileKey: mergedFiles[0]?.key || "",
+          fileKeys: mergedFiles,
+        });
+      }
     } else {
       // Create new note document
       await noteRef.set({
