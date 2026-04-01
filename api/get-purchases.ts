@@ -29,31 +29,62 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const snapshot = await adminDb
+    // Get all completed purchases for this user
+    const purchasesSnapshot = await adminDb
       .collection("purchases")
       .where("userId", "==", verifiedUserId)
+      .where("status", "==", "completed")
       .get();
 
-    const purchases = snapshot.docs.map((doc) => {
-      const d = doc.data();
-      // Support both old single-file (fileKey) and new multi-file (fileKeys) format
-      const legacyKey = d.fileKey || "";
-      const fileKeys: { name: string; key: string }[] =
-        Array.isArray(d.fileKeys) && d.fileKeys.length > 0
-          ? d.fileKeys
-          : legacyKey
-          ? [{ name: d.title || "Document", key: legacyKey }]
-          : [];
+    if (purchasesSnapshot.empty) {
+      return res.status(200).json({ purchases: [] });
+    }
+
+    // Prepare note IDs to fetch corresponding fresh note data
+    const noteIds = new Set<string>();
+    const purchasesData = purchasesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      if (data.productId) noteIds.add(data.productId);
+      return { id: doc.id, ...data };
+    });
+
+    // Fetch the latest note metadata in parallel
+    const noteDocs = await Promise.all(
+      Array.from(noteIds).map(id => adminDb.collection("notes").doc(id).get())
+    );
+
+    // Create a dictionary of current notes
+    const notesMap = new Map();
+    noteDocs.forEach(doc => {
+      if (doc.exists) {
+        notesMap.set(doc.id, doc.data());
+      }
+    });
+
+    // Merge latest fileKeys into each purchase
+    const purchases = purchasesData.map(data => {
+      const noteMapData = notesMap.get(data.productId);
+      
+      // Attempt to load from fresh note DB data, fallback to purchase history, fallback to legacy
+      let fileKeys: any[] = [];
+      if (noteMapData && Array.isArray(noteMapData.fileKeys) && noteMapData.fileKeys.length > 0) {
+        fileKeys = noteMapData.fileKeys;
+      } else if (Array.isArray(data.fileKeys) && data.fileKeys.length > 0) {
+        fileKeys = data.fileKeys;
+      } else if (data.fileKey) {
+        // Legacy single string fallback
+        fileKeys = [{ name: data.title || data.productName || 'Document', key: data.fileKey }];
+      }
 
       return {
-        id: doc.id,
-        productId: d.productId,
-        title: d.title,
-        fileKey: legacyKey,    // legacy compat
-        fileKeys,              // multi-file support
-        price: d.price,
-        razorpay_payment_id: d.razorpay_payment_id,
-        purchasedAt: d.purchasedAt ? d.purchasedAt.toDate().toISOString() : null,
+        id: data.id,
+        productId: data.productId,
+        title: data.title,
+        fileKey: data.fileKey || "",
+        fileKeys,
+        price: data.price,
+        razorpay_payment_id: data.razorpay_payment_id,
+        purchasedAt: data.purchasedAt ? data.purchasedAt.toDate().toISOString() : null,
       };
     });
 
