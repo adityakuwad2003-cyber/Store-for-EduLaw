@@ -73,6 +73,7 @@ export default async function handler(req: any, res: any) {
       fileKey,
       fileKeys,
       price,
+      status: "completed",
       razorpay_payment_id,
       razorpay_order_id,
       purchasedAt: FieldValue.serverTimestamp(),
