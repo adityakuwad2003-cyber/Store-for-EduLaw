@@ -43,8 +43,11 @@ export function Admin() {
   // New note form
   const [noteId, setNoteId] = useState('');
   const [noteTitle, setNoteTitle] = useState('');
+  const [noteDescription, setNoteDescription] = useState('');
   const [noteCategory, setNoteCategory] = useState(CATEGORIES[0]);
   const [notePrice, setNotePrice] = useState('');
+  const [notePages, setNotePages] = useState('');
+  const [noteLanguage, setNoteLanguage] = useState('English');
   const [noteSubjectCode, setNoteSubjectCode] = useState('');
 
   const isAdmin = ADMIN_EMAILS.includes((currentUser?.email || '').toLowerCase());
@@ -171,8 +174,11 @@ export function Admin() {
       };
       if (!selectedNote) {
         saveBody.title = noteTitle;
+        saveBody.description = noteDescription || 'No description provided.';
         saveBody.category = noteCategory;
         saveBody.price = Number(notePrice) || 0;
+        saveBody.totalPages = Number(notePages) || 1;
+        saveBody.language = noteLanguage;
         saveBody.subjectCode = noteSubjectCode;
         saveBody.slug = targetNoteId;
         saveBody.isNew = true;
@@ -188,7 +194,7 @@ export function Admin() {
 
       toast.success(`${uploaded.length} file(s) uploaded successfully!`);
       setUploadFiles([]);
-      setNoteId(''); setNoteTitle(''); setNotePrice(''); setNoteSubjectCode('');
+      setNoteId(''); setNoteTitle(''); setNoteDescription(''); setNotePrice(''); setNotePages(''); setNoteSubjectCode('');
       fetchNotes();
     } catch (err: any) {
       toast.error(err.message || 'Upload failed.');
@@ -261,7 +267,7 @@ export function Admin() {
                   onChange={e => {
                     const found = notes.find(n => n.id === e.target.value) || null;
                     setSelectedNote(found);
-                    if (found) { setNoteId(''); setNoteTitle(''); }
+                    if (found) { setNoteId(''); setNoteTitle(''); setNoteDescription(''); }
                   }}
                   className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm appearance-none focus:outline-none focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
                   title="Select existing note"
@@ -292,6 +298,14 @@ export function Admin() {
                       maxLength={512} className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs font-ui text-parchment/60 mb-1">Description</label>
+                    <textarea 
+                      value={noteDescription} onChange={e => setNoteDescription(e.target.value)} 
+                      placeholder="Comprehensive notes covering..." rows={3}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50 resize-none"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-ui text-parchment/60 mb-1">Category</label>
@@ -305,6 +319,23 @@ export function Admin() {
                       <input type="number" value={notePrice} onChange={e => setNotePrice(e.target.value)} min={0} max={99999}
                         placeholder="299" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
                       />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-ui text-parchment/60 mb-1">Total Pages</label>
+                      <input type="number" value={notePages} onChange={e => setNotePages(e.target.value)} min={1} max={9999}
+                        placeholder="120" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-parchment font-ui text-sm focus:outline-none focus:border-gold/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-ui text-parchment/60 mb-1">Language</label>
+                      <select value={noteLanguage} onChange={e => setNoteLanguage(e.target.value)} title="Language"
+                        className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-3 text-parchment font-ui text-sm appearance-none focus:outline-none focus:border-gold/50">
+                        <option value="English" className="bg-ink">English</option>
+                        <option value="Hindi" className="bg-ink">Hindi</option>
+                        <option value="Both" className="bg-ink">Both</option>
+                      </select>
                     </div>
                   </div>
                 </motion.div>

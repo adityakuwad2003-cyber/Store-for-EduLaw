@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { 
   FileText, ShoppingCart, Check, ChevronLeft,
-  Shield, Zap, Clock, Star, Package, Download
+  Shield, Zap, Clock, Star, Package, Download, Loader2
 } from 'lucide-react';
-import { getNoteBySlug, notesData, getCategoryColor } from '@/data/notes';
+import { notesData, getCategoryColor } from '@/data/notes';
+import { getNoteBySlug } from '@/lib/db';
+import type { Note } from '@/types';
 import { useCartStore } from '@/store';
 import { PriceDisplay } from '@/components/ui/PriceDisplay';
 import { TrustBadges } from '@/components/ui/TrustBadges';
@@ -13,9 +15,29 @@ import { ScalesOfJustice3D, SectionBadge } from '@/components/ui/LegalSVGs';
 
 export function NoteDetail() {
   const { slug } = useParams<{ slug: string }>();
-  const note = getNoteBySlug(slug || '');
+  const [note, setNote] = useState<Note | null | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
   const { addNote, items } = useCartStore();
   const [showPurchaseSuccess, setShowPurchaseSuccess] = useState(false);
+
+  useEffect(() => {
+    if (slug) {
+      getNoteBySlug(slug).then((fetchedNote) => {
+        setNote(fetchedNote);
+        setIsLoading(false);
+      });
+    } else {
+      setIsLoading(false);
+    }
+  }, [slug]);
+
+  if (isLoading) {
+    return (
+      <div className="pt-24 min-h-screen bg-parchment flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#6B1E2E]" />
+      </div>
+    );
+  }
 
   if (!note) {
     return (
