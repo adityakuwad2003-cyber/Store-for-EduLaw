@@ -7,7 +7,7 @@ export default function AdminLayout() {
   const { sidebarCollapsed } = useAdminStore();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-ink via-[#1a0a0f] to-[#2d1020] text-parchment flex font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
       <Sidebar />
       <div 
         className={`flex-1 flex flex-col transition-all duration-300 ${

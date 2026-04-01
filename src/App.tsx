@@ -24,6 +24,7 @@ const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'));
 const AdminGuard = lazy(() => import('@/pages/admin/AdminGuard'));
 const Overview = lazy(() => import('@/pages/admin/Overview'));
 const NotesManager = lazy(() => import('@/pages/admin/products/NotesManager'));
+const BundlesManager = lazy(() => import('@/pages/admin/products/BundlesManager'));
 
 function App() {
   return (
@@ -63,6 +64,7 @@ function App() {
               >
                 <Route index element={<Overview />} />
                 <Route path="notes" element={<NotesManager />} />
+                <Route path="bundles" element={<BundlesManager />} />
               </Route>
             </Routes>
           </Suspense>
