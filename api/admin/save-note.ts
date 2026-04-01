@@ -33,6 +33,7 @@ function sanitizeNumber(val: unknown, fallback = 0): number {
 }
 
 export default async function handler(req: any, res: any) {
+  try {
   const origin = req.headers.origin || "";
   setCorsHeaders(res, origin, "POST, OPTIONS");
 
@@ -156,5 +157,9 @@ export default async function handler(req: any, res: any) {
   } catch (err) {
     console.error("Firestore save-note error:", err);
     return res.status(500).json({ error: "Failed to save note metadata." });
+  }
+  } catch (err: any) {
+    console.error("Unhandled error in save-note:", err);
+    return res.status(500).json({ error: err?.message || "An unexpected server error occurred." });
   }
 }

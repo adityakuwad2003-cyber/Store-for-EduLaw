@@ -21,6 +21,8 @@ import {
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 
 export default async function handler(req: any, res: any) {
+  // Top-level safety net — ensures we ALWAYS return JSON, never a plain-text crash page
+  try {
   const origin = req.headers.origin || "";
   setCorsHeaders(res, origin, "POST, OPTIONS");
 
@@ -83,5 +85,10 @@ export default async function handler(req: any, res: any) {
   } catch (err) {
     console.error("R2 presign error:", err);
     return res.status(500).json({ error: "Could not generate upload URL." });
+  }
+  } catch (err: any) {
+    // Outer safety net — catch anything that escaped inner handlers
+    console.error("Unhandled error in get-upload-url:", err);
+    return res.status(500).json({ error: err?.message || "An unexpected server error occurred." });
   }
 }

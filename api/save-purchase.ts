@@ -16,6 +16,7 @@ function sanitize(val: unknown, max = 512): string {
 }
 
 export default async function handler(req: any, res: any) {
+  try {
   const origin = req.headers.origin || "";
   setCorsHeaders(res, origin, "POST, OPTIONS");
 
@@ -81,5 +82,9 @@ export default async function handler(req: any, res: any) {
   } catch (err) {
     console.error("Error saving purchase:", err);
     return res.status(500).json({ error: "Failed to save purchase record." });
+  }
+  } catch (err: any) {
+    console.error("Unhandled error in save-purchase:", err);
+    return res.status(500).json({ error: err?.message || "An unexpected server error occurred." });
   }
 }

@@ -6,6 +6,7 @@ import { adminDb } from "../lib/adminInit";
 import { setCorsHeaders, verifyAdmin, isRateLimited, getClientIp } from "../lib/security";
 
 export default async function handler(req: any, res: any) {
+  try {
   const origin = req.headers.origin || "";
   setCorsHeaders(res, origin, "GET, OPTIONS");
 
@@ -46,5 +47,9 @@ export default async function handler(req: any, res: any) {
   } catch (err) {
     console.error("list-notes error:", err);
     return res.status(500).json({ error: "Failed to fetch notes." });
+  }
+  } catch (err: any) {
+    console.error("Unhandled error in list-notes:", err);
+    return res.status(500).json({ error: err?.message || "An unexpected server error occurred." });
   }
 }

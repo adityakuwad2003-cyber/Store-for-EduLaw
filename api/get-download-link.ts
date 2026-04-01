@@ -17,6 +17,7 @@ import {
 } from "./lib/security";
 
 export default async function handler(req: any, res: any) {
+  try {
   const origin = req.headers.origin || "";
   setCorsHeaders(res, origin, "POST, OPTIONS");
 
@@ -83,5 +84,9 @@ export default async function handler(req: any, res: any) {
   } catch (err) {
     console.error("R2 signed URL error:", err);
     return res.status(500).json({ error: "Could not generate secure download link." });
+  }
+  } catch (err: any) {
+    console.error("Unhandled error in get-download-link:", err);
+    return res.status(500).json({ error: err?.message || "An unexpected server error occurred." });
   }
 }

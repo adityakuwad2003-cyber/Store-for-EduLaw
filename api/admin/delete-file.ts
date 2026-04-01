@@ -8,6 +8,7 @@ import { adminDb } from "../lib/adminInit";
 import { setCorsHeaders, verifyAdmin, isRateLimited, getClientIp, isSafeFilePath } from "../lib/security";
 
 export default async function handler(req: any, res: any) {
+  try {
   const origin = req.headers.origin || "";
   setCorsHeaders(res, origin, "DELETE, OPTIONS");
 
@@ -55,5 +56,9 @@ export default async function handler(req: any, res: any) {
   } catch (err) {
     console.error("delete-file error:", err);
     return res.status(500).json({ error: "Failed to remove file." });
+  }
+  } catch (err: any) {
+    console.error("Unhandled error in delete-file:", err);
+    return res.status(500).json({ error: err?.message || "An unexpected server error occurred." });
   }
 }

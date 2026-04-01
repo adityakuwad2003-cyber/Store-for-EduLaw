@@ -79,11 +79,12 @@ export function cleanFilePath(raw: string): string {
 const ALLOWED_ORIGINS = new Set([
   "https://store.theedulaw.in",
   "https://www.store.theedulaw.in",
+  "https://store-for-edu-law.vercel.app",
   "http://localhost:5173",
 ]);
 
 export function setCorsHeaders(res: any, origin: string, methods = "POST, OPTIONS") {
-  if (ALLOWED_ORIGINS.has(origin)) {
+  if (ALLOWED_ORIGINS.has(origin) || (origin && origin.endsWith(".vercel.app"))) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
   res.setHeader("Access-Control-Allow-Methods", methods);

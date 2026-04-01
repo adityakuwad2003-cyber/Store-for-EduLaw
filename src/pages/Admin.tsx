@@ -106,20 +106,35 @@ export function Admin() {
 
     try {
       // Step 1: Get presigned PUT URL from our backend
-      const urlRes = await fetch('/api/admin/get-upload-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fileName: key, noteId: targetNoteId, fileSize: uploadFile.file.size }),
-      });
-      if (!urlRes.ok) throw new Error((await urlRes.json()).error || 'Failed to get upload URL');
+      let urlRes;
+      try {
+        urlRes = await fetch('/api/admin/get-upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ fileName: key, noteId: targetNoteId, fileSize: uploadFile.file.size }),
+        });
+      } catch (err) {
+        throw new Error('Failed to connect to backend server. CORS or Network error.');
+      }
+      
+      if (!urlRes.ok) {
+        const errData = await urlRes.json().catch(() => ({ error: 'Failed to get upload URL' }));
+        throw new Error(errData.error || 'Failed to get upload URL');
+      }
       const { uploadUrl } = await urlRes.json();
 
       // Step 2: PUT file directly to Cloudflare R2
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/pdf' },
-        body: uploadFile.file,
-      });
+      let uploadRes;
+      try {
+        uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/pdf' },
+          body: uploadFile.file,
+        });
+      } catch (err) {
+        throw new Error('Upload blocked by R2 CORS settings. Please configure Cloudflare R2 CORS rules.');
+      }
+      
       if (!uploadRes.ok) throw new Error('Upload to storage failed. Check R2 CORS settings.');
 
       setUploadFiles(prev => prev.map((f, i) => i === index ? { ...f, status: 'done', progress: 100, key } : f));
