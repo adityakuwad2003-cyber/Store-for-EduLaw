@@ -16,6 +16,7 @@ const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'adityakuwad2003@gmai
 interface FileEntry { name: string; key: string; }
 interface NoteRecord {
   id: string; title: string; slug: string; category: string;
+  description?: string; language?: string; subjectCode?: string;
   fileKeys: FileEntry[]; price: number; totalPages: number;
   isNew: boolean; isFeatured: boolean;
   createdAt: string | null; updatedAt: string | null;
