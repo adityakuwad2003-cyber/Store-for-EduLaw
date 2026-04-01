@@ -29,7 +29,7 @@ const CATEGORIES = [
   'Property Law', 'Taxation', 'Contract Law', 'Torts', 'Administrative Law', 'Other',
 ];
 
-export function Admin() {
+export default function NotesManager() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
