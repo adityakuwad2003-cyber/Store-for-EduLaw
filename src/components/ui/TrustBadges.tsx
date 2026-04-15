@@ -3,6 +3,7 @@ import { Shield, Zap, Lock, Clock, CheckCircle } from 'lucide-react';
 interface TrustBadgesProps {
   variant?: 'horizontal' | 'vertical';
   size?: 'sm' | 'md';
+  className?: string;
 }
 
 const badges = [
@@ -12,13 +13,13 @@ const badges = [
   { icon: Clock, text: '24/7 Access', subtext: 'Read anytime, anywhere' },
 ];
 
-export function TrustBadges({ variant = 'horizontal', size = 'md' }: TrustBadgesProps) {
+export function TrustBadges({ variant = 'horizontal', size = 'md', className = '' }: TrustBadgesProps) {
   const iconSize = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
 
   if (variant === 'vertical') {
     return (
-      <div className="space-y-3">
+      <div className={`space-y-3 ${className}`}>
         {badges.map((badge, index) => (
           <div key={index} className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-burgundy/10 flex items-center justify-center">
@@ -35,7 +36,7 @@ export function TrustBadges({ variant = 'horizontal', size = 'md' }: TrustBadges
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6">
+    <div className={`flex flex-wrap items-center justify-center gap-4 md:gap-6 ${className}`}>
       {badges.map((badge, index) => (
         <div key={index} className="flex items-center gap-2">
           <badge.icon className={`${iconSize} text-gold`} />

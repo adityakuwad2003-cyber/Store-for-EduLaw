@@ -18,7 +18,7 @@ import {
 
 function isSafePreviewKey(v: unknown): v is string {
   return typeof v === "string" &&
-    /^previews\/[\w\-]{1,128}\.(jpg|jpeg|png)$/.test(v) &&
+    /^previews\/[\w\-]{1,128}\.(jpg|jpeg|png|pdf)$/.test(v) &&
     !v.includes("..");
 }
 
@@ -95,9 +95,23 @@ export default async function handler(req: any, res: any) {
 
   // ── 3. Verify purchase in Firestore ────────────────────────────────────
   try {
-    const purchaseRef = adminDb.collection("purchases").doc(`${verifiedUserId}_${productId}`);
-    const purchaseSnap = await purchaseRef.get();
-    if (!purchaseSnap.exists) {
+    // Query by userId + productId (works for all new auto-ID purchases)
+    const purchaseQuery = await adminDb.collection("purchases")
+      .where("userId", "==", verifiedUserId)
+      .where("productId", "==", productId)
+      .limit(1)
+      .get();
+
+    // Fallback: legacy purchases used doc ID format "${userId}_${productId}"
+    let hasPurchase = !purchaseQuery.empty;
+    if (!hasPurchase) {
+      const legacySnap = await adminDb.collection("purchases")
+        .doc(`${verifiedUserId}_${productId}`)
+        .get();
+      hasPurchase = legacySnap.exists;
+    }
+
+    if (!hasPurchase) {
       return res.status(403).json({ error: "Forbidden: You have not purchased this document." });
     }
   } catch (err) {

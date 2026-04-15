@@ -51,14 +51,14 @@ export function Testimonials() {
 
               {/* Author */}
               <div className="flex items-center gap-3 pt-4 border-t border-parchment-dark">
-                <img
-                  src={testimonial.avatar}
-                  alt={testimonial.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-burgundy to-burgundy-light flex items-center justify-center shrink-0 shadow-sm">
+                  <span className="text-white font-display font-bold text-sm">
+                    {testimonial.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                  </span>
+                </div>
                 <div>
-                  <p className="font-ui font-medium text-ink text-sm">{testimonial.name}</p>
-                  <p className="font-ui text-xs text-mutedgray">{testimonial.college}</p>
+                  <p className="font-ui font-bold text-ink text-sm leading-tight">{testimonial.name}</p>
+                  <p className="font-ui text-[11px] text-mutedgray mt-0.5">{testimonial.college}</p>
                 </div>
               </div>
             </motion.div>

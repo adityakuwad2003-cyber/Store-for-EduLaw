@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Building2, Users, CheckCircle, Mail, Phone, User,
-  GraduationCap, BarChart3, Headphones, BookOpen, Shield, Zap,
-  ArrowRight, Star
+  Building2, Users2, GraduationCap, Check, ArrowRight, Shield, Zap, Star,
+  Mail, Phone, User, BarChart3, Headphones, BookOpen
 } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 import { collegeLicensePlans } from '@/data/notes';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -28,17 +28,22 @@ export default function CollegeLicensing() {
   return (
     <div className="min-h-screen bg-parchment">
       <Navbar />
+      <SEO 
+        title="College & Institutional Licensing — EduLaw for Universities"
+        description="Empower your law students with campus-wide access to EduLaw's premium legal library. Bulk licensing for NLUs and private law colleges."
+        canonical="/college-licensing"
+      />
       
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#6B1E2E]/5 via-parchment to-[#C9A84C]/5" />
+        <div className="absolute inset-0 bg-gradient-to-br from-burgundy/5 via-parchment to-gold/5" />
         
         {/* Floating 3D Elements */}
         <div className="absolute top-40 right-10 w-32 h-32 opacity-20 animate-float">
-          <Building2 className="w-full h-full text-[#6B1E2E]" />
+          <Building2 className="w-full h-full text-burgundy" />
         </div>
         <div className="absolute bottom-20 left-10 w-28 h-28 opacity-20 animate-float-delayed">
-          <GraduationCap className="w-full h-full text-[#C9A84C]" />
+          <GraduationCap className="w-full h-full text-gold" />
         </div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -47,13 +52,13 @@ export default function CollegeLicensing() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#6B1E2E]/10 rounded-full mb-6">
-              <Building2 className="w-4 h-4 text-[#6B1E2E]" />
-              <span className="font-ui text-sm text-[#6B1E2E]">For Educational Institutions</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-burgundy/10 rounded-full mb-6">
+              <Building2 className="w-4 h-4 text-burgundy" />
+              <span className="font-ui text-sm text-burgundy">For Educational Institutions</span>
             </div>
             
             <h1 className="font-display text-5xl md:text-6xl text-ink mb-6">
-              College <span className="text-[#C9A84C]">Licensing</span>
+              College <span className="text-gold">Licensing</span>
             </h1>
             
             <p className="font-body text-lg text-mutedgray mb-8">
@@ -64,15 +69,15 @@ export default function CollegeLicensing() {
             {/* Stats */}
             <div className="flex flex-wrap justify-center gap-8 mt-12">
               <div className="text-center">
-                <div className="font-display text-3xl text-[#6B1E2E]">50+</div>
+                <div className="font-display text-3xl text-burgundy">50+</div>
                 <div className="font-ui text-sm text-mutedgray">Partner Colleges</div>
               </div>
               <div className="text-center">
-                <div className="font-display text-3xl text-[#6B1E2E]">10,000+</div>
+                <div className="font-display text-3xl text-burgundy">10,000+</div>
                 <div className="font-ui text-sm text-mutedgray">Student Users</div>
               </div>
               <div className="text-center">
-                <div className="font-display text-3xl text-[#6B1E2E]">46</div>
+                <div className="font-display text-3xl text-burgundy">46</div>
                 <div className="font-ui text-sm text-mutedgray">Subjects Covered</div>
               </div>
             </div>
@@ -85,7 +90,7 @@ export default function CollegeLicensing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl text-ink mb-4">
-              Why Choose <span className="text-[#6B1E2E]">Institutional License?</span>
+              Why Choose <span className="text-burgundy">Institutional License?</span>
             </h2>
             <p className="font-body text-mutedgray max-w-2xl mx-auto">
               Empower your students with comprehensive legal education resources
@@ -95,7 +100,7 @@ export default function CollegeLicensing() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               { icon: BookOpen, title: 'Complete Library Access', desc: 'All 46 subjects with regular updates' },
-              { icon: Users, title: 'Unlimited Student Accounts', desc: 'Each student gets individual access' },
+              { icon: Users2, title: 'Unlimited Student Accounts', desc: 'Each student gets individual access' },
               { icon: BarChart3, title: 'Analytics Dashboard', desc: 'Track student progress and engagement' },
               { icon: Headphones, title: 'Priority Support', desc: 'Dedicated support for your institution' },
               { icon: Shield, title: 'Legal & Compliant', desc: 'All content reviewed by legal experts' },
@@ -109,8 +114,8 @@ export default function CollegeLicensing() {
                 transition={{ delay: index * 0.1 }}
                 className="p-6 bg-parchment rounded-2xl"
               >
-                <div className="w-14 h-14 bg-[#6B1E2E]/10 rounded-xl flex items-center justify-center mb-4">
-                  <feature.icon className="w-7 h-7 text-[#6B1E2E]" />
+                <div className="w-14 h-14 bg-burgundy/10 rounded-xl flex items-center justify-center mb-4">
+                  <feature.icon className="w-7 h-7 text-burgundy" />
                 </div>
                 <h3 className="font-display text-lg text-ink mb-2">{feature.title}</h3>
                 <p className="font-body text-sm text-mutedgray">{feature.desc}</p>
@@ -125,7 +130,7 @@ export default function CollegeLicensing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl text-ink mb-4">
-              Institutional <span className="text-[#C9A84C]">Plans</span>
+              Institutional <span className="text-gold">Plans</span>
             </h2>
             <p className="font-body text-mutedgray max-w-2xl mx-auto">
               Choose the plan that fits your institution's needs
@@ -142,12 +147,12 @@ export default function CollegeLicensing() {
                 transition={{ delay: index * 0.1 }}
                 className={`relative bg-white rounded-3xl border-2 overflow-hidden ${
                   selectedPlan === plan.id 
-                    ? 'border-[#6B1E2E] shadow-xl shadow-[#6B1E2E]/20' 
-                    : 'border-parchment-dark hover:border-[#6B1E2E]/50'
+                    ? 'border-burgundy shadow-xl shadow-burgundy/20' 
+                    : 'border-parchment-dark hover:border-burgundy/50'
                 } transition-all`}
               >
                 {index === 1 && (
-                  <div className="absolute top-0 left-0 right-0 bg-[#C9A84C] text-parchment text-center py-2 font-ui text-sm">
+                  <div className="absolute top-0 left-0 right-0 bg-gold text-parchment text-center py-2 font-ui text-sm">
                     Most Popular
                   </div>
                 )}
@@ -160,7 +165,7 @@ export default function CollegeLicensing() {
                   
                   <div className="text-center mb-8">
                     <div className="flex items-baseline justify-center gap-1">
-                      <span className="font-display text-4xl text-[#6B1E2E]">₹{plan.price.toLocaleString()}</span>
+                      <span className="font-display text-4xl text-burgundy">₹{plan.price.toLocaleString()}</span>
                       <span className="font-ui text-mutedgray">/{plan.period}</span>
                     </div>
                     <p className="font-ui text-sm text-mutedgray mt-2">
@@ -171,7 +176,7 @@ export default function CollegeLicensing() {
                   <ul className="space-y-3 mb-8">
                     {plan.features.map((feature, fIndex) => (
                       <li key={fIndex} className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                         <span className="font-body text-sm text-mutedgray">{feature}</span>
                       </li>
                     ))}
@@ -181,8 +186,8 @@ export default function CollegeLicensing() {
                     onClick={() => setSelectedPlan(plan.id)}
                     className={`w-full py-4 rounded-xl font-ui font-semibold transition-all ${
                       selectedPlan === plan.id
-                        ? 'bg-[#6B1E2E] text-parchment'
-                        : 'bg-parchment text-[#6B1E2E] hover:bg-[#6B1E2E] hover:text-parchment'
+                        ? 'bg-burgundy text-parchment'
+                        : 'bg-parchment text-burgundy hover:bg-burgundy hover:text-parchment'
                     }`}
                   >
                     {selectedPlan === plan.id ? 'Selected' : 'Select Plan'}
@@ -216,7 +221,7 @@ export default function CollegeLicensing() {
                       required
                       value={formData.collegeName}
                       onChange={(e) => setFormData({...formData, collegeName: e.target.value})}
-                      className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-[#6B1E2E]"
+                      className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-burgundy"
                       placeholder="Enter college name"
                     />
                   </div>
@@ -231,7 +236,7 @@ export default function CollegeLicensing() {
                       required
                       value={formData.contactPerson}
                       onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
-                      className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-[#6B1E2E]"
+                      className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-burgundy"
                       placeholder="Enter contact person name"
                     />
                   </div>
@@ -246,7 +251,7 @@ export default function CollegeLicensing() {
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-[#6B1E2E]"
+                      className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-burgundy"
                       placeholder="Enter email address"
                     />
                   </div>
@@ -258,10 +263,12 @@ export default function CollegeLicensing() {
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-mutedgray" />
                     <input
                       type="tel"
+                      id="phone"
+                      title="Your phone number"
                       required
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-[#6B1E2E]"
+                      className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-burgundy"
                       placeholder="Enter phone number"
                     />
                   </div>
@@ -271,13 +278,13 @@ export default function CollegeLicensing() {
               <div>
                 <label className="block font-ui text-sm text-mutedgray mb-2">Number of Students *</label>
                 <div className="relative">
-                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-mutedgray" />
+                  <Users2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-mutedgray" />
                   <input
                     type="number"
                     required
                     value={formData.studentCount}
                     onChange={(e) => setFormData({...formData, studentCount: e.target.value})}
-                    className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-[#6B1E2E]"
+                    className="w-full pl-12 pr-4 py-4 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-burgundy"
                     placeholder="Approximate number of students"
                   />
                 </div>
@@ -285,7 +292,7 @@ export default function CollegeLicensing() {
               
               <button
                 type="submit"
-                className="w-full py-4 bg-gradient-to-r from-[#6B1E2E] to-[#8B2E42] text-parchment rounded-xl font-ui font-semibold hover:shadow-lg hover:shadow-[#6B1E2E]/30 transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 bg-gradient-to-r from-burgundy to-burgundy-light text-parchment rounded-xl font-ui font-semibold hover:shadow-lg hover:shadow-burgundy/30 transition-all flex items-center justify-center gap-2"
               >
                 <ArrowRight className="w-5 h-5" />
                 Submit Inquiry
@@ -300,7 +307,7 @@ export default function CollegeLicensing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl text-ink mb-4">
-              Trusted by <span className="text-[#6B1E2E]">Leading Institutions</span>
+              Trusted by <span className="text-burgundy">Leading Institutions</span>
             </h2>
           </div>
           
@@ -332,7 +339,7 @@ export default function CollegeLicensing() {
               >
                 <div className="flex items-center gap-1 mb-4">
                   {[1, 2, 3, 4, 5].map(star => (
-                    <Star key={star} className="w-5 h-5 text-[#C9A84C] fill-[#C9A84C]" />
+                    <Star key={star} className="w-5 h-5 text-gold fill-[#C9A84C]" />
                   ))}
                 </div>
                 <p className="font-body text-mutedgray mb-6">"{testimonial.quote}"</p>
@@ -349,13 +356,13 @@ export default function CollegeLicensing() {
       {/* CTA Section */}
       <section className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-r from-[#6B1E2E] to-[#8B2E42] rounded-3xl p-12 text-center text-parchment">
+          <div className="bg-gradient-to-r from-burgundy to-burgundy-light rounded-3xl p-12 text-center text-parchment">
             <h2 className="font-display text-3xl mb-4">Ready to Get Started?</h2>
             <p className="font-body mb-8 opacity-90">
               Contact us today for a personalized demo and custom quote for your institution
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <button className="px-8 py-4 bg-parchment text-[#6B1E2E] rounded-xl font-ui font-semibold hover:shadow-lg transition-all flex items-center gap-2">
+              <button className="px-8 py-4 bg-parchment text-burgundy rounded-xl font-ui font-semibold hover:shadow-lg transition-all flex items-center gap-2">
                 <Phone className="w-5 h-5" />
                 Call Us: +91 98765 43210
               </button>

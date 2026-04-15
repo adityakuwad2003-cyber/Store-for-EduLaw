@@ -4,7 +4,7 @@ import {
   Star, X, Save,
   Loader2, BookOpen,
   FileText, Upload, CheckCircle, AlertCircle,
-  RefreshCw, Trash2, Image as ImageIcon
+  RefreshCw, Trash2, Image as ImageIcon, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -25,11 +25,34 @@ interface Note {
   price: number;
   fileKey: string;
   fileKeys: FileEntry[];
+  samplePdfKey?: string;
+  previewImageKey?: string; // Legacy support
+  previewImageKeys?: string[]; // Multiple previews
   totalPages: number;
+  description?: string;
   isNew: boolean;
   isFeatured: boolean;
+  contentFeatures?: string[];
+  featuredSections?: { title: string; content: string }[];
+  publicDescription?: string;
+  language: string; // Ensure language is here
+  tableOfContents?: string[];
+  audioSummaryKeyEnglish?: string;
+  audioSummaryKeyHindi?: string;
+  infographicKey?: string;
+  quizData?: string;
   createdAt: string | null;
   updatedAt: string | null;
+  hasGst?: boolean;
+  gstRate?: number;
+}
+
+interface PreviewFile {
+  id: string;
+  file?: File;
+  key?: string;
+  status: 'pending' | 'uploading' | 'done' | 'error';
+  url: string;
 }
 
 interface NoteForm {
@@ -37,9 +60,21 @@ interface NoteForm {
   category: string;
   price: number | string;
   description: string;
+  publicDescription: string;
   isFeatured: boolean;
   isNew: boolean;
   language: string;
+  contentFeatures: string[];
+  featuredSections: { title: string; content: string }[];
+  tableOfContents: string[];
+  audioSummaryKeyEnglish: string;
+  audioSummaryKeyHindi: string;
+  infographicKey: string;
+  quizData: string;
+  previewImageKeys: string[];
+  totalPages: number | string;
+  hasGst: boolean;
+  gstRate: number;
 }
 
 interface QueuedFile {
@@ -61,9 +96,21 @@ const BLANK_FORM: NoteForm = {
   category: '',
   price: '',
   description: '',
+  publicDescription: '',
   isFeatured: false,
   isNew: true,
   language: 'English',
+  contentFeatures: [],
+  featuredSections: [],
+  tableOfContents: [],
+  audioSummaryKeyEnglish: '',
+  audioSummaryKeyHindi: '',
+  infographicKey: '',
+  quizData: '',
+  previewImageKeys: [],
+  totalPages: '',
+  hasGst: true,
+  gstRate: 18,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,12 +148,28 @@ export default function NotesManager() {
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Preview image upload
-  const [previewFile, setPreviewFile]       = useState<File | null>(null);
-  const [previewStatus, setPreviewStatus]   = useState<'idle'|'uploading'|'done'|'error'>('idle');
-  const [previewImageKey, setPreviewImageKey] = useState<string>('');
-  const [previewThumb, setPreviewThumb]     = useState<string>('');
+  // Preview images (Multi-upload)
+  const [previewFiles, setPreviewFiles] = useState<PreviewFile[]>([]);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const previewInputRef = useRef<HTMLInputElement>(null);
+
+  // Sample PDF upload (low-res preview pdf)
+  const [sampleFile, setSampleFile]       = useState<File | null>(null);
+  const [sampleStatus, setSampleStatus]   = useState<'idle'|'uploading'|'done'|'error'>('idle');
+  const [samplePdfKey, setSamplePdfKey]   = useState<string>('');
+  const [sampleThumb, setSampleThumb]     = useState<string>('');
+  const sampleInputRef = useRef<HTMLInputElement>(null);
+
+  // Mastery content uploads
+  const [audioEnFile, setAudioEnFile]     = useState<File | null>(null);
+  const [audioEnStatus, setAudioEnStatus] = useState<'idle'|'uploading'|'done'|'error'>('idle');
+  const [audioHiFile, setAudioHiFile]     = useState<File | null>(null);
+  const [audioHiStatus, setAudioHiStatus] = useState<'idle'|'uploading'|'done'|'error'>('idle');
+  const [infoFile, setInfoFile]           = useState<File | null>(null);
+  const [infoStatus, setInfoStatus]       = useState<'idle'|'uploading'|'done'|'error'>('idle');
+  const audioEnInputRef = useRef<HTMLInputElement>(null);
+  const audioHiInputRef = useRef<HTMLInputElement>(null);
+  const infoInputRef = useRef<HTMLInputElement>(null);
 
   // Confirm delete state
   const [deletingKey, setDeletingKey] = useState<{ noteId: string; key: string } | null>(null);
@@ -117,7 +180,7 @@ export default function NotesManager() {
     setLoading(true);
     try {
       const token = await getBearerToken();
-      const res = await fetch('/api/admin/list-notes', {
+      const res = await fetch('/api/admin/list-data?type=notes', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -138,10 +201,21 @@ export default function NotesManager() {
   // ── Open editor ───────────────────────────────────────────────────────────
 
   const resetPreview = () => {
-    setPreviewFile(null);
-    setPreviewStatus('idle');
-    setPreviewImageKey('');
-    setPreviewThumb('');
+    setPreviewFiles([]);
+    if (previewInputRef.current) previewInputRef.current.value = '';
+  };
+
+  const resetSample = () => {
+    setSampleFile(null);
+    setSampleStatus('idle');
+    setSamplePdfKey('');
+    setSampleThumb('');
+  };
+
+  const resetMasteryState = () => {
+    setAudioEnFile(null); setAudioEnStatus('idle');
+    setAudioHiFile(null); setAudioHiStatus('idle');
+    setInfoFile(null); setInfoStatus('idle');
   };
 
   const openCreate = () => {
@@ -149,6 +223,8 @@ export default function NotesManager() {
     setForm(BLANK_FORM);
     setFileQueue([]);
     resetPreview();
+    resetSample();
+    resetMasteryState();
     setIsEditorOpen(true);
   };
 
@@ -158,17 +234,39 @@ export default function NotesManager() {
       title: note.title,
       category: note.category,
       price: note.price,
-      description: '',
+      description: note.description || '', 
+      publicDescription: note.publicDescription || '',
       isFeatured: note.isFeatured,
       isNew: note.isNew,
-      language: 'English',
+      language: (note as any).language || 'English',
+      contentFeatures: note.contentFeatures || [],
+      featuredSections: note.featuredSections || [],
+      tableOfContents: note.tableOfContents || [],
+      audioSummaryKeyEnglish: note.audioSummaryKeyEnglish || '',
+      audioSummaryKeyHindi: note.audioSummaryKeyHindi || '',
+      infographicKey: note.infographicKey || '',
+      quizData: note.quizData || '',
+      previewImageKeys: note.previewImageKeys || (note.previewImageKey ? [note.previewImageKey] : []),
+      totalPages: note.totalPages || '',
+      hasGst: note.hasGst ?? true,
+      gstRate: note.gstRate ?? 18,
     });
     setFileQueue([]);
     resetPreview();
-    // Show existing preview key
-    if ((note as any).previewImageKey) {
-      setPreviewImageKey((note as any).previewImageKey);
+    resetSample();
+
+    // Load existing previews into the multi-upload queue
+    const existingKeys = note.previewImageKeys || (note.previewImageKey ? [note.previewImageKey] : []);
+    if (existingKeys.length > 0) {
+      setPreviewFiles(existingKeys.map(key => ({
+        id: Math.random().toString(36).substring(7),
+        key,
+        status: 'done',
+        url: `/api/get-download-link?previewKey=${encodeURIComponent(key)}`
+      })));
     }
+
+    if (note.samplePdfKey) setSamplePdfKey(note.samplePdfKey);
     setIsEditorOpen(true);
   };
 
@@ -176,44 +274,189 @@ export default function NotesManager() {
     setIsEditorOpen(false);
     setFileQueue([]);
     resetPreview();
+    resetSample();
+    resetMasteryState();
   };
 
   // ── Preview image selection & upload ──────────────────────────────────────
+  // ... (existing selectPreviewFile and uploadPreviewImage) ...
 
-  const selectPreviewFile = (file: File) => {
-    if (!file.type.startsWith('image/')) { toast.error('Please select a JPG or PNG image.'); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error('Preview image must be under 5 MB.'); return; }
-    setPreviewFile(file);
-    setPreviewStatus('idle');
-    setPreviewThumb(URL.createObjectURL(file));
+  // ── Sample PDF selection & upload ─────────────────────────────────────────
+
+  const selectSampleFile = (file: File) => {
+    if (file.type !== 'application/pdf') { toast.error('Please select a PDF file for the sample.'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('Sample PDF must be under 10 MB.'); return; }
+    setSampleFile(file);
+    setSampleStatus('idle');
+    setSampleThumb(file.name);
   };
 
-  const uploadPreviewImage = async (noteId: string, token: string): Promise<string> => {
-    if (!previewFile) return previewImageKey; // already uploaded or none
-    setPreviewStatus('uploading');
-    const ext  = previewFile.name.endsWith('.png') ? 'png' : 'jpg';
-    const key  = `previews/${noteId}.${ext}`;
+  const uploadSamplePdf = async (noteId: string, token: string): Promise<string> => {
+    if (!sampleFile) return samplePdfKey;
+    setSampleStatus('uploading');
+    const key = `samples/${noteId}.pdf`;
     try {
       const urlRes = await fetch('/api/admin/get-upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fileName: key, fileSize: previewFile.size }),
+        body: JSON.stringify({ fileName: key, noteId, fileSize: sampleFile.size }),
       });
       if (!urlRes.ok) throw new Error((await urlRes.json()).error || 'URL error');
       const { uploadUrl } = await urlRes.json();
       const putRes = await fetch(uploadUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': previewFile.type },
-        body: previewFile,
+        headers: { 'Content-Type': 'application/pdf' },
+        body: sampleFile,
       });
       if (!putRes.ok) throw new Error(`R2 upload failed (${putRes.status})`);
-      setPreviewStatus('done');
-      setPreviewImageKey(key);
+      setSampleStatus('done');
+      setSamplePdfKey(key);
       return key;
     } catch (err: any) {
-      setPreviewStatus('error');
+      setSampleStatus('error');
       throw err;
     }
+  };
+
+  // ── Mastery Content selection & upload ─────────────────────────────────────
+  
+  const selectAudioEnFile = (file: File) => {
+    if (!file.type.startsWith('audio/')) { toast.error('Please select an MP3 file.'); return; }
+    if (file.size > 25 * 1024 * 1024) { toast.error('Audio must be under 25 MB.'); return; }
+    setAudioEnFile(file);
+    setAudioEnStatus('idle');
+  };
+
+  const selectAudioHiFile = (file: File) => {
+    if (!file.type.startsWith('audio/')) { toast.error('Please select an MP3 file.'); return; }
+    if (file.size > 25 * 1024 * 1024) { toast.error('Audio must be under 25 MB.'); return; }
+    setAudioHiFile(file);
+    setAudioHiStatus('idle');
+  };
+
+  const selectInfoFile = (file: File) => {
+    if (file.type !== 'application/pdf' && !file.type.startsWith('image/')) { toast.error('Please select a PDF or Image file.'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('Infographic must be under 10 MB.'); return; }
+    setInfoFile(file);
+    setInfoStatus('idle');
+  };
+
+  const uploadMasteryFile = async (
+    file: File | null, 
+    noteId: string, 
+    token: string, 
+    prefix: 'audio' | 'infographics', 
+    suffix: string, 
+    setStatus: (s: 'idle'|'uploading'|'done'|'error') => void,
+    existingKey: string
+  ): Promise<string> => {
+    if (!file) return existingKey;
+    setStatus('uploading');
+    const ext = file.name.split('.').pop() || (prefix === 'audio' ? 'mp3' : 'pdf');
+    const key = `${prefix}/${noteId}_${suffix}.${ext}`;
+    try {
+      const urlRes = await fetch('/api/admin/get-upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: key, noteId, fileSize: file.size }),
+      });
+      if (!urlRes.ok) throw new Error((await urlRes.json()).error || 'URL error');
+      const { uploadUrl } = await urlRes.json();
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error(`R2 upload failed (${putRes.status})`);
+      setStatus('done');
+      return key;
+    } catch (err: any) {
+      setStatus('error');
+      throw err;
+    }
+  };
+
+  const selectPreviewFiles = (files: FileList | null) => {
+    if (!files) return;
+    setPreviewError(null);
+
+    const newFiles = Array.from(files).filter(f => {
+      if (!f.type.startsWith('image/')) { toast.error(`${f.name} is not an image.`); return false; }
+      if (f.size > 5 * 1024 * 1024) { toast.error(`${f.name} exceeds 5MB.`); return false; }
+      return true;
+    });
+
+    if (previewFiles.length + newFiles.length > 10) {
+      setPreviewError('Maximum 10 preview images allowed.');
+      return;
+    }
+
+    const newEntries: PreviewFile[] = newFiles.map(f => ({
+      id: Math.random().toString(36).substring(7),
+      file: f,
+      status: 'pending',
+      url: URL.createObjectURL(f),
+    }));
+
+    setPreviewFiles(prev => [...prev, ...newEntries]);
+  };
+
+  const removePreviewFile = (id: string) => {
+    setPreviewFiles(prev => {
+      const filtered = prev.filter(f => f.id !== id);
+      const removed = prev.find(f => f.id === id);
+      if (removed?.url && removed.url.startsWith('blob:')) {
+        URL.revokeObjectURL(removed.url);
+      }
+      return filtered;
+    });
+    setPreviewError(null);
+  };
+
+  const uploadPreviewImages = async (noteId: string, token: string): Promise<string[]> => {
+    const results: string[] = [];
+    
+    // Create a copy of the queue for processing
+    for (let i = 0; i < previewFiles.length; i++) {
+      const item = previewFiles[i];
+      
+      if (item.status === 'done' && item.key) {
+        results.push(item.key);
+        continue;
+      }
+
+      if (!item.file) continue;
+
+      // Update status to uploading in the state
+      setPreviewFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'uploading' } : f));
+
+      const ext = (item.file.name.split('.').pop() || 'jpg').toLowerCase().replace('jpeg', 'jpg');
+      const key = `previews/${noteId}_${item.id}.${ext}`;
+
+      try {
+        const urlRes = await fetch('/api/admin/get-upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ fileName: key, noteId, fileSize: item.file.size }),
+        });
+        if (!urlRes.ok) throw new Error('Upload URL error');
+        const { uploadUrl } = await urlRes.json();
+        
+        const putRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': item.file.type },
+          body: item.file,
+        });
+        if (!putRes.ok) throw new Error('R2 upload error');
+
+        setPreviewFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'done', key } : f));
+        results.push(key);
+      } catch (err) {
+        setPreviewFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: 'error' } : f));
+        throw err;
+      }
+    }
+    return results;
   };
 
   // ── File selection ────────────────────────────────────────────────────────
@@ -338,16 +581,52 @@ export default function NotesManager() {
 
       const allFiles = [...alreadyDone, ...uploadedEntries];
 
-      // Upload preview image if one was selected
-      let savedPreviewKey = previewImageKey;
-      if (previewFile) {
+      // Upload preview images (multi-upload)
+      let finalPreviewKeys: string[] = [];
+      try {
+        finalPreviewKeys = await uploadPreviewImages(noteId, token);
+      } catch (err: any) {
+        toast.error(`Preview image upload failed: ${err.message}`);
+        setSaving(false);
+        return;
+      }
+
+      // Track images to delete (those that were in the original note but are no longer in the final list)
+      const initialKeys = editingId ? (notes.find(n => n.id === editingId)?.previewImageKeys || (notes.find(n => n.id === editingId)?.previewImageKey ? [notes.find(n => n.id === editingId)!.previewImageKey!] : [])) : [];
+      const imagesToDelete = initialKeys.filter(k => !finalPreviewKeys.includes(k));
+
+      // Upload sample PDF if one was selected
+      let savedSampleKey = samplePdfKey;
+      if (sampleFile) {
         try {
-          savedPreviewKey = await uploadPreviewImage(noteId, token);
+          savedSampleKey = await uploadSamplePdf(noteId, token);
         } catch (err: any) {
-          toast.error(`Preview image upload failed: ${err.message}`);
+          toast.error(`Sample PDF upload failed: ${err.message}`);
           setSaving(false);
           return;
         }
+      }
+
+      // Upload Mastery Content Files
+      let savedAudioEnKey = form.audioSummaryKeyEnglish;
+      if (audioEnFile) {
+        try {
+          savedAudioEnKey = await uploadMasteryFile(audioEnFile, noteId, token, 'audio', 'en', setAudioEnStatus, savedAudioEnKey);
+        } catch (err: any) { toast.error(`Audio EN upload failed: ${err.message}`); setSaving(false); return; }
+      }
+
+      let savedAudioHiKey = form.audioSummaryKeyHindi;
+      if (audioHiFile) {
+        try {
+          savedAudioHiKey = await uploadMasteryFile(audioHiFile, noteId, token, 'audio', 'hi', setAudioHiStatus, savedAudioHiKey);
+        } catch (err: any) { toast.error(`Audio HI upload failed: ${err.message}`); setSaving(false); return; }
+      }
+
+      let savedInfoKey = form.infographicKey;
+      if (infoFile) {
+        try {
+          savedInfoKey = await uploadMasteryFile(infoFile, noteId, token, 'infographics', 'map', setInfoStatus, savedInfoKey);
+        } catch (err: any) { toast.error(`Infographic upload failed: ${err.message}`); setSaving(false); return; }
       }
 
       // Save note metadata to Firestore via admin API
@@ -357,13 +636,31 @@ export default function NotesManager() {
         category: form.category,
         price: Number(form.price) || 0,
         description: form.description,
+        publicDescription: form.publicDescription,
         language: form.language,
         isFeatured: form.isFeatured,
         isNew: form.isNew,
         slug: noteId,
         files: allFiles,
         isUpdateOnly: editingId !== null && allFiles.length === 0,
-        ...(savedPreviewKey ? { previewImageKey: savedPreviewKey } : {}),
+        contentFeatures: form.contentFeatures,
+        featuredSections: form.featuredSections,
+        tableOfContents: form.tableOfContents,
+        previewImageKeys: finalPreviewKeys,
+        previewImageKey: finalPreviewKeys[0] || '', // Legacy compatibility
+        imagesToDelete, // Flagged for removal
+        totalPages: Number(form.totalPages) || 0,
+        hasGst: form.hasGst,
+        gstRate: Number(form.gstRate) || 0,
+        audioSummaryKeyEnglish: savedAudioEnKey,
+        audioSummaryKeyHindi: savedAudioHiKey,
+        infographicKey: savedInfoKey,
+        quizData: form.quizData,
+        ...(savedSampleKey ? { samplePdfKey: savedSampleKey } : {}),
+        // TODO: Confirm with backend whether to send:
+        // (a) newImages + imagesToDelete separately, or
+        // (b) full updated images array in one field
+        // Current implementation uses option (b) with an additional imagesToDelete flag — adjust if needed
       };
 
       const saveRes = await fetch('/api/admin/save-note', {
@@ -413,6 +710,29 @@ export default function NotesManager() {
       fetchNotes();
     } catch (err: any) {
       toast.error(err.message || 'Could not delete file');
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!window.confirm('Are you sure you want to delete this note completely? This cannot be undone.')) return;
+    try {
+      const token = await getBearerToken();
+      const res = await fetch('/api/admin/delete-product', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ productId: noteId, collectionName: 'notes' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(err.error || `Delete error ${res.status}`);
+      }
+      toast.success('Note deleted successfully');
+      fetchNotes();
+    } catch (err: any) {
+      toast.error(err.message || 'Could not delete note');
     }
   };
 
@@ -481,10 +801,10 @@ export default function NotesManager() {
       label: '',
       className: 'w-24',
       render: (row) => (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); openEdit(row); }}
-            className="p-2 hover:bg-gold/10 text-slate-400 hover:text-gold rounded-lg transition-all"
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-gold/10 hover:text-gold hover:border-gold/30 rounded-lg transition-all shadow-sm"
             title="Edit note"
             aria-label="Edit note"
           >
@@ -492,11 +812,19 @@ export default function NotesManager() {
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); window.open(`/notes/${row.slug}`, '_blank'); }}
-            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-900 rounded-lg transition-all"
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-all shadow-sm"
             title="Preview on store"
             aria-label="Preview on store"
           >
             <Eye className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDeleteNote(row.id as string); }}
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-500 hover:border-red-200 rounded-lg transition-all shadow-sm"
+            title="Delete note completely"
+            aria-label="Delete note completely"
+          >
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       ),
@@ -525,7 +853,7 @@ export default function NotesManager() {
           <button
             onClick={fetchNotes}
             disabled={loading}
-            className="p-3 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-400 hover:text-gold transition-all"
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-gold hover:shadow-sm rounded-xl transition-all shadow-sm"
             title="Refresh"
             aria-label="Refresh notes"
           >
@@ -611,7 +939,7 @@ export default function NotesManager() {
             >
               <form onSubmit={handleSave} className="flex flex-col min-h-screen">
                 {/* Sticky header */}
-                <div className="sticky top-0 z-20 px-8 py-6 bg-white border-b border-slate-200 flex items-center justify-between">
+                <div className="sticky top-0 z-20 px-4 sm:px-8 py-4 sm:py-6 bg-white border-b border-slate-200 flex items-center justify-between">
                   <div>
                     <h2 className="font-display text-xl text-slate-900">
                       {editingId ? 'Edit Note' : 'Upload New Note'}
@@ -630,7 +958,7 @@ export default function NotesManager() {
                   </button>
                 </div>
 
-                <div className="p-8 space-y-10 pb-36">
+                <div className="px-4 sm:px-8 py-6 sm:py-8 space-y-10 pb-36">
                   {/* ── Basic Info ── */}
                   <section className="space-y-6">
                     <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">
@@ -649,6 +977,32 @@ export default function NotesManager() {
                           className="admin-input"
                           placeholder="e.g. BNSS Volume 1 — Complete Notes"
                         />
+                      </div>
+
+                      <div className="col-span-2">
+                        <label htmlFor="note-description" className="input-label">Short Description (Card) *</label>
+                        <textarea
+                          id="note-description"
+                          required
+                          rows={2}
+                          value={form.description}
+                          onChange={e => setForm(v => ({ ...v, description: e.target.value }))}
+                          className="admin-input py-3"
+                          placeholder="Brief 1-2 sentence description for the marketplace card..."
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <label htmlFor="note-public-description" className="input-label">Content Description (Product Page)</label>
+                        <textarea
+                          id="note-public-description"
+                          rows={4}
+                          value={form.publicDescription || ''}
+                          onChange={e => setForm(v => ({ ...v, publicDescription: e.target.value }))}
+                          className="admin-input py-3"
+                          placeholder="Full detailed description shown on the product detail page. Supports basic HTML formatting."
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1 ml-1 font-ui">Displays under 'Overview &amp; Scope' on the product page</p>
                       </div>
 
                       <div>
@@ -695,6 +1049,20 @@ export default function NotesManager() {
                           <option value="Hindi">Hindi</option>
                           <option value="Both">Both</option>
                         </select>
+                      </div>
+
+                      <div>
+                        <label htmlFor="note-total-pages" className="input-label">Total Pages *</label>
+                        <input
+                          id="note-total-pages"
+                          type="number"
+                          required
+                          min="0"
+                          value={form.totalPages}
+                          onChange={e => setForm(v => ({ ...v, totalPages: e.target.value }))}
+                          className="admin-input"
+                          placeholder="0"
+                        />
                       </div>
 
                       <div className="flex items-end gap-6">
@@ -758,7 +1126,7 @@ export default function NotesManager() {
                       />
                     </div>
 
-                    {/* File list */}
+                    {/* File list — queued for upload */}
                     {fileQueue.length > 0 && (
                       <div className="space-y-2">
                         {fileQueue.map((item, i) => (
@@ -791,6 +1159,8 @@ export default function NotesManager() {
                               <button
                                 type="button"
                                 onClick={() => removeQueued(i)}
+                                title="Remove file from queue"
+                                aria-label="Remove file from queue"
                                 className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-all flex-shrink-0"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -801,7 +1171,7 @@ export default function NotesManager() {
                       </div>
                     )}
 
-                    {/* Show existing files when editing */}
+                    {/* Currently attached files (edit mode) */}
                     {editingId && (() => {
                       const note = notes.find(n => n.id === editingId);
                       const existing = note?.fileKeys?.length
@@ -813,8 +1183,8 @@ export default function NotesManager() {
                           <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black ml-1">
                             Currently attached files
                           </p>
-                          {existing.map((f, i) => (
-                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                          {existing.map((f, idx) => (
+                            <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                               <CheckCircle className="w-4 h-4 text-green-500/60 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs text-slate-700 truncate font-ui">{f.name}</p>
@@ -825,6 +1195,7 @@ export default function NotesManager() {
                                 onClick={() => setDeletingKey({ noteId: editingId, key: f.key })}
                                 className="p-1.5 hover:bg-red-50 rounded-lg text-slate-300 hover:text-red-500 transition-all flex-shrink-0"
                                 title="Remove this file"
+                                aria-label="Remove this file"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -835,99 +1206,559 @@ export default function NotesManager() {
                     })()}
                   </section>
 
-                  {/* ── Preview Image ── */}
+                  {/* ── Preview Images (multi-upload, max 10) ── */}
+                  <section className="space-y-4">
+                    {/* Header row */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">
+                        Preview Images
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-[9px] font-ui uppercase tracking-widest font-black ${previewFiles.length >= 10 ? 'text-red-400' : 'text-slate-400'}`}>
+                          {previewFiles.length} / 10
+                        </span>
+                        <span className="text-[9px] text-slate-300 font-ui uppercase tracking-widest">
+                          JPG · PNG · WEBP · GIF
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Inline error */}
+                    {previewError && (
+                      <p className="text-[11px] text-red-500 font-ui bg-red-50 border border-red-100 rounded-xl px-3 py-2 flex items-center gap-2">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        {previewError}
+                      </p>
+                    )}
+
+                    {/* ── Empty drop zone (no images yet) ── */}
+                    {previewFiles.length === 0 && (
+                      <div
+                        className="border-2 border-dashed border-slate-200 hover:border-gold/40 rounded-2xl p-10 text-center cursor-pointer transition-all group"
+                        onClick={() => { if (previewInputRef.current) { previewInputRef.current.value = ''; previewInputRef.current.click(); } }}
+                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                        onDrop={e => { e.preventDefault(); e.stopPropagation(); selectPreviewFiles(e.dataTransfer.files); }}
+                      >
+                        <ImageIcon className="w-10 h-10 text-slate-200 group-hover:text-gold/50 mx-auto mb-3 transition-colors" />
+                        <p className="text-sm text-slate-500 font-ui">
+                          Click or drag &amp; drop images here
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-1.5 font-ui uppercase tracking-widest">
+                          JPG, PNG, WEBP, GIF · max 5 MB each · up to 10 images
+                        </p>
+                      </div>
+                    )}
+
+                    {/* ── Responsive image grid (3 cols mobile → 4 cols desktop) ── */}
+                    {previewFiles.length > 0 && (
+                      <>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                          {previewFiles.map((img, idx) => (
+                            <div
+                              key={img.id}
+                              className={`relative rounded-xl overflow-hidden border-2 transition-all ${
+                                img.status === 'uploading'
+                                  ? 'border-gold/60 animate-pulse'
+                                  : img.status === 'error'
+                                  ? 'border-red-300 bg-red-50'
+                                  : img.status === 'done'
+                                  ? 'border-green-200'
+                                  : 'border-gold/40'
+                              }`}
+                              style={{ aspectRatio: '1 / 1' }}
+                            >
+                              {/* Image — use img element directly; no lazy loading so it appears immediately */}
+                              {img.url ? (
+                                <img
+                                  src={img.url}
+                                  alt={`Preview ${idx + 1}`}
+                                  className="absolute inset-0 w-full h-full object-cover bg-slate-100"
+                                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              ) : (
+                                <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">
+                                  <ImageIcon className="w-6 h-6 text-slate-300" />
+                                </div>
+                              )}
+
+                              {/* Uploading spinner overlay */}
+                              {img.status === 'uploading' && (
+                                <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                                  <Loader2 className="w-5 h-5 text-gold animate-spin" />
+                                </div>
+                              )}
+
+                              {/* Bottom-left badge */}
+                              <span className={`absolute bottom-1 left-1 text-[8px] rounded px-1 py-0.5 font-black uppercase leading-tight ${
+                                img.status === 'done'
+                                  ? 'bg-green-500/90 text-white'
+                                  : img.status === 'error'
+                                  ? 'bg-red-500/90 text-white'
+                                  : img.status === 'uploading'
+                                  ? 'bg-gold/90 text-white'
+                                  : 'bg-gold text-white'
+                              }`}>
+                                {img.status === 'done' ? '✓' : img.status === 'error' ? '!' : img.status === 'uploading' ? '…' : 'new'}
+                              </span>
+
+                              {/* Position number */}
+                              <span className="absolute top-1 left-1 text-[8px] bg-black/40 text-white rounded px-1 py-0.5 leading-tight font-bold">
+                                {idx + 1}
+                              </span>
+
+                              {/* Remove button — 28×28px for easy tap on mobile */}
+                              <button
+                                type="button"
+                                onClick={() => removePreviewFile(img.id)}
+                                disabled={img.status === 'uploading'}
+                                className="absolute top-1 right-1 w-7 h-7 bg-white/90 hover:bg-red-500 rounded-full shadow-md flex items-center justify-center text-slate-600 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                title="Remove image"
+                                aria-label={`Remove preview image ${idx + 1}`}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+
+                          {/* "Add more" tile — appears inside the grid */}
+                          {previewFiles.length < 10 && (
+                            <div
+                              className="rounded-xl border-2 border-dashed border-slate-200 hover:border-gold/40 hover:bg-gold/5 flex flex-col items-center justify-center cursor-pointer transition-all group"
+                              style={{ aspectRatio: '1 / 1' }}
+                              onClick={() => { if (previewInputRef.current) { previewInputRef.current.value = ''; previewInputRef.current.click(); } }}
+                              onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                              onDrop={e => { e.preventDefault(); e.stopPropagation(); selectPreviewFiles(e.dataTransfer.files); }}
+                            >
+                              <Plus className="w-6 h-6 text-slate-300 group-hover:text-gold/70 transition-colors" />
+                              <span className="text-[9px] text-slate-400 group-hover:text-gold mt-1 font-ui tracking-wide">
+                                Add
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info row below grid */}
+                        <p className="text-[10px] text-slate-400 font-ui">
+                          {previewFiles.filter(f => f.status === 'pending').length > 0
+                            ? `${previewFiles.filter(f => f.status === 'pending').length} image${previewFiles.filter(f => f.status === 'pending').length !== 1 ? 's' : ''} ready to upload · will save when you click "${editingId ? 'Update Note' : 'Create & Upload'}"`
+                            : `${previewFiles.length} image${previewFiles.length !== 1 ? 's' : ''} attached`
+                          }
+                        </p>
+                      </>
+                    )}
+
+                    {/* Hidden file input */}
+                    <input
+                      ref={previewInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      multiple
+                      className="hidden"
+                      aria-label="Upload preview images"
+                      onChange={e => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          selectPreviewFiles(e.target.files);
+                        }
+                      }}
+                    />
+                  </section>
+
+                  {/* ── Sample PDF Preview ── */}
                   <section className="space-y-5">
                     <div className="flex items-center justify-between">
                       <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">
-                        Preview Image
+                        Dedicated Sample PDF
                       </h3>
                       <span className="text-[9px] text-slate-400 font-ui uppercase tracking-widest">
-                        Shown to visitors · EduLaw logo watermark auto-applied
+                        Visible to public · Watermark applied
                       </span>
                     </div>
 
-                    {/* Show existing or newly selected preview */}
-                    {(previewThumb || previewImageKey) && (
-                      <div className="relative w-full max-w-xs rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-                        {previewThumb ? (
-                          <img src={previewThumb} alt="Preview" className="w-full object-cover" />
-                        ) : (
-                          <div className="p-4 bg-slate-50 flex items-center gap-3">
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                            <div>
-                              <p className="text-xs text-slate-700 font-ui font-bold">Preview image uploaded</p>
-                              <p className="text-[10px] text-slate-400 font-mono">{previewImageKey}</p>
-                            </div>
-                          </div>
-                        )}
+                    {(sampleThumb || samplePdfKey) && (
+                      <div className="flex items-center gap-4 p-4 bg-burgundy/5 border border-burgundy/10 rounded-2xl relative group">
+                        <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm flex-shrink-0">
+                          <FileText className="w-6 h-6 text-burgundy" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-ui font-bold text-slate-900 truncate">
+                            {sampleThumb || 'Sample PDF Uploaded'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-mono truncate">
+                            {samplePdfKey || 'Pending Upload'}
+                          </p>
+                        </div>
                         <button
                           type="button"
-                          onClick={resetPreview}
-                          className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-full shadow text-slate-400 hover:text-red-500 transition-all"
-                          title="Remove preview image"
+                          onClick={resetSample}
+                          title="Remove sample PDF"
+                          aria-label="Remove sample PDF"
+                          className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-red-500 transition-all flex-shrink-0"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                        {previewStatus === 'uploading' && (
-                          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                            <Loader2 className="w-6 h-6 text-gold animate-spin" />
+                        {sampleStatus === 'uploading' && (
+                          <div className="absolute inset-0 bg-white/40 flex items-center justify-center rounded-2xl">
+                            <RefreshCw className="w-5 h-5 text-burgundy animate-spin" />
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* Drop zone */}
-                    {!previewThumb && !previewImageKey && (
+                    {!sampleThumb && !samplePdfKey && (
                       <div
                         className="border-2 border-dashed border-slate-200 hover:border-gold/40 rounded-2xl p-8 text-center cursor-pointer transition-all group"
-                        onClick={() => previewInputRef.current?.click()}
-                        onDragOver={e => e.preventDefault()}
-                        onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) selectPreviewFile(f); }}
+                        onClick={() => sampleInputRef.current?.click()}
                       >
-                        <ImageIcon className="w-8 h-8 text-slate-200 group-hover:text-gold/50 mx-auto mb-2 transition-colors" />
-                        <p className="text-sm text-slate-500 font-ui">
-                          Drop image here or <span className="text-gold underline">browse</span>
-                        </p>
-                        <p className="text-[10px] text-slate-300 mt-1 font-ui uppercase tracking-widest">
-                          JPG or PNG · max 5 MB
-                        </p>
+                        <Upload className="w-8 h-8 text-slate-200 group-hover:text-gold/50 mx-auto mb-2 transition-colors" />
+                        <p className="text-xs text-slate-500 font-ui">Upload Public Sample PDF</p>
                         <input
-                          ref={previewInputRef}
+                          ref={sampleInputRef}
                           type="file"
-                          accept="image/jpeg,image/png"
+                          accept=".pdf"
                           className="hidden"
-                          onChange={e => { const f = e.target.files?.[0]; if (f) selectPreviewFile(f); }}
-                          aria-label="Upload preview image"
+                          aria-label="Upload sample PDF file"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) selectSampleFile(f); }}
                         />
                       </div>
                     )}
                   </section>
 
-                  {/* ── Description ── */}
+                  {/* ── Add-On Mastery Content ── */}
+                  <section className="space-y-5 border-t border-slate-100 pt-8 mt-8">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">
+                        Add-On Mastery Content
+                      </h3>
+                      <span className="text-[9px] text-slate-400 font-ui uppercase tracking-widest">
+                        NotebookLM Magic
+                      </span>
+                    </div>
+
+                    {/* Audio English */}
+                    <div className="flex flex-col md:flex-row items-center gap-4">
+                      <div className="flex-1 w-full">
+                        <label className="input-label">English Audio Summary (.mp3)</label>
+                        {form.audioSummaryKeyEnglish && !audioEnFile ? (
+                          <div className="text-xs font-mono text-green-600 bg-green-50 p-3 rounded-xl break-all relative group cursor-pointer" onClick={() => audioEnInputRef.current?.click()}>
+                            <span className="group-hover:opacity-0 transition-opacity">Stored: {form.audioSummaryKeyEnglish}</span>
+                            <span className="absolute inset-0 flex items-center justify-center font-bold absolute opacity-0 group-hover:opacity-100 transition-opacity text-green-700">Change File</span>
+                            <input ref={audioEnInputRef} type="file" accept="audio/mpeg,.mp3" className="hidden" aria-label="Upload English Audio Summary" title="Upload English Audio Summary" onChange={e => { const f = e.target.files?.[0]; if (f) selectAudioEnFile(f); }} />
+                          </div>
+                        ) : (
+                          <div
+                            className="bg-slate-50 border border-slate-200 hover:border-gold/30 p-4 rounded-xl cursor-pointer transition-all flex items-center gap-3"
+                            onClick={() => audioEnInputRef.current?.click()}
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm transition-colors">
+                              {audioEnStatus === 'uploading' ? <Loader2 className="w-5 h-5 text-gold animate-spin" /> : <Upload className="w-5 h-5 text-slate-400 group-hover:text-gold" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-700 truncate">{audioEnFile ? audioEnFile.name : 'Upload English MP3'}</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-ui">{audioEnStatus === 'done' ? 'Ready to Save' : 'Max 25 MB'}</p>
+                            </div>
+                            <input
+                              ref={audioEnInputRef} type="file" accept="audio/mpeg,.mp3" className="hidden"
+                              aria-label="Upload English Audio Summary" title="Upload English Audio Summary"
+                              onChange={e => { const f = e.target.files?.[0]; if (f) selectAudioEnFile(f); }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Audio Hindi */}
+                      <div className="flex-1 w-full">
+                        <label className="input-label">Hindi Audio Summary (.mp3)</label>
+                        {form.audioSummaryKeyHindi && !audioHiFile ? (
+                          <div className="text-xs font-mono text-green-600 bg-green-50 p-3 rounded-xl break-all relative group cursor-pointer" onClick={() => audioHiInputRef.current?.click()}>
+                            <span className="group-hover:opacity-0 transition-opacity">Stored: {form.audioSummaryKeyHindi}</span>
+                            <span className="absolute inset-0 flex items-center justify-center font-bold absolute opacity-0 group-hover:opacity-100 transition-opacity text-green-700">Change File</span>
+                            <input ref={audioHiInputRef} type="file" accept="audio/mpeg,.mp3" className="hidden" aria-label="Upload Hindi Audio Summary" title="Upload Hindi Audio Summary" onChange={e => { const f = e.target.files?.[0]; if (f) selectAudioHiFile(f); }} />
+                          </div>
+                        ) : (
+                          <div
+                            className="bg-slate-50 border border-slate-200 hover:border-gold/30 p-4 rounded-xl cursor-pointer transition-all flex items-center gap-3"
+                            onClick={() => audioHiInputRef.current?.click()}
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm transition-colors">
+                              {audioHiStatus === 'uploading' ? <Loader2 className="w-5 h-5 text-gold animate-spin" /> : <Upload className="w-5 h-5 text-slate-400 group-hover:text-gold" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-700 truncate">{audioHiFile ? audioHiFile.name : 'Upload Hindi MP3'}</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-ui">{audioHiStatus === 'done' ? 'Ready to Save' : 'Max 25 MB'}</p>
+                            </div>
+                            <input
+                              ref={audioHiInputRef} type="file" accept="audio/mpeg,.mp3" className="hidden"
+                              aria-label="Upload Hindi Audio Summary" title="Upload Hindi Audio Summary"
+                              onChange={e => { const f = e.target.files?.[0]; if (f) selectAudioHiFile(f); }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Infographic & Quiz */}
+                    <div className="flex flex-col md:flex-row items-start gap-4">
+                      <div className="flex-1 w-full">
+                        <label className="input-label">Transition Infographic (.pdf/.png)</label>
+                        {form.infographicKey && !infoFile ? (
+                          <div className="text-xs font-mono text-green-600 bg-green-50 p-3 rounded-xl break-all relative group cursor-pointer" onClick={() => infoInputRef.current?.click()}>
+                            <span className="group-hover:opacity-0 transition-opacity">Stored: {form.infographicKey}</span>
+                            <span className="absolute inset-0 flex items-center justify-center font-bold absolute opacity-0 group-hover:opacity-100 transition-opacity text-green-700">Change File</span>
+                            <input ref={infoInputRef} type="file" accept="application/pdf,image/*" className="hidden" aria-label="Upload Transition Infographic" title="Upload Transition Infographic" onChange={e => { const f = e.target.files?.[0]; if (f) selectInfoFile(f); }} />
+                          </div>
+                        ) : (
+                          <div
+                            className="bg-slate-50 border border-slate-200 hover:border-gold/30 p-4 rounded-xl cursor-pointer transition-all flex items-center gap-3"
+                            onClick={() => infoInputRef.current?.click()}
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm transition-colors">
+                              {infoStatus === 'uploading' ? <Loader2 className="w-5 h-5 text-gold animate-spin" /> : <Upload className="w-5 h-5 text-slate-400 group-hover:text-gold" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-700 truncate">{infoFile ? infoFile.name : 'Upload Infographic'}</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-ui">{infoStatus === 'done' ? 'Ready to Save' : 'Max 10 MB'}</p>
+                            </div>
+                            <input
+                              ref={infoInputRef} type="file" accept="application/pdf,image/*" className="hidden"
+                              aria-label="Upload Transition Infographic" title="Upload Transition Infographic"
+                              onChange={e => { const f = e.target.files?.[0]; if (f) selectInfoFile(f); }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 w-full">
+                        <label className="input-label">Law Quiz JSON Text</label>
+                        <textarea
+                          placeholder='Paste NotebookLM generated JSON [{"question": "...", "options": [...]}]'
+                          value={form.quizData}
+                          onChange={e => setForm({ ...form, quizData: e.target.value })}
+                          className="admin-input font-mono text-xs h-32 custom-scrollbar resize-none bg-slate-900 text-green-400 focus:border-green-400"
+                          title="Law Quiz JSON Data"
+                          aria-label="Law Quiz JSON Data"
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* ── Marketplace Content Features ── */}
+                  <section className="space-y-5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">
+                        Content Features
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setForm(v => ({ ...v, contentFeatures: [...v.contentFeatures, ''] }))}
+                        className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-ui font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
+                        title="Add New Content Feature"
+                      >
+                        <Plus className="w-3 h-3" /> ADD FEATURE
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {form.contentFeatures.map((f, i) => (
+                        <div key={i} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={f}
+                            onChange={e => {
+                              const newF = [...form.contentFeatures];
+                              newF[i] = e.target.value;
+                              setForm(v => ({ ...v, contentFeatures: newF }));
+                            }}
+                            className="admin-input flex-1"
+                            placeholder="e.g. Detailed Case Summaries"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newF = form.contentFeatures.filter((_, idx) => idx !== i);
+                              setForm(v => ({ ...v, contentFeatures: newF }));
+                            }}
+                            title="Remove this feature"
+                            aria-label="Remove this feature"
+                            className="p-3 text-slate-400 hover:text-red-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* ── Featured Sections ── */}
+                  <section className="space-y-5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">
+                        Premium Highlights
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setForm(v => ({ ...v, featuredSections: [...v.featuredSections, { title: '', content: '' }] }))}
+                        className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-ui font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
+                        title="Add New Highlight Section"
+                      >
+                        <Plus className="w-3 h-3" /> ADD HIGHLIGHT
+                      </button>
+                    </div>
+
+                    {/* Taxation Section */}
+                    <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ShieldCheck className="w-4 h-4 text-gold" />
+                        <span className="text-[10px] text-gold uppercase font-black tracking-widest">Taxation (GST)</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <div className={`relative w-10 h-5 rounded-full transition-colors ${form.hasGst ? 'bg-gold' : 'bg-slate-200'}`}>
+                            <input 
+                              type="checkbox"
+                              checked={form.hasGst}
+                              onChange={e => setForm(v => ({ ...v, hasGst: e.target.checked }))}
+                              className="sr-only"
+                            />
+                            <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${form.hasGst ? 'translate-x-5' : 'translate-x-0'}`} />
+                          </div>
+                          <span className="text-xs font-ui font-bold text-slate-600 group-hover:text-slate-900 transition-colors uppercase tracking-widest">Enable GST</span>
+                        </label>
+                      </div>
+
+                      {form.hasGst && (
+                        <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                          <label className="input-label">GST Rate (%)</label>
+                          <div className="relative">
+                            <input 
+                              type="number"
+                              value={form.gstRate}
+                              onChange={e => setForm(v => ({ ...v, gstRate: Number(e.target.value) }))}
+                              className="admin-input"
+                              placeholder="18"
+                              min="0"
+                              max="100"
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">%</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      {form.featuredSections.map((s, i) => (
+                        <div key={i} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newS = form.featuredSections.filter((_, idx) => idx !== i);
+                              setForm(v => ({ ...v, featuredSections: newS }));
+                            }}
+                            title="Remove this highlight"
+                            aria-label="Remove this highlight"
+                            className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <input
+                            type="text"
+                            value={s.title}
+                            onChange={e => {
+                              const newS = [...form.featuredSections];
+                              newS[i] = { ...newS[i], title: e.target.value };
+                              setForm(v => ({ ...v, featuredSections: newS }));
+                            }}
+                            className="admin-input bg-white"
+                            placeholder="Highlight Title (e.g. Important Sections)"
+                          />
+                          <textarea
+                            value={s.content}
+                            onChange={e => {
+                              const newS = [...form.featuredSections];
+                              newS[i] = { ...newS[i], content: e.target.value };
+                              setForm(v => ({ ...v, featuredSections: newS }));
+                            }}
+                            className="admin-input bg-white min-h-[80px]"
+                            placeholder="Brief description of this highlight..."
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* ── Curriculum Structure ── */}
+                  <section className="space-y-5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">
+                        Curriculum Structure
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setForm(v => ({ ...v, tableOfContents: [...(v.tableOfContents || []), ''] }))}
+                        className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-ui font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
+                        title="Add New Chapter"
+                      >
+                        <Plus className="w-3 h-3" /> ADD CHAPTER
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {(form.tableOfContents || []).map((chapter, i) => (
+                        <div key={i} className="flex gap-2">
+                          <div className="w-10 flex-shrink-0 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center text-[10px] font-ui font-black text-slate-400">
+                            {(i + 1).toString().padStart(2, '0')}
+                          </div>
+                          <input
+                            type="text"
+                            value={chapter}
+                            onChange={e => {
+                              const newTOC = [...(form.tableOfContents || [])];
+                              newTOC[i] = e.target.value;
+                              setForm(v => ({ ...v, tableOfContents: newTOC }));
+                            }}
+                            className="admin-input flex-1"
+                            placeholder="e.g. Introduction to BNS"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newTOC = (form.tableOfContents || []).filter((_, idx) => idx !== i);
+                              setForm(v => ({ ...v, tableOfContents: newTOC }));
+                            }}
+                            className="p-3 text-slate-400 hover:text-red-500"
+                            title="Remove Chapter"
+                            aria-label="Remove Chapter"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* ── Public Description (Rich Text) ── */}
                   <section className="space-y-5">
                     <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">
-                      Public Description
+                      Detailed Public Description
                     </h3>
                     <RichTextEditor
-                      value={form.description}
-                      onChange={html => setForm(v => ({ ...v, description: html }))}
+                      value={form.publicDescription}
+                      onChange={html => setForm(v => ({ ...v, publicDescription: html }))}
                     />
                   </section>
                 </div>
 
                 {/* Sticky footer */}
-                <div className="sticky bottom-0 z-20 px-8 py-5 bg-white border-t border-slate-200 flex items-center justify-end gap-4 shadow-[0_-12px_40px_rgba(0,0,0,0.05)]">
+                <div className="sticky bottom-0 z-20 px-4 sm:px-8 py-4 sm:py-5 bg-white border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3 shadow-[0_-12px_40px_rgba(0,0,0,0.05)]">
                   <button
                     type="button"
                     onClick={closeEditor}
-                    className="px-6 py-3 text-slate-500 hover:text-slate-900 font-ui font-semibold transition-colors"
+                    className="w-full sm:w-auto px-6 py-3 text-slate-500 hover:text-slate-900 font-ui font-semibold transition-colors text-center border border-slate-200 sm:border-0 rounded-xl sm:rounded-none"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-8 py-3 bg-gold text-ink font-ui font-black rounded-xl shadow-xl shadow-gold/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-8 py-3 bg-gold text-ink font-ui font-black rounded-xl shadow-xl shadow-gold/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {saving
                       ? <><Loader2 className="w-5 h-5 animate-spin" />Saving...</>

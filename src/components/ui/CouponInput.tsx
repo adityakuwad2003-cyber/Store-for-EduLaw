@@ -20,12 +20,9 @@ export function CouponInput({ onApply, onRemove, appliedCode, discountAmount }: 
     setError(null);
     
     try {
-      const success = await onApply(code.trim().toUpperCase());
-      if (!success) {
-        setError('Invalid or expired coupon code');
-      }
-    } catch {
-      setError('Something went wrong. Please try again.');
+      await onApply(code.trim().toUpperCase());
+    } catch (err: any) {
+      setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }

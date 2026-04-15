@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, Edit, 
-  ClipboardCheck, X, Save,
-  Clock, HelpCircle, FileUp, Archive
+  ClipboardCheck, X, Save, Trash2,
+  Clock, HelpCircle, FileUp, Archive,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { 
   collection, query, orderBy, 
   getDocs, doc, updateDoc, 
-  addDoc, serverTimestamp 
+  addDoc, deleteDoc, serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { DataTable } from '../../../components/admin/DataTable';
@@ -105,6 +106,17 @@ export default function MockTestsManager() {
     }
   };
 
+  const handleDeleteMockTest = async (testId: string) => {
+    if (!window.confirm('Are you sure you want to delete this mock test completely? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'mock_tests', testId));
+      toast.success('Mock test deleted successfully');
+      fetchTests();
+    } catch (error) {
+      toast.error('Failed to delete mock test');
+    }
+  };
+
   const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -186,13 +198,21 @@ export default function MockTestsManager() {
       label: '',
       className: 'w-10',
       render: (row) => (
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2">
           <button 
             onClick={(e) => { e.stopPropagation(); setEditingTest(row); setIsEditorOpen(true); }}
-            className="p-2 hover:bg-gold/10 text-slate-400 hover:text-gold rounded-lg transition-all"
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-gold/10 hover:text-gold hover:border-gold/30 rounded-lg transition-all shadow-sm"
             aria-label="Edit mock test"
           >
             <Edit className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDeleteMockTest(row.id as string); }}
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-500 hover:border-red-200 rounded-lg transition-all shadow-sm"
+            title="Delete mock test completely"
+            aria-label="Delete mock test completely"
+          >
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       )
@@ -213,12 +233,22 @@ export default function MockTestsManager() {
           </div>
         </div>
 
-        <button 
-          onClick={() => { setEditingTest({ questions: [], duration: 60, status: 'draft', isFree: false }); setIsEditorOpen(true); }}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
-        >
-          <Plus className="w-5 h-5" /> Create New Test
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchTests}
+            disabled={loading}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-gold hover:shadow-sm rounded-xl transition-all shadow-sm"
+            aria-label="Refresh tests"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button 
+            onClick={() => { setEditingTest({ questions: [], duration: 60, status: 'draft', isFree: false }); setIsEditorOpen(true); }}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-5 h-5" /> Create New Test
+          </button>
+        </div>
       </div>
 
       <DataTable

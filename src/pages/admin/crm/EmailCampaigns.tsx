@@ -97,10 +97,16 @@ export default function EmailCampaigns() {
     setLoading(true);
     try {
       // In production, this would call a cloud function that uses Resend API
+      const { getAuth } = await import('firebase/auth');
+      const token = await getAuth().currentUser?.getIdToken();
+
       // For now, we simulate the request
       const res = await fetch('/api/admin/send-campaign', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ campaignId: campaign.id })
       });
       

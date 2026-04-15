@@ -1,19 +1,19 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   Plus, Edit, Eye, 
-  Package, X, Save,
+  Package, X, Save, Trash2,
   TrendingUp, ShoppingCart, 
   Check, ExternalLink, Loader2, GripVertical,
-  RefreshCw
+  RefreshCw, Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { 
   collection, query, orderBy, 
   getDocs, doc, updateDoc, 
-  addDoc, serverTimestamp
+  addDoc, deleteDoc, serverTimestamp
 } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { db, auth } from '../../../lib/firebase';
 import { DataTable } from '../../../components/admin/DataTable';
 import type { Column } from '../../../components/admin/DataTable';
 import { StatusBadge } from '../../../components/admin/StatusBadge';
@@ -36,6 +36,10 @@ interface Bundle {
     carts: number;
     purchases: number;
   };
+  audioSummaryKeyEnglish?: string;
+  audioSummaryKeyHindi?: string;
+  infographicKey?: string;
+  quizData?: string;
   createdAt: any;
   updatedAt: any;
 }
@@ -53,6 +57,24 @@ export default function BundlesManager() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<Partial<Bundle> | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Mastery content uploads
+  const [audioEnFile, setAudioEnFile]     = useState<File | null>(null);
+  const [audioEnStatus, setAudioEnStatus] = useState<'idle'|'uploading'|'done'|'error'>('idle');
+  const [audioHiFile, setAudioHiFile]     = useState<File | null>(null);
+  const [audioHiStatus, setAudioHiStatus] = useState<'idle'|'uploading'|'done'|'error'>('idle');
+  const [infoFile, setInfoFile]           = useState<File | null>(null);
+  const [infoStatus, setInfoStatus]       = useState<'idle'|'uploading'|'done'|'error'>('idle');
+
+  const audioEnInputRef = useRef<HTMLInputElement>(null);
+  const audioHiInputRef = useRef<HTMLInputElement>(null);
+  const infoInputRef = useRef<HTMLInputElement>(null);
+
+  const resetMasteryState = () => {
+    setAudioEnFile(null); setAudioEnStatus('idle');
+    setAudioHiFile(null); setAudioHiStatus('idle');
+    setInfoFile(null); setInfoStatus('idle');
+  };
 
   // ── DATA FETCHING ──
   const fetchData = useCallback(async () => {
@@ -83,6 +105,64 @@ export default function BundlesManager() {
     fetchData();
   }, [fetchData]);
 
+  // ── Mastery Content selection & upload ─────────────────────────────────────
+  
+  const selectAudioEnFile = (file: File) => {
+    if (!file.type.startsWith('audio/')) { toast.error('Please select an MP3 file.'); return; }
+    if (file.size > 25 * 1024 * 1024) { toast.error('Audio must be under 25 MB.'); return; }
+    setAudioEnFile(file);
+    setAudioEnStatus('idle');
+  };
+
+  const selectAudioHiFile = (file: File) => {
+    if (!file.type.startsWith('audio/')) { toast.error('Please select an MP3 file.'); return; }
+    if (file.size > 25 * 1024 * 1024) { toast.error('Audio must be under 25 MB.'); return; }
+    setAudioHiFile(file);
+    setAudioHiStatus('idle');
+  };
+
+  const selectInfoFile = (file: File) => {
+    if (file.type !== 'application/pdf' && !file.type.startsWith('image/')) { toast.error('Please select a PDF or Image file.'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('Infographic must be under 10 MB.'); return; }
+    setInfoFile(file);
+    setInfoStatus('idle');
+  };
+
+  const uploadMasteryFile = async (
+    file: File | null, 
+    bundleId: string, 
+    token: string, 
+    prefix: 'audio' | 'infographics', 
+    suffix: string, 
+    setStatus: (s: 'idle'|'uploading'|'done'|'error') => void,
+    existingKey: string
+  ): Promise<string> => {
+    if (!file) return existingKey;
+    setStatus('uploading');
+    const ext = file.name.split('.').pop() || (prefix === 'audio' ? 'mp3' : 'pdf');
+    const key = `${prefix}/${bundleId}_${suffix}.${ext}`;
+    try {
+      const urlRes = await fetch('/api/admin/get-upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: key, noteId: bundleId, fileSize: file.size }),
+      });
+      if (!urlRes.ok) throw new Error((await urlRes.json()).error || 'URL error');
+      const { uploadUrl } = await urlRes.json();
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error(`R2 upload failed (${putRes.status})`);
+      setStatus('done');
+      return key;
+    } catch (err: any) {
+      setStatus('error');
+      throw err;
+    }
+  };
+
   // ── AUTO-CALCULATIONS ──
   const originalTotal = useMemo(() => {
     if (!editingBundle?.noteIds) return 0;
@@ -108,10 +188,35 @@ export default function BundlesManager() {
 
     setSaving(true);
     try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+      const token = await user.getIdToken();
+
       const slug = editingBundle.title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+      const bundleId = editingBundle.id || slug;
+
+      // Upload Mastery Content Files
+      let savedAudioEnKey = editingBundle.audioSummaryKeyEnglish || '';
+      if (audioEnFile) {
+        savedAudioEnKey = await uploadMasteryFile(audioEnFile, bundleId, token, 'audio', 'en', setAudioEnStatus, savedAudioEnKey);
+      }
+
+      let savedAudioHiKey = editingBundle.audioSummaryKeyHindi || '';
+      if (audioHiFile) {
+        savedAudioHiKey = await uploadMasteryFile(audioHiFile, bundleId, token, 'audio', 'hi', setAudioHiStatus, savedAudioHiKey);
+      }
+
+      let savedInfoKey = editingBundle.infographicKey || '';
+      if (infoFile) {
+        savedInfoKey = await uploadMasteryFile(infoFile, bundleId, token, 'infographics', 'map', setInfoStatus, savedInfoKey);
+      }
+
       const payload = {
         ...editingBundle,
         slug,
+        audioSummaryKeyEnglish: savedAudioEnKey,
+        audioSummaryKeyHindi: savedAudioHiKey,
+        infographicKey: savedInfoKey,
         originalPrice: originalTotal,
         discountPercentage,
         updatedAt: serverTimestamp(),
@@ -136,6 +241,17 @@ export default function BundlesManager() {
       toast.error('Failed to save bundle');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteBundle = async (bundleId: string) => {
+    if (!window.confirm('Are you sure you want to delete this bundle completely? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'bundles', bundleId));
+      toast.success('Bundle deleted successfully');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete bundle');
     }
   };
 
@@ -212,20 +328,28 @@ export default function BundlesManager() {
       key: 'actions',
       label: '',
       render: (row) => (
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2">
           <button 
-            onClick={(e) => { e.stopPropagation(); setEditingBundle(row); setIsEditorOpen(true); }}
-            className="p-2 hover:bg-gold/10 text-slate-400 hover:text-gold rounded-lg transition-all"
+            onClick={(e) => { e.stopPropagation(); resetMasteryState(); setEditingBundle(row); setIsEditorOpen(true); }}
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-gold/10 hover:text-gold hover:border-gold/30 rounded-lg transition-all shadow-sm"
             aria-label="Edit bundle"
           >
             <Edit className="w-4 h-4" />
           </button>
           <button 
              onClick={(e) => { e.stopPropagation(); window.open(`/bundles`, '_blank'); }}
-            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-900 rounded-lg transition-all"
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-all shadow-sm"
             aria-label="View bundle"
           >
             <ExternalLink className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDeleteBundle(row.id as string); }}
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-500 hover:border-red-200 rounded-lg transition-all shadow-sm"
+            title="Delete bundle completely"
+            aria-label="Delete bundle completely"
+          >
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       )
@@ -258,7 +382,7 @@ export default function BundlesManager() {
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
-            onClick={() => { setEditingBundle({ noteIds: [], price: 0 }); setIsEditorOpen(true); }}
+            onClick={() => { setEditingBundle({ noteIds: [], price: 0 }); resetMasteryState(); setIsEditorOpen(true); }}
             className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
           >
             <Plus className="w-5 h-5" /> Launch Bundle
@@ -271,7 +395,7 @@ export default function BundlesManager() {
         data={bundles}
         loading={loading}
         keyField="id"
-        onRowClick={(row) => { setEditingBundle(row); setIsEditorOpen(true); }}
+        onRowClick={(row) => { resetMasteryState(); setEditingBundle(row); setIsEditorOpen(true); }}
         emptyMessage="No bundles active. Combine your notes to boost sales!"
       />
 
@@ -364,6 +488,108 @@ export default function BundlesManager() {
                       className="admin-input resize-none" 
                       placeholder="Explain why this bundle is essential for students..."
                     />
+                  </div>
+
+                  {/* ── Add-On Mastery Content ── */}
+                  <div className="space-y-6 border-t border-slate-100 pt-8">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">
+                        Add-On Mastery Content
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Audio EN */}
+                      <div className="space-y-2">
+                        <label className="input-label">English Audio Summary</label>
+                        {editingBundle?.audioSummaryKeyEnglish && !audioEnFile ? (
+                          <div className="text-[10px] font-mono text-green-600 bg-green-50 p-4 rounded-xl break-all relative group cursor-pointer border border-green-100" onClick={() => audioEnInputRef.current?.click()}>
+                            <span className="group-hover:opacity-0 transition-opacity">Key: {editingBundle.audioSummaryKeyEnglish}</span>
+                            <span className="absolute inset-0 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity text-green-700">Change MP3</span>
+                            <input ref={audioEnInputRef} type="file" accept="audio/mpeg,.mp3" className="hidden" aria-label="Upload English Audio Summary" title="Upload English Audio Summary" onChange={e => { const f = e.target.files?.[0]; if (f) selectAudioEnFile(f); }} />
+                          </div>
+                        ) : (
+                          <div
+                            className="bg-slate-50 border border-slate-200 hover:border-gold/30 p-4 rounded-xl cursor-pointer transition-all flex items-center gap-3"
+                            onClick={() => audioEnInputRef.current?.click()}
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm transition-colors">
+                              {audioEnStatus === 'uploading' ? <Loader2 className="w-5 h-5 text-gold animate-spin" /> : <Upload className="w-5 h-5 text-slate-400 group-hover:text-gold" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-700 truncate">{audioEnFile ? audioEnFile.name : 'Upload English MP3'}</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest">{audioEnStatus === 'done' ? 'Ready to Save' : 'Max 25 MB'}</p>
+                            </div>
+                            <input ref={audioEnInputRef} type="file" accept="audio/mpeg,.mp3" className="hidden" aria-label="Upload English Audio Summary" title="Upload English Audio Summary" onChange={e => { const f = e.target.files?.[0]; if (f) selectAudioEnFile(f); }} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Audio HI */}
+                      <div className="space-y-2">
+                        <label className="input-label">Hindi Audio Summary</label>
+                        {editingBundle?.audioSummaryKeyHindi && !audioHiFile ? (
+                          <div className="text-[10px] font-mono text-green-600 bg-green-50 p-4 rounded-xl break-all relative group cursor-pointer border border-green-100" onClick={() => audioHiInputRef.current?.click()}>
+                            <span className="group-hover:opacity-0 transition-opacity">Key: {editingBundle.audioSummaryKeyHindi}</span>
+                            <span className="absolute inset-0 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity text-green-700">Change MP3</span>
+                            <input ref={audioHiInputRef} type="file" accept="audio/mpeg,.mp3" className="hidden" aria-label="Upload Hindi Audio Summary" title="Upload Hindi Audio Summary" onChange={e => { const f = e.target.files?.[0]; if (f) selectAudioHiFile(f); }} />
+                          </div>
+                        ) : (
+                          <div
+                            className="bg-slate-50 border border-slate-200 hover:border-gold/30 p-4 rounded-xl cursor-pointer transition-all flex items-center gap-3"
+                            onClick={() => audioHiInputRef.current?.click()}
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm transition-colors">
+                                {audioHiStatus === 'uploading' ? <Loader2 className="w-5 h-5 text-gold animate-spin" /> : <Upload className="w-5 h-5 text-slate-400 group-hover:text-gold" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-700 truncate">{audioHiFile ? audioHiFile.name : 'Upload Hindi MP3'}</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest">{audioHiStatus === 'done' ? 'Ready to Save' : 'Max 25 MB'}</p>
+                            </div>
+                            <input ref={audioHiInputRef} type="file" accept="audio/mpeg,.mp3" className="hidden" aria-label="Upload Hindi Audio Summary" title="Upload Hindi Audio Summary" onChange={e => { const f = e.target.files?.[0]; if (f) selectAudioHiFile(f); }} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Infographic */}
+                      <div className="space-y-2">
+                        <label className="input-label">Infographic (PDF/PNG)</label>
+                        {editingBundle?.infographicKey && !infoFile ? (
+                          <div className="text-[10px] font-mono text-green-600 bg-green-50 p-4 rounded-xl break-all relative group cursor-pointer border border-green-100" onClick={() => infoInputRef.current?.click()}>
+                            <span className="group-hover:opacity-0 transition-opacity">Key: {editingBundle.infographicKey}</span>
+                            <span className="absolute inset-0 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity text-green-700">Change File</span>
+                            <input ref={infoInputRef} type="file" accept="application/pdf,image/*" className="hidden" aria-label="Upload Transition Infographic" title="Upload Transition Infographic" onChange={e => { const file = e.target.files?.[0]; if (file) selectInfoFile(file); }} />
+                          </div>
+                        ) : (
+                          <div
+                            className="bg-slate-50 border border-slate-200 hover:border-gold/30 p-4 rounded-xl cursor-pointer transition-all flex items-center gap-3"
+                            onClick={() => infoInputRef.current?.click()}
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm transition-colors">
+                                {infoStatus === 'uploading' ? <Loader2 className="w-5 h-5 text-gold animate-spin" /> : <Upload className="w-5 h-5 text-slate-400 group-hover:text-gold" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-700 truncate">{infoFile ? infoFile.name : 'Upload Infographic'}</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest">{infoStatus === 'done' ? 'Ready to Save' : 'Max 10 MB'}</p>
+                            </div>
+                            <input ref={infoInputRef} type="file" accept="application/pdf,image/*" className="hidden" aria-label="Upload Transition Infographic" title="Upload Transition Infographic" onChange={e => { const file = e.target.files?.[0]; if (file) selectInfoFile(file); }} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Quiz JSON */}
+                      <div className="space-y-2">
+                        <label className="input-label">Quiz JSON Data</label>
+                        <textarea 
+                          value={editingBundle?.quizData || ''}
+                          onChange={e => setEditingBundle(v => ({ ...v, quizData: e.target.value }))}
+                          className="admin-input font-mono text-[10px] h-32 resize-none bg-slate-900 text-green-400 placeholder:text-slate-700 border-none shadow-inner"
+                          placeholder='[{"question": "...", "options": [...]}]'
+                          title="Law Quiz JSON Data"
+                          aria-label="Law Quiz JSON Data"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Notes Picker Section */}

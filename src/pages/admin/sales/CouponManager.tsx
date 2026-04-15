@@ -1,39 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
+import {
   Ticket, Plus, X, Save,
   Percent, IndianRupee,
-  Clock, Edit
+  Clock, Edit, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { 
-  collection, query, orderBy, 
-  getDocs, doc, updateDoc, 
-  addDoc, serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
 import { DataTable } from '../../../components/admin/DataTable';
 import type { Column } from '../../../components/admin/DataTable';
 import { StatusBadge } from '../../../components/admin/StatusBadge';
 import { format } from 'date-fns';
 
+
+// Local extension of GlobalCoupon for Admin management
 interface Coupon {
   id: string;
   code: string;
-  type: 'percentage' | 'fixed';
-  value: number;
-  minOrderAmount: number;
-  maxDiscount?: number;
-  usageLimit?: number;
-  usageCount: number;
-  expiryDate: any;
-  status: 'active' | 'expired' | 'disabled';
+  type: 'percentage' | 'fixed'; // Maps to discountType
+  value: number;               // Maps to discountValue
+  minOrderAmount: number;      // Maps to minOrder
+  usageLimit?: number;         // Maps to maxUses
+  usageCount: number;          // Maps to usesCount
+  expiryDate: any;             // Maps to validUntil
+  status: 'active' | 'expired' | 'disabled'; // Maps to isActive
   description?: string;
+  applicableTo: 'all' | 'bundles' | 'subscription' | 'notes';
   createdAt: any;
   updatedAt: any;
 }
 
 export default function CouponManager() {
+  const { currentUser } = useAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -41,19 +39,23 @@ export default function CouponManager() {
 
   // ── DATA FETCHING ──
   const fetchCoupons = useCallback(async () => {
+    if (!currentUser) return;
     setLoading(true);
     try {
-      const q = query(collection(db, 'coupons'), orderBy('createdAt', 'desc'));
-      const snap = await getDocs(q);
-      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Coupon[];
-      setCoupons(data);
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/list-data?type=coupons', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load coupons');
+      setCoupons(json.coupons || []);
     } catch (error) {
       console.error('Error fetching coupons:', error);
       toast.error('Failed to load coupon library');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     fetchCoupons();
@@ -61,29 +63,57 @@ export default function CouponManager() {
 
   // ── ACTIONS ──
   const handleSave = async (data: Partial<Coupon>) => {
+    if (!data.code || !data.value) {
+      toast.error('Code and Value are required');
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error('Not authenticated');
+      return;
+    }
+
     setLoading(true);
     try {
-      const payload = {
-        ...data,
-        code: data.code?.toUpperCase() || '',
-        updatedAt: serverTimestamp(),
-        usageCount: data.usageCount || 0
+      const token = await currentUser.getIdToken();
+
+      const expiryDate = data.expiryDate;
+      const validUntil = expiryDate
+        ? (typeof expiryDate === 'string' ? expiryDate : (expiryDate as Date).toISOString?.() ?? null)
+        : null;
+
+      const payload: any = {
+        id: data.id || undefined,
+        code: data.code.toUpperCase(),
+        discountType: data.type === 'percentage' ? 'percent' : 'flat',
+        discountValue: Number(data.value),
+        minOrder: Number(data.minOrderAmount || 0),
+        maxUses: Number(data.usageLimit || 0),
+        usesCount: data.usageCount || 0,
+        validUntil,
+        applicableTo: (data as any).applicableTo || 'all',
+        isActive: data.status === 'active',
+        description: data.description || '',
       };
 
-      if (data.id) {
-        await updateDoc(doc(db, 'coupons', data.id), payload);
-        toast.success('Coupon updated successfully');
-      } else {
-        await addDoc(collection(db, 'coupons'), {
-          ...payload,
-          createdAt: serverTimestamp(),
-        });
-        toast.success('New promotion launched');
-      }
+      const res = await fetch('/api/admin/save-coupon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to save coupon');
+
+      toast.success(data.id ? 'Coupon updated successfully' : 'New promotion launched');
       setIsEditorOpen(false);
       fetchCoupons();
-    } catch (error) {
-      toast.error('Failed to save coupon');
+    } catch (error: any) {
+      console.error('Save error:', error);
+      toast.error(error.message || 'Failed to save coupon');
     } finally {
       setLoading(false);
     }
@@ -135,12 +165,19 @@ export default function CouponManager() {
       key: 'expiry',
       label: 'Valid Until',
       sortable: true,
-      render: (row) => (
-        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1">
-           <Clock className="w-3 h-3" />
-           {row.expiryDate?.toDate ? format(row.expiryDate.toDate(), 'MMM dd, yyyy') : 'No Expiry'}
-        </span>
-      )
+      render: (row) => {
+        let dateStr = 'No Expiry';
+        if (row.expiryDate) {
+          const d = row.expiryDate?.toDate ? row.expiryDate.toDate() : new Date(row.expiryDate);
+          if (!isNaN(d.getTime())) dateStr = format(d, 'MMM dd, yyyy');
+        }
+        return (
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {dateStr}
+          </span>
+        );
+      }
     },
     {
       key: 'actions',
@@ -149,7 +186,7 @@ export default function CouponManager() {
       render: (row) => (
         <button 
           onClick={(e) => { e.stopPropagation(); setEditingCoupon(row); setIsEditorOpen(true); }}
-          className="p-2 hover:bg-slate-100 text-slate-400 hover:text-gold rounded-lg transition-all"
+          className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-gold/10 hover:text-gold hover:border-gold/30 rounded-lg transition-all shadow-sm"
           aria-label="Edit coupon"
         >
           <Edit className="w-4 h-4" />
@@ -172,12 +209,22 @@ export default function CouponManager() {
           </div>
         </div>
 
-        <button 
-          onClick={() => { setEditingCoupon({ type: 'percentage', status: 'active', usageCount: 0 }); setIsEditorOpen(true); }}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
-        >
-          <Plus className="w-5 h-5" /> New Promo Code
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchCoupons}
+            disabled={loading}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-gold hover:shadow-sm rounded-xl transition-all shadow-sm"
+            aria-label="Refresh coupons"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button 
+            onClick={() => { setEditingCoupon({ type: 'percentage', status: 'active', usageCount: 0 }); setIsEditorOpen(true); }}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-5 h-5" /> New Promo Code
+          </button>
+        </div>
       </div>
 
       <DataTable
@@ -286,6 +333,33 @@ export default function CouponManager() {
                         />
                       </div>
                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <label htmlFor="expiry-date" className="input-label">Expiry Date</label>
+                    <input 
+                      id="expiry-date"
+                      type="date"
+                      value={editingCoupon?.expiryDate ? format(new Date(editingCoupon.expiryDate), 'yyyy-MM-dd') : ''}
+                      onChange={e => setEditingCoupon(v => ({ ...v, expiryDate: e.target.value ? new Date(e.target.value) : null }))}
+                      className="admin-input" 
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <label htmlFor="applicable-to" className="input-label">Applicable Range</label>
+                    <select 
+                      id="applicable-to"
+                      value={(editingCoupon as any)?.applicableTo || 'all'}
+                      onChange={e => setEditingCoupon(v => ({ ...v, applicableTo: e.target.value } as any))}
+                      className="admin-input"
+                    >
+                      <option value="all">Entire Store</option>
+                      <option value="notes">Individual Drafts</option>
+                      <option value="bundles">Premium Bundles</option>
+                      <option value="subscription">Subscriptions</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="space-y-4">

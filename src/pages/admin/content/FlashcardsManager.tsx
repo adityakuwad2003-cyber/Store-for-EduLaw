@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, Edit, X, Save,
   Layers, Trash2,
-  Brain
+  Brain, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -136,7 +136,7 @@ export default function FlashcardsManager() {
       render: (row) => (
         <button 
           onClick={(e) => { e.stopPropagation(); setEditingDeck(row); setIsEditorOpen(true); }}
-          className="p-2 hover:bg-slate-100 text-slate-400 hover:text-gold rounded-lg transition-all"
+          className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-gold/10 hover:text-gold hover:border-gold/30 rounded-lg transition-all shadow-sm"
           aria-label="Edit deck"
         >
           <Edit className="w-4 h-4" />
@@ -159,12 +159,22 @@ export default function FlashcardsManager() {
           </div>
         </div>
 
-        <button 
-          onClick={() => { setEditingDeck({ cards: [], status: 'draft', difficulty: 'Beginner' }); setIsEditorOpen(true); }}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
-        >
-          <Plus className="w-5 h-5" /> New Study Deck
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchDecks}
+            disabled={loading}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-gold hover:shadow-sm rounded-xl transition-all shadow-sm"
+            aria-label="Refresh library"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button 
+            onClick={() => { setEditingDeck({ cards: [], status: 'draft', difficulty: 'Beginner' }); setIsEditorOpen(true); }}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-5 h-5" /> New Study Deck
+          </button>
+        </div>
       </div>
 
       <DataTable

@@ -71,7 +71,7 @@ export default function OrdersManager() {
     setLoading(true);
     try {
       const token = await getBearerToken();
-      const res = await fetch('/api/admin/list-orders', {
+      const res = await fetch('/api/admin/list-data?type=orders', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -199,7 +199,7 @@ export default function OrdersManager() {
       render: (row) => (
         <button
           onClick={(e) => { e.stopPropagation(); setSelectedOrder(row); setIsDetailOpen(true); }}
-          className="p-2 hover:bg-slate-100 text-slate-400 hover:text-gold rounded-lg transition-all"
+          className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-gold/10 hover:text-gold hover:border-gold/30 rounded-lg transition-all shadow-sm"
           aria-label="View order details"
         >
           <Eye className="w-4 h-4" />
@@ -229,7 +229,7 @@ export default function OrdersManager() {
           <button
             onClick={fetchOrders}
             disabled={loading}
-            className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-400 hover:text-gold transition-all"
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-gold hover:shadow-sm rounded-xl transition-all shadow-sm"
             aria-label="Refresh orders"
           >
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />

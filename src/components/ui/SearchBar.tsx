@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { notesData } from '@/data/notes';
+import { getAllNotes } from '@/lib/db';
 import { Link } from 'react-router-dom';
+import type { Note } from '@/types';
 
 interface SearchBarProps {
   variant?: 'hero' | 'nav' | 'compact';
@@ -12,9 +13,14 @@ interface SearchBarProps {
 export function SearchBar({ variant = 'compact', onSearch }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<typeof notesData>([]);
+  const [suggestions, setSuggestions] = useState<Note[]>([]);
+  const [allNotes, setAllNotes] = useState<Note[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getAllNotes().then(setAllNotes);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -29,10 +35,10 @@ export function SearchBar({ variant = 'compact', onSearch }: SearchBarProps) {
 
   useEffect(() => {
     if (query.length > 1) {
-      const filtered = notesData.filter(note => 
+      const filtered = allNotes.filter(note =>
         note.title.toLowerCase().includes(query.toLowerCase()) ||
         note.category.toLowerCase().includes(query.toLowerCase()) ||
-        ( note.subjectCode ?? '').toLowerCase().includes(query.toLowerCase())
+        (note.subjectCode ?? '').toLowerCase().includes(query.toLowerCase())
       ).slice(0, 5);
       setSuggestions(filtered);
       setIsOpen(true);
@@ -40,7 +46,7 @@ export function SearchBar({ variant = 'compact', onSearch }: SearchBarProps) {
       setSuggestions([]);
       setIsOpen(false);
     }
-  }, [query]);
+  }, [query, allNotes]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

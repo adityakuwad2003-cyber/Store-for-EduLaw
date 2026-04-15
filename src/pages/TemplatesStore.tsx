@@ -8,6 +8,7 @@ import {
 import { legalTemplates } from '@/data/notes';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { SEO } from '@/components/SEO';
 import { LegalScroll3D } from '@/components/ui/LegalSVGs';
 
 const formatIcons = {
@@ -35,14 +36,19 @@ export default function TemplatesStore() {
   return (
     <div className="min-h-screen bg-parchment">
       <Navbar />
+      <SEO 
+        title="Legal Templates & Notice Formats — EduLaw"
+        description="Download ready-to-use rent agreements, employment contracts, NDA templates, and legal notice formats compliant with Indian laws."
+        canonical="/templates"
+      />
       
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#C9A84C]/10 via-parchment to-[#6B1E2E]/5" />
+        <div className="absolute inset-0 bg-gradient-to-br from-gold/10 via-parchment to-burgundy/5" />
         
         {/* Floating 3D Elements */}
         <div className="absolute top-40 right-20 w-36 h-36 opacity-20 animate-float">
-          <FileText className="w-full h-full text-[#6B1E2E]" />
+          <FileText className="w-full h-full text-burgundy" />
         </div>
         <div className="absolute bottom-20 left-20 w-28 h-28 opacity-20 animate-float-delayed">
           <LegalScroll3D />
@@ -54,13 +60,13 @@ export default function TemplatesStore() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#C9A84C]/10 rounded-full mb-6">
-              <FileText className="w-4 h-4 text-[#C9A84C]" />
-              <span className="font-ui text-sm text-[#C9A84C]">Professional Legal Documents</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 rounded-full mb-6">
+              <FileText className="w-4 h-4 text-gold" />
+              <span className="font-ui text-sm text-gold">Professional Legal Documents</span>
             </div>
             
             <h1 className="font-display text-5xl md:text-6xl text-ink mb-6">
-              Legal Templates <span className="text-[#6B1E2E]">Store</span>
+              Legal Templates <span className="text-burgundy">Store</span>
             </h1>
             
             <p className="font-body text-lg text-mutedgray mb-8">
@@ -71,15 +77,15 @@ export default function TemplatesStore() {
             {/* Stats */}
             <div className="flex flex-wrap justify-center gap-8 mt-12">
               <div className="text-center">
-                <div className="font-display text-3xl text-[#6B1E2E]">{legalTemplates.length}+</div>
+                <div className="font-display text-3xl text-burgundy">{legalTemplates.length}+</div>
                 <div className="font-ui text-sm text-mutedgray">Templates</div>
               </div>
               <div className="text-center">
-                <div className="font-display text-3xl text-[#6B1E2E]">10k+</div>
+                <div className="font-display text-3xl text-burgundy">10k+</div>
                 <div className="font-ui text-sm text-mutedgray">Downloads</div>
               </div>
               <div className="text-center">
-                <div className="font-display text-3xl text-[#6B1E2E]">4.9</div>
+                <div className="font-display text-3xl text-burgundy">4.9</div>
                 <div className="font-ui text-sm text-mutedgray">Rating</div>
               </div>
             </div>
@@ -92,7 +98,7 @@ export default function TemplatesStore() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
             <h2 className="font-display text-2xl text-ink">Featured Templates</h2>
-            <button className="flex items-center gap-2 text-[#6B1E2E] font-ui text-sm hover:underline">
+            <button className="flex items-center gap-2 text-burgundy font-ui text-sm hover:underline">
               View All <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -108,8 +114,8 @@ export default function TemplatesStore() {
               >
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-[#6B1E2E]/10 rounded-xl flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-[#6B1E2E]" />
+                    <div className="w-12 h-12 bg-burgundy/10 rounded-xl flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-burgundy" />
                     </div>
                     {template.originalPrice && (
                       <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full font-ui text-xs">
@@ -123,7 +129,7 @@ export default function TemplatesStore() {
                   
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-display text-xl text-[#6B1E2E]">₹{template.price}</span>
+                      <span className="font-display text-xl text-burgundy">₹{template.price}</span>
                       {template.originalPrice && (
                         <span className="font-ui text-sm text-mutedgray line-through ml-2">₹{template.originalPrice}</span>
                       )}
@@ -152,28 +158,24 @@ export default function TemplatesStore() {
                 placeholder="Search templates..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-[#6B1E2E]"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-burgundy"
               />
             </div>
             
-            {/* Category Filter */}
             <div className="flex items-center gap-2">
               <Filter className="w-5 h-5 text-mutedgray" />
-              <div className="flex gap-2">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                title="Filter by legal category"
+                className="px-4 py-3 rounded-xl border border-parchment-dark bg-white font-ui text-sm focus:outline-none focus:border-burgundy"
+              >
                 {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-2 rounded-xl font-ui text-sm transition-all ${
-                      selectedCategory === cat
-                        ? 'bg-[#6B1E2E] text-parchment'
-                        : 'bg-white border border-parchment-dark text-mutedgray hover:text-ink'
-                    }`}
-                  >
-                    {cat === 'all' ? 'All' : cat}
-                  </button>
+                  <option key={cat} value={cat}>
+                    {cat === 'all' ? 'All Categories' : cat}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
           </div>
         </div>
@@ -200,13 +202,13 @@ export default function TemplatesStore() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="group bg-white rounded-2xl border border-parchment-dark overflow-hidden hover:shadow-xl hover:shadow-[#6B1E2E]/10 transition-all duration-300"
+                    className="group bg-white rounded-2xl border border-parchment-dark overflow-hidden hover:shadow-xl hover:shadow-burgundy/10 transition-all duration-300"
                   >
                     <div className="p-6">
                       {/* Header */}
                       <div className="flex items-start justify-between mb-4">
-                        <div className="w-14 h-14 bg-gradient-to-br from-[#6B1E2E]/10 to-[#C9A84C]/10 rounded-xl flex items-center justify-center">
-                          <FormatIcon className="w-7 h-7 text-[#6B1E2E]" />
+                        <div className="w-14 h-14 bg-gradient-to-br from-burgundy/10 to-gold/10 rounded-xl flex items-center justify-center">
+                          <FormatIcon className="w-7 h-7 text-burgundy" />
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-1 bg-parchment rounded-lg font-ui text-xs text-mutedgray uppercase">
@@ -242,7 +244,7 @@ export default function TemplatesStore() {
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="font-display text-xl text-[#6B1E2E]">₹{template.price}</span>
+                          <span className="font-display text-xl text-burgundy">₹{template.price}</span>
                           {template.originalPrice && (
                             <span className="font-ui text-xs text-mutedgray line-through block">₹{template.originalPrice}</span>
                           )}
@@ -252,7 +254,7 @@ export default function TemplatesStore() {
                     
                     {/* Actions */}
                     <div className="px-6 pb-6">
-                      <button className="w-full py-3 bg-gradient-to-r from-[#6B1E2E] to-[#8B2E42] text-parchment rounded-xl font-ui font-semibold hover:shadow-lg hover:shadow-[#6B1E2E]/30 transition-all flex items-center justify-center gap-2">
+                      <button className="w-full py-3 bg-gradient-to-r from-burgundy to-burgundy-light text-parchment rounded-xl font-ui font-semibold hover:shadow-lg hover:shadow-burgundy/30 transition-all flex items-center justify-center gap-2">
                         <ShoppingCart className="w-4 h-4" />
                         Add to Cart
                       </button>
@@ -270,7 +272,7 @@ export default function TemplatesStore() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl text-ink mb-4">
-              Why Choose Our <span className="text-[#6B1E2E]">Templates?</span>
+              Why Choose Our <span className="text-burgundy">Templates?</span>
             </h2>
             <p className="font-body text-mutedgray max-w-2xl mx-auto">
               Professionally drafted by experienced lawyers
@@ -292,8 +294,8 @@ export default function TemplatesStore() {
                 transition={{ delay: index * 0.1 }}
                 className="text-center p-6"
               >
-                <div className="w-16 h-16 mx-auto mb-4 bg-[#6B1E2E]/10 rounded-2xl flex items-center justify-center">
-                  <feature.icon className="w-8 h-8 text-[#6B1E2E]" />
+                <div className="w-16 h-16 mx-auto mb-4 bg-burgundy/10 rounded-2xl flex items-center justify-center">
+                  <feature.icon className="w-8 h-8 text-burgundy" />
                 </div>
                 <h3 className="font-display text-lg text-ink mb-2">{feature.title}</h3>
                 <p className="font-body text-sm text-mutedgray">{feature.desc}</p>
@@ -306,13 +308,13 @@ export default function TemplatesStore() {
       {/* CTA Section */}
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-r from-[#6B1E2E] to-[#8B2E42] rounded-3xl p-12 text-center text-parchment">
+          <div className="bg-gradient-to-r from-burgundy to-burgundy-light rounded-3xl p-12 text-center text-parchment">
             <h2 className="font-display text-3xl mb-4">Need Custom Documents?</h2>
             <p className="font-body mb-8 opacity-90">
               Our legal experts can draft custom documents tailored to your specific needs
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <button className="px-8 py-4 bg-parchment text-[#6B1E2E] rounded-xl font-ui font-semibold hover:shadow-lg transition-all">
+              <button className="px-8 py-4 bg-parchment text-burgundy rounded-xl font-ui font-semibold hover:shadow-lg transition-all">
                 Contact Legal Services
               </button>
               <button className="px-8 py-4 border-2 border-parchment text-parchment rounded-xl font-ui font-semibold hover:bg-parchment/10 transition-all">

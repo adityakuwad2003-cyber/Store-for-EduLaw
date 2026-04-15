@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ShoppingCart, Check, Sparkles, Package } from 'lucide-react';
 import type { Bundle } from '@/types';
 import { useCartStore } from '@/store';
+import { ShareButton } from './ShareButton';
 
 interface BundleCardProps {
   bundle: Bundle;
@@ -105,8 +106,8 @@ export function BundleCard({ bundle, index = 0, isCustom = false }: BundleCardPr
           onClick={handleAddToCart}
           disabled={isInCart}
           className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-ui font-medium transition-all ${
-            isInCart 
-              ? 'bg-green-100 text-green-600' 
+            isInCart
+              ? 'bg-green-100 text-green-600'
               : bundle.tag?.includes('Best')
                 ? 'bg-gold text-ink hover:bg-gold-light'
                 : 'bg-burgundy text-parchment hover:bg-burgundy-light'
@@ -118,6 +119,18 @@ export function BundleCard({ bundle, index = 0, isCustom = false }: BundleCardPr
             <><ShoppingCart className="w-5 h-5" /> Add to Cart</>
           )}
         </button>
+
+        {/* Share row */}
+        <div className="mt-3 flex justify-center">
+          <ShareButton
+            title={bundle.name}
+            description={bundle.description}
+            price={bundle.price}
+            originalPrice={bundle.originalPrice}
+            url={`${window.location.origin}/marketplace`}
+            variant="pill"
+          />
+        </div>
       </div>
     </motion.div>
   );

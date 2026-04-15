@@ -1,28 +1,72 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useSearchParams } from 'react-router-dom';
+import { useEffect, lazy, Suspense, Component, type ReactNode, type ErrorInfo } from 'react';
+
+class PageErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error('[PageErrorBoundary]', error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] p-8 text-center">
+          <div className="max-w-md">
+            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-6">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <h2 className="font-display text-2xl text-slate-900 font-bold mb-2">Something went wrong</h2>
+            <p className="text-sm text-slate-500 font-ui mb-6">
+              {(this.state.error as Error).message}
+            </p>
+            <button
+              onClick={() => { this.setState({ error: null }); window.location.href = '/marketplace'; }}
+              className="px-6 py-3 bg-burgundy text-white rounded-xl font-ui font-bold text-sm"
+            >
+              Back to Marketplace
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import { Home } from '@/pages/Home';
-import { Marketplace } from '@/pages/Marketplace';
-import { NoteDetail } from '@/pages/NoteDetail';
-import { Bundles } from '@/pages/Bundles';
-import { Subscription } from '@/pages/Subscription';
-import { LegalServices } from '@/pages/LegalServices';
-import { Cart } from '@/pages/Cart';
-import { Dashboard } from '@/pages/Dashboard';
-import { Login } from '@/pages/Login';
-import MockTests from '@/pages/MockTests';
-import TemplatesStore from '@/pages/TemplatesStore';
-import CommunityForum from '@/pages/CommunityForum';
-import ReferralProgram from '@/pages/ReferralProgram';
-import CollegeLicensing from '@/pages/CollegeLicensing';
-import { PrivacyPolicy } from '@/pages/PrivacyPolicy';
-import { TermsOfService } from '@/pages/TermsOfService';
-import { RefundPolicy } from '@/pages/RefundPolicy';
+import { ScrollToTop } from '@/components/layout/ScrollToTop';
 import { Toaster } from '@/components/ui/sonner';
+import { WhatsAppFloat } from '@/components/ui/WhatsAppFloat';
+import { BundleModal } from '@/components/ui/BundleModal';
+import { SignInPopup } from '@/components/ui/SignInPopup';
+import { ScholarAI } from '@/components/ui/ScholarAI';
+import { WishlistNudge } from '@/components/ui/WishlistNudge';
+import { useUIStore } from '@/store';
 
-import { lazy, Suspense } from 'react';
-
-// Lazy load admin components to keep the public bundle small
+// Lazy-load all public pages — reduces initial JS parse time significantly
+const Home = lazy(() => import('@/pages/Home').then(m => ({ default: m.Home })));
+const Marketplace = lazy(() => import('@/pages/Marketplace').then(m => ({ default: m.Marketplace })));
+const NoteDetail = lazy(() => import('@/pages/NoteDetail').then(m => ({ default: m.NoteDetail })));
+const Bundles = lazy(() => import('@/pages/Bundles').then(m => ({ default: m.Bundles })));
+const Subscription = lazy(() => import('@/pages/Subscription').then(m => ({ default: m.Subscription })));
+const LegalServices = lazy(() => import('@/pages/LegalServices').then(m => ({ default: m.LegalServices })));
+const Cart = lazy(() => import('@/pages/Cart').then(m => ({ default: m.Cart })));
+const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const Login = lazy(() => import('@/pages/Login').then(m => ({ default: m.Login })));
+const MockTests = lazy(() => import('@/pages/MockTests'));
+const MCQQuiz = lazy(() => import('@/pages/MCQQuiz'));
+const TemplatesStore = lazy(() => import('@/pages/TemplatesStore'));
+const CommunityForum = lazy(() => import('@/pages/CommunityForum'));
+const ReferralProgram = lazy(() => import('@/pages/ReferralProgram'));
+const CollegeLicensing = lazy(() => import('@/pages/CollegeLicensing'));
+const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
+const LegalHub = lazy(() => import('@/pages/LegalHub'));
+const LegalPlayground = lazy(() => import('@/pages/LegalPlayground').then(m => ({ default: m.LegalPlayground })));
+const BlogArticle = lazy(() => import('@/pages/BlogArticle'));
+const LegalNewsIndex = lazy(() => import('@/pages/LegalNewsIndex'));
+const LegalNewsArticle = lazy(() => import('@/pages/LegalNewsArticle'));
+const PlaygroundItemDetail = lazy(() => import('@/pages/PlaygroundItemDetail').then(m => ({ default: m.PlaygroundItemDetail })));
+const TermsOfService = lazy(() => import('@/pages/TermsOfService').then(m => ({ default: m.TermsOfService })));
+const RefundPolicy = lazy(() => import('@/pages/RefundPolicy').then(m => ({ default: m.RefundPolicy })));
+// Lazy load admin components
 const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'));
 const AdminGuard = lazy(() => import('@/pages/admin/AdminGuard'));
 const Overview = lazy(() => import('@/pages/admin/Overview'));
@@ -32,9 +76,12 @@ const NotesManager = lazy(() => import('@/pages/admin/products/NotesManager'));
 const BundlesManager = lazy(() => import('@/pages/admin/products/BundlesManager'));
 const TemplatesManager = lazy(() => import('@/pages/admin/products/TemplatesManager'));
 const MockTestsManager = lazy(() => import('@/pages/admin/products/MockTestsManager'));
+const NoteMCQsManager = lazy(() => import('@/pages/admin/products/NoteMCQsManager'));
 
 // Content
 const BlogManager = lazy(() => import('@/pages/admin/content/BlogManager'));
+const PlaygroundManager = lazy(() => import('@/pages/admin/content/PlaygroundManager'));
+const PlaygroundNewsManager = lazy(() => import('@/pages/admin/content/PlaygroundNewsManager'));
 const VideoLectures = lazy(() => import('@/pages/admin/content/VideoLectures'));
 const FlashcardsManager = lazy(() => import('@/pages/admin/content/FlashcardsManager'));
 
@@ -48,6 +95,7 @@ const EmailCampaigns = lazy(() => import('@/pages/admin/crm/EmailCampaigns'));
 const PushNotifications = lazy(() => import('@/pages/admin/crm/PushNotifications'));
 const SupportTickets = lazy(() => import('@/pages/admin/crm/SupportTickets'));
 const ReferralsManager = lazy(() => import('@/pages/admin/crm/ReferralsManager'));
+const ServiceRequests = lazy(() => import('@/pages/admin/crm/ServiceRequests').then(m => ({ default: m.ServiceRequests })));
 
 // System
 const RevenueAnalytics = lazy(() => import('@/pages/admin/system/RevenueAnalytics'));
@@ -67,14 +115,30 @@ const FullPageSpinner = () => (
  * Inner component — must be inside <Router> so useLocation works.
  * Hides the public Navbar + Footer when on any /admin sub-route.
  */
+function RefCapture() {
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) {
+      localStorage.setItem('pending_ref_code', ref.toUpperCase());
+    }
+  }, [searchParams]);
+  return null;
+}
+
 function AppContent() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  const { isBundleModalOpen, bundleModalCount, bundleModalNoteId, setBundleModal } = useUIStore();
 
   return (
     <div className={`min-h-screen ${isAdmin ? 'bg-slate-50' : 'bg-parchment font-ui'}`}>
+      <RefCapture />
+      {!isAdmin && <BundleModal isOpen={isBundleModalOpen} onClose={() => setBundleModal(false, 0, null)} noteCount={bundleModalCount} noteId={bundleModalNoteId} />}
+      {!isAdmin && <WishlistNudge />}
       {!isAdmin && <Navbar />}
       <main>
+        <PageErrorBoundary>
         <Suspense fallback={<FullPageSpinner />}>
           <Routes>
             {/* ── Public routes ── */}
@@ -90,10 +154,17 @@ function AppContent() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/mock-tests" element={<MockTests />} />
+            <Route path="/mock-tests/:bookletId" element={<MCQQuiz />} />
             <Route path="/templates" element={<TemplatesStore />} />
             <Route path="/community" element={<CommunityForum />} />
             <Route path="/referral" element={<ReferralProgram />} />
             <Route path="/college-licensing" element={<CollegeLicensing />} />
+            <Route path="/legal-hub" element={<LegalHub />} />
+            <Route path="/legal-playground" element={<LegalPlayground />} />
+            <Route path="/legal-playground/:type/:slug" element={<PlaygroundItemDetail />} />
+            <Route path="/blog/:slug" element={<BlogArticle />} />
+            <Route path="/legal-news" element={<LegalNewsIndex />} />
+            <Route path="/legal-news/:id" element={<LegalNewsArticle />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
@@ -114,9 +185,12 @@ function AppContent() {
               <Route path="bundles" element={<BundlesManager />} />
               <Route path="templates" element={<TemplatesManager />} />
               <Route path="mock-tests" element={<MockTestsManager />} />
+              <Route path="note-mcqs" element={<NoteMCQsManager />} />
 
               {/* Content */}
               <Route path="blog" element={<BlogManager />} />
+              <Route path="playground" element={<PlaygroundManager />} />
+              <Route path="playground-news" element={<PlaygroundNewsManager />} />
               <Route path="video-lectures" element={<VideoLectures />} />
               <Route path="flashcards" element={<FlashcardsManager />} />
 
@@ -131,6 +205,7 @@ function AppContent() {
               <Route path="notifications" element={<PushNotifications />} />
               <Route path="support" element={<SupportTickets />} />
               <Route path="referrals" element={<ReferralsManager />} />
+              <Route path="service-requests" element={<ServiceRequests />} />
 
               {/* System */}
               <Route path="glossary" element={<LegalGlossary />} />
@@ -140,8 +215,16 @@ function AppContent() {
             </Route>
           </Routes>
         </Suspense>
+        </PageErrorBoundary>
       </main>
       {!isAdmin && <Footer />}
+      {!isAdmin && <WhatsAppFloat />}
+      {!isAdmin && <SignInPopup />}
+      {!isAdmin && (
+        <div className="fixed bottom-6 right-28 z-[100]">
+          <ScholarAI />
+        </div>
+      )}
     </div>
   );
 }
@@ -149,6 +232,7 @@ function AppContent() {
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AppContent />
       <Toaster position="top-center" expand={true} richColors />
     </Router>

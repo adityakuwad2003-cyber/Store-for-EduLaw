@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   FileEdit, Plus, X, Save,
   Eye, Image as ImageIcon, Globe,
-  Layout
+  Layout, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -40,7 +40,17 @@ interface Article {
   updatedAt: any;
 }
 
-const CATEGORIES = ['Legal Updates', 'Case Studies', 'Career Advice', 'News', 'Academic'];
+const CATEGORIES = [
+  'Landmark Judgements',
+  'AI & Tech Developments',
+  'Criminal Law',
+  'War & Geopolitics',
+  'Legal Updates',
+  'Case Studies',
+  'Career Advice',
+  'News',
+  'Academic'
+];
 
 export default function BlogManager() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -155,7 +165,7 @@ export default function BlogManager() {
       render: (row) => (
         <button 
           onClick={(e) => { e.stopPropagation(); setEditingArticle(row); setIsEditorOpen(true); }}
-          className="p-2 hover:bg-slate-100 text-slate-400 hover:text-gold rounded-lg transition-all"
+          className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-gold/10 hover:text-gold hover:border-gold/30 rounded-lg transition-all shadow-sm"
           aria-label="Edit article"
         >
           <FileEdit className="w-4 h-4" />
@@ -178,12 +188,22 @@ export default function BlogManager() {
           </div>
         </div>
 
-        <button 
-          onClick={() => { setEditingArticle({ status: 'draft', category: 'Legal Updates', content: '', tags: [], seo: { metaTitle: '', metaDesc: '', keywords: '' } }); setIsEditorOpen(true); }}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
-        >
-          <Plus className="w-5 h-5" /> New Article
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchArticles}
+            disabled={loading}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-gold hover:shadow-sm rounded-xl transition-all shadow-sm"
+            aria-label="Refresh articles"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button 
+            onClick={() => { setEditingArticle({ status: 'draft', category: 'Legal Updates', content: '', tags: [], seo: { metaTitle: '', metaDesc: '', keywords: '' } }); setIsEditorOpen(true); }}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-5 h-5" /> New Article
+          </button>
+        </div>
       </div>
 
       <DataTable

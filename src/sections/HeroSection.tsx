@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Play, Sparkles, BookOpen, Scale, GraduationCap } from 'lucide-react';
+import { ArrowRight, Sparkles, BookOpen, Scale, GraduationCap, Zap, Flame } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { SearchBar } from '@/components/ui/SearchBar';
+import { HeroSearch } from '@/components/ui/HeroSearch';
 import { 
   ScalesOfJustice3D, 
   LawBooks3D, 
@@ -10,6 +10,7 @@ import {
   DocumentCard3D,
   LaurelWreath 
 } from '@/components/ui/LegalSVGs';
+import { useUIStore } from '@/store';
 
 const floatingCards = [
   { title: 'BNS Notes', subtitle: 'Criminal Law', delay: 0, icon: Scale },
@@ -19,6 +20,8 @@ const floatingCards = [
 ];
 
 export function HeroSection() {
+  const { setScholarAI } = useUIStore();
+
   return (
     <section className="relative min-h-screen pt-20 lg:pt-24 overflow-hidden">
       {/* Background Pattern */}
@@ -96,10 +99,10 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#6B1E2E]/10 to-[#C9A84C]/10 rounded-full mb-6 border border-[#6B1E2E]/20"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-burgundy/10 to-gold/10 rounded-full mb-6 border border-burgundy/20"
             >
-              <Sparkles className="w-4 h-4 text-[#C9A84C]" />
-              <span className="font-ui text-sm text-[#6B1E2E]">India's #1 Legal Notes Platform</span>
+              <Sparkles className="w-4 h-4 text-gold" />
+              <span className="font-ui text-sm text-burgundy">India's #1 Legal Notes Platform</span>
             </motion.div>
 
             {/* Headline */}
@@ -110,7 +113,7 @@ export function HeroSection() {
               className="font-display text-4xl sm:text-5xl lg:text-6xl text-ink leading-tight mb-6"
             >
               Master Every Law.
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#6B1E2E] to-[#8B2E42]">
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-burgundy to-burgundy-light">
                 Own Every Note.
               </span>
             </motion.h1>
@@ -120,11 +123,54 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="font-body text-lg text-mutedgray mb-8"
+              className="font-body text-lg text-mutedgray mb-5"
             >
-              India's most comprehensive legal notes marketplace — crafted for law students, 
+              India's most comprehensive legal notes marketplace — crafted for law students,
               LLB, LLM, CLAT PG, Judiciary, and practising advocates.
             </motion.p>
+
+            {/* Who is this for */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45 }}
+              className="mb-6"
+            >
+              <p className="font-ui text-xs text-mutedgray uppercase tracking-widest font-semibold mb-2.5">
+                Built for →
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'CLAT PG', emoji: '📘' },
+                  { label: 'LLB / LLM', emoji: '🎓' },
+                  { label: 'Judiciary Aspirants', emoji: '⚖️' },
+                  { label: 'UPSC Law Optional', emoji: '🏛️' },
+                  { label: 'Practising Advocates', emoji: '👨‍⚖️' },
+                  { label: 'Bar Exam Prep', emoji: '📜' },
+                ].map((tag) => (
+                  <span
+                    key={tag.label}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-parchment-dark rounded-full font-ui text-xs font-semibold text-ink shadow-sm hover:border-gold/50 hover:shadow-md transition-all cursor-default"
+                  >
+                    <span>{tag.emoji}</span>
+                    {tag.label}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Urgency strip */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.48 }}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-orange-50 border border-orange-200 rounded-xl mb-6"
+            >
+              <Flame className="w-4 h-4 text-orange-500 shrink-0" />
+              <span className="font-ui text-sm font-semibold text-orange-700">
+                47 students bought notes in the last 24 hours
+              </span>
+            </motion.div>
 
             {/* Search Bar */}
             <motion.div
@@ -133,7 +179,7 @@ export function HeroSection() {
               transition={{ delay: 0.5 }}
               className="mb-8"
             >
-              <SearchBar variant="hero" />
+              <HeroSearch />
             </motion.div>
 
             {/* CTAs */}
@@ -145,18 +191,37 @@ export function HeroSection() {
             >
               <Link
                 to="/marketplace"
-                className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-[#C9A84C] to-[#E8C97A] text-ink rounded-xl font-ui font-semibold hover:shadow-lg hover:shadow-[#C9A84C]/30 transition-all hover:scale-105"
+                className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-gold to-gold-light text-ink rounded-xl font-ui font-semibold hover:shadow-lg hover:shadow-[#C9A84C]/30 transition-all hover:scale-105"
               >
                 Browse Notes
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                to="/marketplace"
-                className="inline-flex items-center gap-2 px-6 py-3.5 border-2 border-[#6B1E2E] text-[#6B1E2E] rounded-xl font-ui font-semibold hover:bg-[#6B1E2E] hover:text-parchment transition-all"
+                to="/legal-hub"
+                className="inline-flex items-center gap-2 px-6 py-3.5 border-2 border-burgundy text-burgundy rounded-xl font-ui font-semibold hover:bg-burgundy hover:text-parchment transition-all"
               >
-                <Play className="w-4 h-4" />
-                Start Free Preview
+                Legal Updates
               </Link>
+              <Link
+                to="/legal-playground"
+                className="inline-flex items-center gap-2 px-6 py-3.5 border-2 border-teal-600 text-teal-700 rounded-xl font-ui font-semibold hover:bg-teal-600 hover:text-white transition-all"
+              >
+                <Zap className="w-4 h-4" />
+                Legal Playground
+                <span className="text-[10px] font-black uppercase tracking-widest bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full -mr-1">Free</span>
+              </Link>
+              <button
+                onClick={() => setScholarAI(true)}
+                className="group relative inline-flex items-center gap-2 px-6 py-3.5 bg-ink text-white rounded-xl font-ui font-semibold hover:shadow-lg hover:shadow-ink/20 transition-all hover:translate-y-[-2px] overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gold/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                <GraduationCap className="w-4 h-4 text-gold" />
+                <span className="relative">AI Scholar Assistant</span>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
+                </span>
+              </button>
             </motion.div>
 
             {/* Trust Indicators */}
@@ -167,17 +232,17 @@ export function HeroSection() {
               className="flex items-center gap-6 mt-8 pt-8 border-t border-parchment-dark"
             >
               <div>
-                <p className="font-display text-2xl text-[#C9A84C]">46+</p>
+                <p className="font-display text-2xl text-gold">46+</p>
                 <p className="font-ui text-sm text-mutedgray">Subjects</p>
               </div>
               <div className="w-px h-10 bg-parchment-dark" />
               <div>
-                <p className="font-display text-2xl text-[#C9A84C]">10K+</p>
+                <p className="font-display text-2xl text-gold">10K+</p>
                 <p className="font-ui text-sm text-mutedgray">Students</p>
               </div>
               <div className="w-px h-10 bg-parchment-dark" />
               <div>
-                <p className="font-display text-2xl text-[#C9A84C]">4.9★</p>
+                <p className="font-display text-2xl text-gold">4.9★</p>
                 <p className="font-ui text-sm text-mutedgray">Rating</p>
               </div>
             </motion.div>
@@ -245,7 +310,7 @@ export function HeroSection() {
               transition={{ delay: 0.8, duration: 1 }}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 -z-10"
             >
-              <div className="w-full h-full rounded-full bg-gradient-to-br from-[#C9A84C]/30 to-[#6B1E2E]/20 blur-3xl" />
+              <div className="w-full h-full rounded-full bg-gradient-to-br from-gold/30 to-burgundy/20 blur-3xl" />
             </motion.div>
 
             {/* Laurel wreath decoration */}

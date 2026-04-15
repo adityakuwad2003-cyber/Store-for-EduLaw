@@ -1,13 +1,20 @@
 import { useState } from 'react';
 import { Check, Crown } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { subscriptionPlans } from '@/data/notes';
+import { SEO } from '@/components/SEO';
 
 export function Subscription() {
   const [isAnnual, setIsAnnual] = useState(false);
   const plan = isAnnual ? subscriptionPlans[1] : subscriptionPlans[0];
 
   return (
-    <div className="pt-20 min-h-screen bg-parchment">
+    <div className="pt-24 pb-20 min-h-screen bg-parchment">
+      <SEO 
+        title="Unlimited Legal Learning Subscription — EduLaw Pro"
+        description="Get unlimited access to India's most comprehensive legal library. Subscribe to EduLaw Pro for monthly downloads and premium legal services."
+        canonical="/subscription"
+      />
       {/* Hero */}
       <div className="bg-ink py-16">
         <div className="section-container">
@@ -34,6 +41,7 @@ export function Subscription() {
           </span>
           <button
             onClick={() => setIsAnnual(!isAnnual)}
+            title={`Switch to ${isAnnual ? 'Monthly' : 'Annual'} billing`}
             className={`relative w-16 h-8 rounded-full transition-colors ${
               isAnnual ? 'bg-burgundy' : 'bg-parchment-dark'
             }`}
@@ -132,6 +140,52 @@ export function Subscription() {
               Choose Annual
             </button>
           </div>
+        </div>
+
+        {/* Coming Soon Banner */}
+        <div className="max-w-4xl mx-auto mb-16 px-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="relative overflow-hidden bg-gradient-to-br from-ink to-[#1a1a1a] rounded-[2.5rem] p-8 sm:p-12 border border-gold/20 shadow-2xl group text-center md:text-left"
+          >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gold/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-gold/10 transition-colors duration-700" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-burgundy/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-burgundy/10 transition-colors duration-700" />
+            
+            <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-12">
+              <div className="shrink-0">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gold/10 border border-gold/20 flex items-center justify-center relative">
+                  <Crown className="w-10 h-10 sm:w-12 sm:h-12 text-gold animate-pulse" />
+                  <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-gold text-ink text-[8px] font-black uppercase tracking-widest rounded-md shadow-lg">
+                    SOON
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex-1">
+                <h3 className="font-display text-2xl sm:text-3xl text-parchment mb-3">
+                  The <span className="text-gold">Ultimate</span> Legal Edge
+                </h3>
+                <p className="font-ui text-sm sm:text-base text-parchment/60 leading-relaxed max-w-xl mx-auto md:mx-0">
+                  We are finalising our premium subscription infrastructure to provide you with seamless 
+                  access to over <span className="text-parchment font-bold">46+ Dynamic Modules</span>, 
+                  Expert Insights, and Priority Legal Support.
+                </p>
+                
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-6">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px] font-ui font-black text-parchment/40 uppercase tracking-widest">Integrating Razorpay</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+                    <span className="text-[10px] font-ui font-black text-parchment/40 uppercase tracking-widest">Final Testing phase</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
 
         {/* Selected Plan CTA */}

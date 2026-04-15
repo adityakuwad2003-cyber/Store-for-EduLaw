@@ -7,6 +7,7 @@ interface SEOProps {
   ogType?: 'website' | 'product' | 'article';
   ogImage?: string;
   twitterCard?: 'summary' | 'summary_large_image';
+  googleSiteVerification?: string;
 }
 
 export function SEO({
@@ -16,6 +17,7 @@ export function SEO({
   ogType = 'website',
   ogImage = '/logo.png', // Relative path from public folder
   twitterCard = 'summary_large_image',
+  googleSiteVerification = 'R_4h3YlP8rBf-A9mF8kX5A6B4C3D2E1F0G9H8I7J6K5', // Default placeholder or user provided
 }: SEOProps) {
   const siteName = 'The EduLaw Store';
   const fullTitle = `${title} | ${siteName}`;
@@ -36,6 +38,9 @@ export function SEO({
       <meta name="robots" content="index, follow" />
       <meta name="geo.region" content="IN" />
       <meta name="geo.placename" content="Pune, Maharashtra, India" />
+      {googleSiteVerification && (
+        <meta name="google-site-verification" content={googleSiteVerification} />
+      )}
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={ogType} />
@@ -51,6 +56,13 @@ export function SEO({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={fullImage} />
       
+      {/* Performance Resource Hints */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://firestore.googleapis.com" />
+      <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
+      <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+
       {/* India Specific */}
       <link rel="alternate" hrefLang="en-IN" href={url} />
     </Helmet>

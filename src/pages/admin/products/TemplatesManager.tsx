@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, Edit, 
-  FileText, X, Save,
-  FileCode, Globe, Loader2, DollarSign
+  FileText, X, Save, Trash2,
+  FileCode, Globe, Loader2, DollarSign,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { 
   collection, query, orderBy, 
   getDocs, doc, updateDoc, 
-  addDoc, serverTimestamp 
+  addDoc, deleteDoc, serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { DataTable } from '../../../components/admin/DataTable';
@@ -89,6 +90,17 @@ export default function TemplatesManager() {
     }
   };
 
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!window.confirm('Are you sure you want to delete this template completely? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'templates', templateId));
+      toast.success('Template deleted successfully');
+      fetchTemplates();
+    } catch (error) {
+      toast.error('Failed to delete template');
+    }
+  };
+
   const columns: Column<Template>[] = [
     {
       key: 'title',
@@ -147,13 +159,21 @@ export default function TemplatesManager() {
       label: '',
       className: 'w-10',
       render: (row) => (
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2">
           <button 
             onClick={(e) => { e.stopPropagation(); setEditingTemplate(row); setIsEditorOpen(true); }}
-            className="p-2 hover:bg-gold/10 text-slate-400 hover:text-gold rounded-lg transition-all"
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-gold/10 hover:text-gold hover:border-gold/30 rounded-lg transition-all shadow-sm"
             aria-label="Edit template"
           >
             <Edit className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(row.id as string); }}
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-500 hover:border-red-200 rounded-lg transition-all shadow-sm"
+            title="Delete template completely"
+            aria-label="Delete template completely"
+          >
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       )
@@ -174,12 +194,22 @@ export default function TemplatesManager() {
           </div>
         </div>
 
-        <button 
-          onClick={() => { setEditingTemplate({ isFree: false, language: 'English', category: 'Petition' }); setIsEditorOpen(true); }}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
-        >
-          <Plus className="w-5 h-5" /> New Template
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchTemplates}
+            disabled={loading}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-gold hover:shadow-sm rounded-xl transition-all shadow-sm"
+            aria-label="Refresh templates"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button 
+            onClick={() => { setEditingTemplate({ isFree: false, language: 'English', category: 'Petition' }); setIsEditorOpen(true); }}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-ui font-bold rounded-xl shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-5 h-5" /> New Template
+          </button>
+        </div>
       </div>
 
       <DataTable

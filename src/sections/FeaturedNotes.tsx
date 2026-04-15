@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { NoteCard } from '@/components/ui/NoteCard';
-import { getFeaturedNotes, getNewNotes } from '@/data/notes';
+import { getAllNotes } from '@/lib/db';
+import type { Note } from '@/types';
 
 interface FeaturedNotesProps {
   variant?: 'featured' | 'new' | 'all';
@@ -11,18 +13,22 @@ interface FeaturedNotesProps {
   subtitle?: string;
 }
 
-export function FeaturedNotes({ 
-  variant = 'featured', 
+export function FeaturedNotes({
+  variant = 'featured',
   limit = 8,
   title,
-  subtitle 
+  subtitle
 }: FeaturedNotesProps) {
-  const notes = variant === 'featured' 
-    ? getFeaturedNotes() 
-    : variant === 'new' 
-      ? getNewNotes() 
-      : getFeaturedNotes();
-  
+  const [allNotes, setAllNotes] = useState<Note[]>([]);
+
+  useEffect(() => {
+    getAllNotes().then(setAllNotes);
+  }, []);
+
+  const notes = variant === 'new'
+    ? allNotes.filter(n => n.isNew)
+    : allNotes.filter(n => n.isFeatured);
+
   const displayNotes = notes.slice(0, limit);
 
   const sectionTitle = title || (variant === 'featured' 

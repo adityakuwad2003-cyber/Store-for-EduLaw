@@ -3,7 +3,7 @@ import {
   Share2, TrendingUp, Wallet, 
   CheckCircle2, ArrowUpRight, Settings, 
   Award, Users, Download, X, Percent,
-  IndianRupee, Save
+  IndianRupee, Save, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -149,18 +149,18 @@ export default function ReferralsManager() {
       label: '',
       className: 'w-10',
       render: (row) => (
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2">
           {row.status === 'pending' && (
              <button 
                 onClick={(e) => { e.stopPropagation(); handleUpdateStatus(row.id, 'approved'); }}
-                className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-all"
+                className="p-2 bg-white border border-slate-200 text-green-600 hover:bg-green-50 hover:border-green-200 rounded-lg transition-all shadow-sm"
                 title="Approve"
               >
                 <CheckCircle2 className="w-4 h-4" />
              </button>
           )}
           <button 
-            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-gold rounded-lg transition-all"
+            className="p-2 bg-white border border-slate-200 text-slate-600 hover:bg-gold/10 hover:text-gold hover:border-gold/30 rounded-lg transition-all shadow-sm"
             aria-label="View referral details"
           >
             <ArrowUpRight className="w-4 h-4" />
@@ -185,9 +185,17 @@ export default function ReferralsManager() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={fetchRecords}
+            disabled={loading}
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-gold hover:shadow-sm rounded-xl transition-all shadow-sm"
+            aria-label="Refresh referrals"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
           <button 
             onClick={() => setIsSettingsOpen(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 font-ui font-bold rounded-xl transition-all"
+            className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-ui font-bold rounded-xl shadow-sm transition-all"
           >
             <Settings className="w-5 h-5" /> Config
           </button>
@@ -217,6 +225,76 @@ export default function ReferralsManager() {
           </div>
         ))}
       </div>
+
+      {/* ── OWED PER REFERRER ── */}
+      {records.length > 0 && (() => {
+        // Group pending + approved records by referrerEmail and sum commissions
+        const owedMap: Record<string, { email: string; uid: string; total: number; count: number }> = {};
+        for (const r of records) {
+          if (r.status === 'pending' || r.status === 'approved') {
+            if (!owedMap[r.referrerUid]) {
+              owedMap[r.referrerUid] = { email: r.referrerEmail, uid: r.referrerUid, total: 0, count: 0 };
+            }
+            owedMap[r.referrerUid].total += r.commissionAmount;
+            owedMap[r.referrerUid].count += 1;
+          }
+        }
+        const rows = Object.values(owedMap).sort((a, b) => b.total - a.total);
+        if (rows.length === 0) return null;
+        return (
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
+              <Wallet className="w-5 h-5 text-gold" />
+              <h2 className="font-display text-lg text-slate-900">Owed to Referrers</h2>
+              <span className="ml-2 px-2.5 py-0.5 bg-amber-50 text-amber-700 text-xs font-ui font-bold rounded-full border border-amber-100">
+                {rows.length} referrer{rows.length !== 1 ? 's' : ''} awaiting payment
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 text-[10px] uppercase tracking-widest font-black text-slate-400">
+                  <tr>
+                    <th className="px-6 py-3 text-left">Referrer</th>
+                    <th className="px-6 py-3 text-left">Conversions</th>
+                    <th className="px-6 py-3 text-left">Amount Owed</th>
+                    <th className="px-6 py-3 text-left">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.uid} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-slate-900 text-sm">{row.email}</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{row.uid.slice(0, 12)}…</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 font-ui">{row.count} referral{row.count !== 1 ? 's' : ''}</td>
+                      <td className="px-6 py-4">
+                        <span className="text-lg font-display text-gold font-bold">₹{row.total}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={async () => {
+                            // Mark all pending/approved for this referrer as paid
+                            const toMark = records.filter(
+                              r => r.referrerUid === row.uid && (r.status === 'pending' || r.status === 'approved')
+                            );
+                            for (const r of toMark) {
+                              await handleUpdateStatus(r.id, 'paid');
+                            }
+                          }}
+                          className="px-4 py-2 bg-green-600 text-white text-xs font-ui font-bold rounded-lg hover:bg-green-700 transition-all"
+                        >
+                          Mark as Paid
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       <DataTable
         columns={columns}

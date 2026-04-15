@@ -240,21 +240,20 @@ export function DataTable<T>({
             <button
               disabled={currentPage === 1 || loading}
               onClick={() => onPageChange?.(currentPage - 1)}
-              className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-gold hover:border-gold/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-gold hover:border-gold/30 hover:shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
               title="Previous Page"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="flex gap-1">
-              {/* Simple page indicator - can be expanded to full numbers if needed */}
-              <div className="px-4 py-2 bg-gold/10 border border-gold/20 rounded-xl text-gold font-bold text-xs ring-2 ring-gold/5">
+              <div className="px-4 py-2 bg-gold/10 border border-gold/30 rounded-xl text-gold font-bold text-xs shadow-sm">
                 {currentPage}
               </div>
             </div>
             <button
               disabled={currentPage >= totalPages || loading}
               onClick={() => onPageChange?.(currentPage + 1)}
-              className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-gold hover:border-gold/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-gold hover:border-gold/30 hover:shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
               title="Next Page"
             >
               <ChevronRight className="w-5 h-5" />

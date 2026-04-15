@@ -1,13 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAdminStore } from '../../stores/adminStore';
-import { 
+import {
   BarChart3, BookOpen, Users,
   Settings, Layers, ShoppingCart,
   ChevronLeft, ChevronRight, ShieldCheck,
   FileText, ClipboardCheck,
   Ticket, Share2, Building2, Mail,
   Bell, LayoutDashboard, PenTool,
-  MessageSquare,
+  MessageSquare, Newspaper,
   UserCog, Video, Brain, Activity
 } from 'lucide-react';
 import { useAdminAuth } from '../../hooks/admin/useAdminAuth';
@@ -22,8 +22,8 @@ const NAV_ITEMS = [
     { name: 'Bundles', path: '/admin/bundles', icon: Layers, permission: 'bundles' },
     { name: 'Templates', path: '/admin/templates', icon: FileText, permission: 'templates' },
     { name: 'Mock Tests', path: '/admin/mock-tests', icon: ClipboardCheck, permission: 'mock_tests' },
+    { name: 'Note MCQs', path: '/admin/note-mcqs', icon: Brain, permission: 'mock_tests' },
     { name: 'Video Lectures', path: '/admin/video-lectures', icon: Video, permission: 'content' },
-    { name: 'Flashcards', path: '/admin/flashcards', icon: Brain, permission: 'content' },
   ]},
   { group: 'Sales & Revenue', items: [
     { name: 'Orders', path: '/admin/orders', icon: ShoppingCart, permission: 'orders.view' },
@@ -31,6 +31,7 @@ const NAV_ITEMS = [
     { name: 'Referrals', path: '/admin/referrals', icon: Share2, permission: 'referral' },
   ]},
   { group: 'CRM & Engagement', items: [
+    { name: 'Service Requests', path: '/admin/service-requests', icon: FileText, permission: 'support' },
     { name: 'Subscribers', path: '/admin/subscribers', icon: Users, permission: 'users' },
     { name: 'Support Tickets', path: '/admin/support', icon: MessageSquare, permission: 'support' },
     { name: 'Email Campaigns', path: '/admin/email-campaigns', icon: Mail, permission: 'email' },
@@ -38,6 +39,9 @@ const NAV_ITEMS = [
   ]},
   { group: 'Content & System', items: [
     { name: 'Blog Manager', path: '/admin/blog', icon: PenTool, permission: 'blog' },
+    { name: 'Playground Content', path: '/admin/playground', icon: BookOpen, permission: 'content' },
+    { name: 'Live Legal News', path: '/admin/playground-news', icon: Newspaper, permission: 'content' },
+    { name: 'Flashcard Library', path: '/admin/flashcards', icon: Brain, permission: 'content' },
     { name: 'Legal Glossary', path: '/admin/glossary', icon: Building2, permission: 'glossary' },
     { name: 'Admin Access', path: '/admin/admins', icon: UserCog, permission: 'super_admin' },
     { name: 'System Settings', path: '/admin/settings', icon: Settings, permission: 'super_admin' },

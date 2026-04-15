@@ -23,7 +23,7 @@ export function RefundPolicy() {
           <p className="text-mutedgray">In cases of accidental double purchases of the exact same item, we will issue a full refund for the duplicate transaction if reported within 24 hours.</p>
 
           <h2 className="text-2xl font-display text-ink mt-8 mb-4">4. Contact Information</h2>
-          <p className="text-mutedgray text-lg mt-4">For any refund-related queries, please email us at <span className="font-display text-[#6B1E2E]">support@theedulaw.in</span> or use the contact form on our main website.</p>
+          <p className="text-mutedgray text-lg mt-4">For any refund-related queries, please email us at <span className="font-display text-burgundy">support@theedulaw.in</span> or use the contact form on our main website.</p>
         </div>
       </div>
     </div>

@@ -5,9 +5,10 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext'
 import { pdfjs } from 'react-pdf';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// Use a high-performance CDN for the PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+// Serve worker from same origin so it passes CSP worker-src 'self'
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

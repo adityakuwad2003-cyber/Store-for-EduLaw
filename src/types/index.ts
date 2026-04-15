@@ -13,12 +13,26 @@ export interface Note {
   pdfUrl?: string;
   fileKey?: string;
   fileKeys?: { name: string; key: string }[];
-  previewImageKey?: string;   // R2 key for the admin-uploaded preview image
+  samplePdfKey?: string;    // R2 key for the partial/sample PDF
+  previewImageKey?: string; // R2 key for the admin-uploaded preview image
+  previewImageKeys?: string[]; // Multiple R2 keys for preview images
   isFeatured: boolean;
   isNew: boolean;
   language?: 'English' | 'Hindi' | 'Both';
   tableOfContents?: string[];
+  contentFeatures?: string[]; // Bullet points for marketplace
+  featuredSections?: { title: string; content: string }[]; // Special highlights
+  publicDescription?: string; // Rich text description for marketplace
+  audioSummaryUrl?: string;   // Mastery Bundle - AI Audio Summary
+  audioSummaryUrlEnglish?: string;
+  audioSummaryUrlHindi?: string;
+  audioSummaryKeyEnglish?: string; // Stored MP3 key (R2)
+  audioSummaryKeyHindi?: string;   // Stored MP3 key (R2)
+  infographicKey?: string;         // Stored PDF/PNG key (R2)
+  quizData?: string;               // Stringified JSON containing NotebookLM quiz questions
   createdAt?: string;
+  hasGst?: boolean;
+  gstRate?: number;
 }
 
 export interface Category {
@@ -36,7 +50,7 @@ export interface Bundle {
   name: string;
   slug: string;
   description: string;
-  noteIds: number[];
+  noteIds: (string | number)[];
   price: number;
   originalPrice: number;
   isActive: boolean;
@@ -44,6 +58,12 @@ export interface Bundle {
   savingsPercent: number;
   bundleType?: 'quantity' | 'curated' | 'combo' | 'institutional';
   includes?: string[];
+  audioSummaryKeyEnglish?: string; // Stored MP3 key (R2)
+  audioSummaryKeyHindi?: string;   // Stored MP3 key (R2)
+  infographicKey?: string;         // Stored PDF/PNG key (R2)
+  quizData?: string;               // Stringified JSON containing NotebookLM quiz questions
+  hasGst?: boolean;
+  gstRate?: number;
 }
 
 export interface SubscriptionPlan {
@@ -84,10 +104,17 @@ export interface FAQ {
   answer: string;
 }
 
+export interface AudioSummaryAddon {
+  id: string;
+  noteId: string | number;
+  title: string;
+  price: number;
+}
+
 export interface CartItem {
   id: string;
-  type: 'note' | 'bundle';
-  item: Note | Bundle;
+  type: 'note' | 'bundle' | 'test' | 'audio';
+  item: Note | Bundle | MockTest | AudioSummaryAddon;
   quantity: number;
 }
 
@@ -321,4 +348,25 @@ export interface Highlight {
   color: 'yellow' | 'green' | 'blue' | 'pink';
   note?: string;
   createdAt: string;
+}
+
+export interface Review {
+  id: string;
+  noteId: string;
+  userId: string;
+  userName: string;
+  userInitial: string;
+  rating: number; // 1-5
+  text: string;
+  userAffiliation?: string;
+  createdAt: string;
+}
+
+export interface GlossaryTerm {
+  id: string;
+  term: string;
+  origin: 'Latin' | 'English' | 'French' | 'Other';
+  definition: string;
+  category: string;
+  usageExample?: string;
 }

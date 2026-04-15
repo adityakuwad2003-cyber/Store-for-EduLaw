@@ -124,8 +124,12 @@ export async function verifyAdmin(req: any): Promise<string> {
     throw Object.assign(new Error("Invalid or expired token."), { status: 401 });
   }
 
-  const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase());
-  if (!adminEmails.includes((decoded.email || "").toLowerCase())) {
+  const adminEmailsList = [
+    ...(process.env.ADMIN_EMAILS || "").split(","),
+    ...(process.env.VITE_ADMIN_EMAILS || "adityakuwad2003@gmail.com").split(",")
+  ].map(e => e.trim().toLowerCase()).filter(Boolean);
+
+  if (!adminEmailsList.includes((decoded.email || "").toLowerCase())) {
     throw Object.assign(new Error("Forbidden: Admin access only."), { status: 403 });
   }
   return decoded.uid;

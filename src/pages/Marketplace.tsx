@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams, useParams } from 'react-router-dom';
-import { Search, Grid3X3, List, SlidersHorizontal, X, ShoppingCart, HelpCircle } from 'lucide-react';
+import { Search, Grid3X3, List, SlidersHorizontal, X, ShoppingCart, HelpCircle, ArrowRight } from 'lucide-react';
 import { categories } from '@/data/notes';
 import { getAllNotes } from '@/lib/db';
 import type { Note } from '@/types';
@@ -9,6 +9,10 @@ import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { useCartStore } from '@/store';
 import { SEO } from '@/components/SEO';
 import { StructuredData, getOrganizationSchema } from '@/components/StructuredData';
+import { motion } from 'framer-motion';
+import { ScalesOfJustice3D, LegalScroll3D, LaurelWreath } from '@/components/ui/LegalSVGs';
+import { BadgeCheck, ShieldCheck, Trophy } from 'lucide-react';
+import { AmbedkarJayantiPopup } from '@/components/ui/AmbedkarJayantiPopup';
 
 export function Marketplace() {
   const { categorySlug: routeCategorySlug } = useParams<{ categorySlug: string }>();
@@ -113,7 +117,9 @@ export function Marketplace() {
     : "Shop India's most trusted legal notes and study materials. Expertly crafted resources for law students, judiciary exams, and legal practitioners.";
 
   return (
-    <div className="pt-20 min-h-screen bg-slate-50">
+    <>
+    <AmbedkarJayantiPopup />
+    <div className="pt-20 min-h-screen bg-[#FDFBF7]">
       <SEO 
         title={pageTitle}
         description={pageDescription}
@@ -121,23 +127,64 @@ export function Marketplace() {
       />
       <StructuredData data={getOrganizationSchema()} />
       
-      {/* Header */}
-      <div className="bg-slate-900 py-16">
-        <div className="section-container text-center lg:text-left">
-          <div className="max-w-3xl">
-            <h1 className="font-display text-3xl lg:text-5xl text-white mb-4 leading-tight font-bold">
-              {categoryData ? (
-                <>Buy <span className="text-gold">{categoryData.name}</span> Online</>
-              ) : (
-                <>Browse All <span className="text-gold">Legal Notes</span></>
-              )}
-            </h1>
-            <p className="font-body text-parchment/70 text-lg">
-              {categoryData 
-                ? `Prepare for CLAT, Judiciary, and LLB exams with our premium ${categoryData.name.toLowerCase()} resources. Expertly curated for performance and clarity.`
-                : `${allNotes.length}+ comprehensive legal subjects crafted for law students and practitioners across India.`
-              }
-            </p>
+      {/* ── HERO SECTION ────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden border-b border-gold/10 bg-[#FDFBF7]">
+        {/* Background Decorations */}
+        <div className="absolute top-0 right-0 w-[600px] h-full opacity-[0.03] pointer-events-none translate-x-1/4">
+          <ScalesOfJustice3D className="w-full h-full" />
+        </div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 opacity-[0.02] pointer-events-none -translate-x-1/2 translate-y-1/2">
+          <LegalScroll3D className="w-full h-full" />
+        </div>
+
+        <div className="section-container py-16 lg:py-24 relative z-10">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+            <div className="max-w-3xl text-center lg:text-left">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 px-3 py-1 bg-burgundy/5 border border-burgundy/10 rounded-full mb-6"
+              >
+                <BadgeCheck className="w-4 h-4 text-burgundy" />
+                <span className="text-[10px] font-ui font-black uppercase tracking-widest text-burgundy">India's Most Trusted Legal Library</span>
+              </motion.div>
+              
+              <h1 className="font-display text-4xl lg:text-6xl text-ink mb-6 leading-[1.1] font-bold">
+                {categoryData ? (
+                  <>The Premium <span className="text-gold italic block sm:inline">{categoryData.name}</span> Collection</>
+                ) : (
+                  <>Browse All <span className="text-gold italic block sm:inline">Legal Notes</span></>
+                )}
+              </h1>
+              
+              <p className="font-body text-ink/60 text-lg lg:text-xl max-w-2xl leading-relaxed">
+                {categoryData 
+                  ? `Master the complexities of ${categoryData.name.toLowerCase()} with our expertly-structured research materials and memory aides.`
+                  : `Explore over ${allNotes.length} specialized legal modules. Each document is a masterpiece of legal research and clarity.`
+                }
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 mt-10">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-gold" />
+                  <span className="text-xs font-ui font-bold text-ink/70">BCI Standards Compliant</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-ink/10" />
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-gold" />
+                  <span className="text-xs font-ui font-bold text-ink/70">Used by 50,000+ Students</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats/Badge Column */}
+            <div className="hidden xl:flex flex-col gap-4">
+              <div className="p-6 bg-white border border-gold/10 rounded-[2rem] shadow-xl shadow-gold/5 flex flex-col items-center text-center max-w-[200px]">
+                <LaurelWreath className="w-16 h-8 mb-2" />
+                <div className="text-2xl font-display text-ink font-bold leading-none">4.9/5</div>
+                <div className="text-[9px] font-ui font-black uppercase tracking-widest text-gold mt-1">Student Rating</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -148,46 +195,56 @@ export function Marketplace() {
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-24 space-y-6">
               {/* Categories */}
-              <div>
-                <h3 className="font-display text-lg text-slate-900 mb-6 font-bold uppercase tracking-widest text-[10px]">Categories</h3>
-                <div className="space-y-2">
+              <div className="bg-white p-6 rounded-[2rem] border border-gold/10 shadow-sm">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-1 h-4 bg-burgundy rounded-full" />
+                  <h3 className="font-display text-[10px] font-black text-ink uppercase tracking-[0.2em]">Disciplines</h3>
+                </div>
+                <div className="space-y-1">
                   <button
                     onClick={() => handleCategorySelect(null)}
-                    className={`w-full text-left px-4 py-3 rounded-xl font-ui text-xs font-black uppercase tracking-widest transition-all ${
-                      !selectedCategory ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' : 'text-slate-500 hover:bg-slate-100'
+                    className={`w-full text-left px-4 py-3 rounded-xl font-ui text-[11px] font-bold uppercase tracking-widest transition-all ${
+                      !selectedCategory ? 'bg-burgundy text-white shadow-lg shadow-burgundy/20' : 'text-ink/60 hover:bg-parchment'
                     }`}
                     aria-pressed={!selectedCategory ? "true" : "false"}
                   >
-                    All Subjects ({allNotes.length})
+                    All Modules ({allNotes.length})
                   </button>
                   {categories.map((category) => (
                     <button
                       key={category.id}
                       onClick={() => handleCategorySelect(category.slug)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-ui text-xs font-black uppercase tracking-widest transition-all ${
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-ui text-[11px] font-bold uppercase tracking-widest transition-all ${
                         selectedCategory === category.slug 
-                          ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' 
-                          : 'text-slate-500 hover:bg-slate-100'
+                          ? 'bg-burgundy text-white shadow-lg shadow-burgundy/20' 
+                          : 'text-ink/60 hover:bg-parchment'
                       }`}
                       aria-pressed={selectedCategory === category.slug ? "true" : "false"}
                     >
-                      <span>{category.name}</span>
-                      <span className={`text-[10px] ${selectedCategory === category.slug ? 'text-gold' : 'text-slate-300'}`}>{category.noteCount}</span>
+                      <span className="truncate pr-2">{category.name}</span>
+                      <span className={`text-[9px] font-black tracking-tight shrink-0 ${selectedCategory === category.slug ? 'text-gold' : 'text-gold/60'}`}>{category.noteCount}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Price Range */}
-              <div className="pt-6 border-t border-slate-100">
-                <h3 className="font-display text-lg text-slate-900 mb-4 font-bold uppercase tracking-widest text-[10px]">Pricing</h3>
-                <div className="flex items-center gap-2">
-                  <span className="font-ui text-sm text-mutedgray">All notes at</span>
-                  <span className="font-display text-gold">₹199</span>
+              <div className="bg-white p-6 rounded-[2rem] border border-gold/10 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-gold/5 -translate-y-1/2 translate-x-1/2 rounded-full group-hover:scale-150 transition-transform" />
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-4 bg-gold rounded-full" />
+                  <h3 className="font-display text-[10px] font-black text-ink uppercase tracking-[0.2em]">Investment</h3>
                 </div>
-                <p className="text-xs text-mutedgray mt-2">
-                  Bundle discounts available
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-display text-ink font-bold tracking-tight">₹199</span>
+                  <span className="text-[10px] font-ui font-black text-gold uppercase tracking-widest">Starting Price</span>
+                </div>
+                <p className="text-[10px] font-ui font-medium text-ink/40 mt-3 leading-relaxed">
+                  Unlock premium discounts when building subjects into a study bundle.
                 </p>
+                <Link to="/bundles" className="mt-4 flex items-center gap-2 text-[9px] font-black tracking-widest uppercase text-burgundy group/link hover:gap-3 transition-all">
+                  Bundle & Save <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
             </div>
           </aside>
@@ -197,13 +254,13 @@ export function Marketplace() {
             {/* Search & Filter Bar */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1 group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-gold transition-colors" />
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gold group-focus-within:scale-110 transition-transform" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="What are you studying today?"
-                  className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-200 font-ui text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-gold/50 focus:ring-4 focus:ring-gold/5 transition-all shadow-sm"
+                  placeholder="Search for subjects, sections, or statutes..."
+                  className="w-full pl-14 pr-6 py-5 bg-white rounded-3xl border border-gold/10 font-ui text-[13px] text-ink placeholder:text-ink/20 focus:outline-none focus:border-gold/30 focus:shadow-[0_0_40px_rgba(201,168,76,0.05)] transition-all"
                   aria-label="Search Legal Notes"
                 />
               </div>
@@ -239,12 +296,12 @@ export function Marketplace() {
 
                 <Link
                   to="/cart"
-                  className="relative p-4 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-[0.98]"
+                  className="relative p-5 bg-burgundy text-white rounded-3xl hover:bg-burgundy-light transition-all shadow-lg shadow-burgundy/20 active:scale-[0.98] group"
                   aria-label="Go to shopping cart"
                 >
-                  <ShoppingCart className="w-5 h-5" />
+                  <ShoppingCart className="w-5 h-5 group-hover:rotate-6 transition-transform" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-gold text-slate-900 text-[10px] font-ui font-black rounded-lg flex items-center justify-center ring-2 ring-white">
+                    <span className="absolute -top-1 -right-1 w-6 h-6 bg-gold text-ink text-[11px] font-black rounded-xl flex items-center justify-center ring-4 ring-[#FDFBF7]">
                       {cartCount}
                     </span>
                   )}
@@ -409,5 +466,6 @@ export function Marketplace() {
         Build Your Bundle
       </Link>
     </div>
+    </>
   );
 }

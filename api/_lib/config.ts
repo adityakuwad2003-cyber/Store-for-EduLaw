@@ -14,12 +14,12 @@ export const RAZORPAY_CONFIG = {
 import { createHmac } from "crypto";
 
 export function verifyRazorpaySignature(
-  orderId: string,
+  orderId: string | null,
   paymentId: string,
   signature: string
 ): boolean {
   const secret = RAZORPAY_CONFIG.key_secret;
-  if (!secret) return false;
+  if (!secret || !orderId) return false;
 
   const generated_signature = createHmac("sha256", secret)
     .update(orderId + "|" + paymentId)
