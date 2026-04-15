@@ -10,6 +10,11 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { SEO } from '@/components/SEO';
 import { LegalScroll3D } from '@/components/ui/LegalSVGs';
+import { Drawer } from 'vaul';
+import { useCartStore } from '@/store';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import type { LegalTemplate } from '@/types';
 
 const formatIcons = {
   pdf: File,
@@ -22,6 +27,36 @@ const categories = ['all', 'Property', 'Corporate', 'Litigation', 'Family'];
 export default function TemplatesStore() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedTemplate, setSelectedTemplate] = useState<LegalTemplate | null>(null);
+  
+  const navigate = useNavigate();
+  const { addNote } = useCartStore();
+
+  const handleAddToCart = (template: LegalTemplate) => {
+    // Map LegalTemplate to Note-like structure for the cart store
+    const itemAsNote = {
+      ...template,
+      id: template.id,
+      title: template.title,
+      price: template.price,
+      totalPages: 0, // Placeholder for templates
+      isNew: false
+    } as any;
+    
+    addNote(itemAsNote);
+    toast.success('Added to cart!', {
+      description: template.title,
+      action: {
+        label: 'View Cart',
+        onClick: () => navigate('/cart')
+      }
+    });
+  };
+
+  const handleBuyNow = (template: LegalTemplate) => {
+    handleAddToCart(template);
+    navigate('/cart');
+  };
 
   const filteredTemplates = legalTemplates.filter(template => {
     const matchesSearch = template.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -253,10 +288,19 @@ export default function TemplatesStore() {
                     </div>
                     
                     {/* Actions */}
-                    <div className="px-6 pb-6">
-                      <button className="w-full py-3 bg-gradient-to-r from-burgundy to-burgundy-light text-parchment rounded-xl font-ui font-semibold hover:shadow-lg hover:shadow-burgundy/30 transition-all flex items-center justify-center gap-2">
-                        <ShoppingCart className="w-4 h-4" />
-                        Add to Cart
+                    <div className="px-6 pb-6 flex gap-3">
+                      <button 
+                        onClick={() => setSelectedTemplate(template)}
+                        className="flex-1 py-3 border border-burgundy/20 text-burgundy rounded-xl font-ui font-bold text-xs hover:bg-burgundy/5 transition-all text-center"
+                      >
+                        Quick View
+                      </button>
+                      <button 
+                        onClick={() => handleAddToCart(template)}
+                        className="flex-1 py-3 bg-burgundy text-parchment rounded-xl font-ui font-bold text-xs hover:bg-burgundy-light transition-all flex items-center justify-center gap-2"
+                      >
+                        <ShoppingCart className="w-3.5 h-3.5" />
+                        Add
                       </button>
                     </div>
                   </motion.div>
@@ -266,6 +310,104 @@ export default function TemplatesStore() {
           )}
         </div>
       </section>
+
+      {/* --- QUICK VIEW DRAWER (MOBILE FRIENDLY) --- */}
+      <Drawer.Root 
+        open={!!selectedTemplate} 
+        onOpenChange={(open) => !open && setSelectedTemplate(null)}
+      >
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100]" />
+          <Drawer.Content className="bg-white flex flex-col rounded-t-[32px] h-[90vh] mt-24 fixed bottom-0 left-0 right-0 z-[101] outline-none">
+            <div className="p-4 bg-white rounded-t-[32px] flex-1 overflow-y-auto">
+              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-slate-200 mb-8" />
+              
+              <div className="max-w-xl mx-auto">
+                <div className="flex items-start justify-between mb-8">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-burgundy/5 text-burgundy rounded-full mb-4">
+                      <Tag className="w-3 h-3" />
+                      <span className="font-ui text-[10px] font-black uppercase tracking-widest">{selectedTemplate?.category}</span>
+                    </div>
+                    <Drawer.Title className="font-display text-3xl font-bold text-ink mb-2">
+                      {selectedTemplate?.title}
+                    </Drawer.Title>
+                    <Drawer.Description className="font-body text-slate-500">
+                      {selectedTemplate?.description}
+                    </Drawer.Description>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-display text-4xl font-bold text-burgundy">₹{selectedTemplate?.price}</div>
+                    {selectedTemplate?.originalPrice && (
+                      <div className="font-ui text-sm text-slate-300 line-through">₹{selectedTemplate?.originalPrice}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Features & Benefits */}
+                <div className="grid sm:grid-cols-2 gap-8 mb-12">
+                  <div>
+                    <h4 className="font-ui text-[11px] font-black text-ink uppercase tracking-wider mb-4">Key Features</h4>
+                    <ul className="space-y-3">
+                      {(selectedTemplate?.features || ['Fully Editable', 'Court Compliant', 'Instant Download', 'Life-time Access']).map(f => (
+                        <li key={f} className="flex items-center gap-3 text-sm font-ui text-slate-600">
+                          <div className="w-5 h-5 bg-gold/10 rounded-full flex items-center justify-center shrink-0">
+                            <Check className="w-3 h-3 text-gold" />
+                          </div>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-ui text-[11px] font-black text-ink uppercase tracking-wider mb-4">Business Benefits</h4>
+                    <ul className="space-y-3">
+                      {(selectedTemplate?.benefits || ['Risk Mitigation', 'Strategic Clauses', 'Advocate Verified']).map(b => (
+                        <li key={b} className="flex items-center gap-3 text-sm font-ui text-slate-600">
+                          <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Trust Badges */}
+                <div className="p-6 bg-parchment/30 rounded-3xl border border-parchment-dark/50 mb-12 flex items-center justify-around">
+                  <div className="text-center">
+                    <Shield className="w-6 h-6 text-gold mx-auto mb-2" />
+                    <p className="text-[9px] font-ui font-black uppercase tracking-widest text-ink">Secure</p>
+                  </div>
+                  <div className="text-center">
+                    <Clock className="w-6 h-6 text-gold mx-auto mb-2" />
+                    <p className="text-[9px] font-ui font-black uppercase tracking-widest text-ink">Instant</p>
+                  </div>
+                  <div className="text-center">
+                    <Award className="w-6 h-6 text-gold mx-auto mb-2" />
+                    <p className="text-[9px] font-ui font-black uppercase tracking-widest text-ink">Verified</p>
+                  </div>
+                </div>
+
+                {/* Action Bar */}
+                <div className="sticky bottom-4 left-0 right-0 flex gap-4 pt-4 bg-white">
+                  <button 
+                    onClick={() => { if(selectedTemplate) handleAddToCart(selectedTemplate); }}
+                    className="flex-1 py-5 border-2 border-slate-100 text-ink rounded-[2rem] font-ui font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
+                  >
+                    Add to Cart
+                  </button>
+                  <button 
+                    onClick={() => { if(selectedTemplate) handleBuyNow(selectedTemplate); }}
+                    className="flex-1 py-5 bg-burgundy text-parchment rounded-[2rem] font-ui font-black text-xs uppercase tracking-widest hover:bg-burgundy-light transition-all shadow-xl shadow-burgundy/20 active:scale-95"
+                  >
+                    Buy Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
 
       {/* Features Section */}
       <section className="py-20 bg-white">

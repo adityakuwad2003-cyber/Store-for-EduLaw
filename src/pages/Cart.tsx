@@ -183,7 +183,15 @@ export function Cart() {
               }
             }
 
-            navigate('/dashboard', { state: { fromCheckout: true } });
+            navigate('/order-success', { 
+              state: { 
+                fromCheckout: true,
+                orderInfo: {
+                  orderId: response.razorpay_payment_id,
+                  items: items.map(i => ({ id: i.id, title: (i.item as any).title || (i.item as any).name, price: i.item.price }))
+                }
+              } 
+            });
           } catch (err) {
             console.error("Error saving purchase:", err);
             toast.error("Payment received but could not save record. Contact support with your payment ID: " + response.razorpay_payment_id);

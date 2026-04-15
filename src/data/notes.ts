@@ -603,6 +603,7 @@ export const legalTemplates = [
     title: 'Rent Agreement Template',
     slug: 'rent-agreement-template',
     description: 'Comprehensive residential rent agreement template compliant with current laws. Includes all essential clauses for landlord-tenant protection.',
+    benefits: ['10+ Landlord Protection Clauses', 'State-wise Compliance Guide', 'Editable MS Word Format'],
     category: 'Property',
     price: 49,
     originalPrice: 99,
@@ -610,13 +611,15 @@ export const legalTemplates = [
     isFeatured: true,
     downloads: 1250,
     previewUrl: '/templates/rent-agreement-preview.pdf',
-    tags: ['Property', 'Rent', 'Agreement', 'Residential']
+    tags: ['Property', 'Rent', 'Agreement', 'Residential'],
+    features: ['Fully Editable', 'Court Compliant', 'Instant Download', 'Life-time Access']
   },
   {
     id: 'tpl-002',
     title: 'Employment Contract Template',
     slug: 'employment-contract-template',
     description: 'Professional employment contract with confidentiality, non-compete, and termination clauses.',
+    benefits: ['IP Protection Clauses', 'Performance Metric Frameworks', 'Termination Protocols'],
     category: 'Corporate',
     price: 79,
     originalPrice: 149,
@@ -624,13 +627,15 @@ export const legalTemplates = [
     isFeatured: true,
     downloads: 890,
     previewUrl: '/templates/employment-contract-preview.pdf',
-    tags: ['Employment', 'HR', 'Corporate', 'Contract']
+    tags: ['Employment', 'HR', 'Corporate', 'Contract'],
+    features: ['HR Approved', 'Confidentiality Included', 'Customizable', 'Digital Sign Ready']
   },
   {
     id: 'tpl-003',
     title: 'Legal Notice Format Pack',
     slug: 'legal-notice-format-pack',
     description: 'Collection of 10+ legal notice formats for various purposes - recovery, defamation, property disputes.',
+    benefits: ['10 Different Scenarios Covered', 'Drafting Tips Included', 'Strategic Response Guide'],
     category: 'Litigation',
     price: 99,
     originalPrice: 199,
@@ -638,13 +643,15 @@ export const legalTemplates = [
     isFeatured: true,
     downloads: 2100,
     previewUrl: '/templates/legal-notice-preview.pdf',
-    tags: ['Notice', 'Litigation', 'Drafting', 'Recovery']
+    tags: ['Notice', 'Litigation', 'Drafting', 'Recovery'],
+    features: ['Multi-Draft Pack', 'Lawyer Verified', 'Strategic Clauses', 'Bonus Advice PDF']
   },
   {
     id: 'tpl-004',
     title: 'Power of Attorney Template',
     slug: 'power-of-attorney-template',
     description: 'General and Special Power of Attorney templates with execution guidelines.',
+    benefits: ['Specific vs General Clauses', 'Security Safeguards', 'Verification Checklist'],
     category: 'Property',
     price: 39,
     originalPrice: 79,
@@ -652,13 +659,15 @@ export const legalTemplates = [
     isFeatured: false,
     downloads: 650,
     previewUrl: '/templates/poa-preview.pdf',
-    tags: ['POA', 'Property', 'Authorization']
+    tags: ['POA', 'Property', 'Authorization'],
+    features: ['GPA & SPA Included', 'Witness Guide', 'Legally Standardized', 'Simple to Edit']
   },
   {
     id: 'tpl-005',
     title: 'Non-Disclosure Agreement (NDA)',
     slug: 'nda-template',
     description: 'Mutual and unilateral NDA templates for business and employment purposes.',
+    benefits: ['Mutual/Unilateral Options', 'Trade Secret Protection', 'Indemnity Clauses'],
     category: 'Corporate',
     price: 59,
     originalPrice: 99,
@@ -666,13 +675,15 @@ export const legalTemplates = [
     isFeatured: true,
     downloads: 1100,
     previewUrl: '/templates/nda-preview.pdf',
-    tags: ['NDA', 'Confidentiality', 'Corporate', 'IP']
+    tags: ['NDA', 'Confidentiality', 'Corporate', 'IP'],
+    features: ['Founders Choice', 'High Secrecy Level', 'MS Word Ready', '2024 Updated']
   },
   {
     id: 'tpl-006',
     title: 'Partnership Deed Template',
     slug: 'partnership-deed-template',
     description: 'Comprehensive partnership deed with profit sharing, capital contribution, and dissolution clauses.',
+    benefits: ['Resolution Mechanism', 'Capital Protection', 'Exit Strategies'],
     category: 'Corporate',
     price: 69,
     originalPrice: 129,
@@ -680,13 +691,15 @@ export const legalTemplates = [
     isFeatured: false,
     downloads: 780,
     previewUrl: '/templates/partnership-preview.pdf',
-    tags: ['Partnership', 'Business', 'Deed']
+    tags: ['Partnership', 'Business', 'Deed'],
+    features: ['Stamp Duty Guide', 'Tax Optimized', 'Clear Exit Clauses', 'Pro Formats']
   },
   {
     id: 'tpl-007',
     title: 'Will/Testament Template',
     slug: 'will-template',
     description: 'Legally valid will template with executor appointment and asset distribution clauses.',
+    benefits: ['Executor Guide', 'Asset Listing Template', 'Video Will Guide'],
     category: 'Family',
     price: 49,
     originalPrice: 99,
@@ -694,13 +707,15 @@ export const legalTemplates = [
     isFeatured: false,
     downloads: 920,
     previewUrl: '/templates/will-preview.pdf',
-    tags: ['Will', 'Family', 'Succession', 'Property']
+    tags: ['Will', 'Family', 'Succession', 'Property'],
+    features: ['Secure Format', 'Witness Protocol', 'Easy Revision', 'Legacy Protection']
   },
   {
     id: 'tpl-008',
     title: 'Sale Deed Template',
     slug: 'sale-deed-template',
     description: 'Property sale deed template with indemnity and title warranty clauses.',
+    benefits: ['Indemnity Protection', 'Title Flow Guide', 'Payment Proof Methods'],
     category: 'Property',
     price: 89,
     originalPrice: 149,
@@ -708,7 +723,8 @@ export const legalTemplates = [
     isFeatured: true,
     downloads: 540,
     previewUrl: '/templates/sale-deed-preview.pdf',
-    tags: ['Property', 'Sale', 'Conveyance']
+    tags: ['Property', 'Sale', 'Conveyance'],
+    features: ['Full Ownership Flow', 'Tax Checklist', 'Court Validated', 'Advocate Reviewed']
   }
 ];
 

@@ -66,6 +66,7 @@ const LegalNewsArticle = lazy(() => import('@/pages/LegalNewsArticle'));
 const PlaygroundItemDetail = lazy(() => import('@/pages/PlaygroundItemDetail').then(m => ({ default: m.PlaygroundItemDetail })));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService').then(m => ({ default: m.TermsOfService })));
 const RefundPolicy = lazy(() => import('@/pages/RefundPolicy').then(m => ({ default: m.RefundPolicy })));
+const OrderSuccess = lazy(() => import('@/pages/OrderSuccess'));
 // Lazy load admin components
 const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'));
 const AdminGuard = lazy(() => import('@/pages/admin/AdminGuard'));
@@ -168,6 +169,7 @@ function AppContent() {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/order-success" element={<OrderSuccess />} />
 
             {/* ── Admin Suite ── */}
             <Route

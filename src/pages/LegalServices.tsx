@@ -77,6 +77,7 @@ export function LegalServices() {
   
   const [selectedService, setSelectedService] = useState<LegalService | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [formData, setFormData] = useState({
     name: currentUser?.displayName || '',
     email: currentUser?.email || '',
@@ -149,9 +150,9 @@ export function LegalServices() {
 
       if (!res.ok) throw new Error('Submission failed');
 
-      toast.success(razorpayResponse ? 'Payment successful! We will contact you shortly.' : 'Request sent! We will contact you soon.');
+      setIsSuccess(true);
       setFormData({ name: '', email: '', phone: '', description: '' });
-      setSelectedService(null);
+      // Keep selected service for the success screen
     } catch (err) {
       toast.error('Could not save request. If you paid, please contact support.');
     }
@@ -167,7 +168,58 @@ export function LegalServices() {
 
       <Header />
 
-      {!selectedService ? (
+      {isSuccess ? (
+        /* --- STAGE 3: Success View --- */
+        <div className="pt-40 pb-24 px-6 min-h-screen bg-[#FDFBF7]">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-2xl mx-auto text-center"
+          >
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-emerald-50 rounded-full mb-8 relative">
+              <CheckCircle2 className="w-12 h-12 text-emerald-600" />
+              <motion.div 
+                initial={{ scale: 1 }}
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                className="absolute inset-0 bg-emerald-100 rounded-full -z-10 opacity-30" 
+              />
+            </div>
+            <h1 className="font-display text-4xl lg:text-5xl text-ink font-bold mb-6">Booking Confirmed!</h1>
+            <p className="font-ui text-lg text-slate-600 mb-12 max-w-lg mx-auto leading-relaxed">
+              Thank you for trusting us with your legal needs. An advocate has been assigned to your request and will reach out to you within <span className="text-burgundy font-bold">4-6 hours</span> via WhatsApp or Email.
+            </p>
+
+            <div className="grid sm:grid-cols-2 gap-4 mb-12">
+              <div className="p-6 bg-white rounded-3xl border border-slate-100 text-left">
+                <p className="text-[10px] font-ui font-black text-slate-400 uppercase tracking-widest mb-2">Service ID</p>
+                <p className="font-display font-bold text-ink">#ELS-{Math.floor(1000 + Math.random() * 9000)}</p>
+              </div>
+              <div className="p-6 bg-white rounded-3xl border border-slate-100 text-left">
+                <p className="text-[10px] font-ui font-black text-slate-400 uppercase tracking-widest mb-2">Service Type</p>
+                <p className="font-display font-bold text-ink">{selectedService?.name}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button 
+                onClick={() => { setIsSuccess(false); setSelectedService(null); }}
+                className="w-full sm:w-auto px-8 py-4 bg-ink text-white rounded-2xl font-ui font-bold text-sm hover:bg-slate-800 transition-all"
+              >
+                Go to Dashboard
+              </button>
+              <a 
+                href="https://wa.me/919876543210" 
+                target="_blank" 
+                rel="noreferrer"
+                className="w-full sm:w-auto px-8 py-4 bg-emerald-600 text-white rounded-2xl font-ui font-bold text-sm hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-4 h-4" /> Priority Support
+              </a>
+            </div>
+          </motion.div>
+        </div>
+      ) : !selectedService ? (
         <div className="pt-24 pb-20">
           {/* ── HERO ── */}
           <section className="relative pt-16 pb-24 overflow-hidden border-b border-burgundy/5">
@@ -344,7 +396,7 @@ export function LegalServices() {
                     key={plan.id}
                     className={`relative p-10 rounded-[3rem] border-2 transition-all ${
                       plan.highlight 
-                        ? 'border-burgundy bg-slate-950 text-white shadow-2xl shadow-burgundy/20' 
+                        ? 'border-burgundy bg-[#0A0A0B] text-white shadow-[0_20px_60px_-15px_rgba(107,30,46,0.3)]' 
                         : 'border-slate-100 bg-white text-ink shadow-xl shadow-slate-100'
                     }`}
                   >

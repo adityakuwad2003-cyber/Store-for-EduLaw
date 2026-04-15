@@ -219,6 +219,8 @@ export interface LegalTemplate {
   title: string;
   slug: string;
   description: string;
+  benefits?: string[];
+  features?: string[];
   category: string;
   price: number;
   originalPrice?: number;
