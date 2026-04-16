@@ -7,12 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UniversalSearch } from '@/components/ui/UniversalSearch';
 
 // v2.1.2 - Force update for Find Judgments visibility
+// v2.1.3 - Force refresh & prominence
 const navLinks = [
+  { name: 'Find Judgments', href: '/judgement-finder', icon: Gavel, isNew: true },
   { name: 'Marketplace', href: '/marketplace', icon: Store },
   { name: 'Bundles', href: '/bundles', icon: Layers },
   { name: 'Subscription', href: '/subscription', icon: Crown },
   { name: 'Services', href: '/legal-services', icon: Scale },
-  { name: 'Find Judgments', href: '/judgement-finder', icon: Gavel },
   { name: 'Templates', href: '/templates', icon: FileText },
   { name: 'Updates', href: '/legal-hub', icon: MessageSquare },
 ];
@@ -93,7 +94,7 @@ export function Navbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-4 flex-wrap justify-center flex-1 px-4">
+            <div className="hidden lg:flex items-center gap-3 flex-wrap justify-center flex-1 px-4">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = location.pathname === link.href;
@@ -107,6 +108,9 @@ export function Navbar() {
                   >
                     <Icon className="w-3.5 h-3.5" />
                     <span className="whitespace-nowrap">{link.name}</span>
+                    {link.isNew && (
+                      <span className="ml-1 px-1.5 py-0.5 bg-gold text-ink text-[8px] font-black uppercase tracking-tighter rounded-full leading-none">NEW</span>
+                    )}
                     <span className={`absolute -bottom-1 left-0 h-0.5 bg-gold transition-all duration-300 ${
                       isActive ? 'w-full' : 'w-0 group-hover:w-full'
                     }`} />
@@ -273,7 +277,10 @@ export function Navbar() {
                         }`}
                       >
                         <Icon className="w-4 h-4 shrink-0" />
-                        {link.name}
+                        <span className="flex-1">{link.name}</span>
+                        {link.isNew && (
+                          <span className="ml-auto px-1.5 py-0.5 bg-gold text-ink text-[8px] font-black uppercase rounded-full">NEW</span>
+                        )}
                       </Link>
                     );
                   })}
