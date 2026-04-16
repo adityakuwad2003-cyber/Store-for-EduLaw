@@ -6,6 +6,7 @@ import { useCartStore } from '@/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { UniversalSearch } from '@/components/ui/UniversalSearch';
 
+// v2.1.2 - Force update for Find Judgments visibility
 const navLinks = [
   { name: 'Marketplace', href: '/marketplace', icon: Store },
   { name: 'Bundles', href: '/bundles', icon: Layers },
@@ -92,7 +93,7 @@ export function Navbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden xl:flex items-center gap-4 flex-wrap justify-center flex-1 px-4">
+            <div className="hidden lg:flex items-center gap-4 flex-wrap justify-center flex-1 px-4">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = location.pathname === link.href;
@@ -226,7 +227,7 @@ export function Navbar() {
               {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="xl:hidden p-2 sm:p-2.5 hover:bg-burgundy/10 rounded-xl transition-colors"
+                className="lg:hidden p-2 sm:p-2.5 hover:bg-burgundy/10 rounded-xl transition-colors"
                 aria-label="Toggle mobile menu"
               >
                 {isMobileMenuOpen ? (
@@ -246,7 +247,7 @@ export function Navbar() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="xl:hidden bg-parchment border-t border-parchment-dark overflow-hidden"
+              className="lg:hidden bg-parchment border-t border-parchment-dark overflow-hidden"
             >
               <div className="section-container py-4 space-y-4 max-h-[80vh] overflow-y-auto">
                 {/* Mobile Search */}
