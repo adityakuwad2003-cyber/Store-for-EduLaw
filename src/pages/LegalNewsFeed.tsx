@@ -480,15 +480,7 @@ export default function LegalNewsFeed() {
         </div>
       </div>
 
-      {/* ── Spotlight Recommendation ── */}
-      {!loading && filtered.length > 0 && (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8">
-          <SubtleHook 
-            textToMatch={filtered[0].summary + " " + filtered[0].title} 
-            className="bg-white/60 border-ink/5 shadow-sm" 
-          />
-        </div>
-      )}
+      </div>
 
       {/* ── News grid ── */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
@@ -513,14 +505,7 @@ export default function LegalNewsFeed() {
             className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
           >
             {filtered.map((item, idx) => {
-              const elements = [];
-              const hook = getRecommendedHook(item.summary + ' ' + item.title);
-              
-              if (hook && (idx === 2 || idx === 7 || idx === 12)) {
-                 elements.push(<HookCard key={`hook-${item.id}`} hook={hook} />);
-              }
-
-              elements.push(
+              return (
                 <motion.button
                   key={item.id}
                   layout
@@ -563,8 +548,6 @@ export default function LegalNewsFeed() {
                   </div>
                 </motion.button>
               );
-
-              return elements;
             })}
           </motion.div>
         )}

@@ -262,20 +262,6 @@ export default function LegalNewsArticle() {
             </Link>
           </div>
 
-          {/* Study CTA */}
-          <div className="mt-10 p-5 bg-gradient-to-r from-ink/5 to-gold/10 rounded-2xl border border-gold/20">
-            <p className="font-ui text-sm font-semibold text-ink mb-1">
-              📚 Preparing for judiciary exams or law practice?
-            </p>
-            <p className="font-body text-xs text-mutedgray mb-3">
-              Get comprehensive notes, mock tests, and legal resources on The EduLaw Store.
-            </p>
-            <Link
-              to="/marketplace"
-              className="inline-flex items-center gap-1.5 text-xs font-ui font-bold text-gold hover:underline"
-            >
-              Browse Study Materials →
-            </Link>
           </div>
         </motion.div>
       </article>
