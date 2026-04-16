@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ShoppingCart, User, ChevronDown, LogOut, FileQuestion, FileText, MessageSquare, Gift, Store, Layers, Crown, Scale, ShieldCheck, Search } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, ChevronDown, LogOut, FileQuestion, FileText, MessageSquare, Gift, Store, Layers, Crown, Scale, ShieldCheck, Search, Gavel } from 'lucide-react';
 import { useCartStore } from '@/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { UniversalSearch } from '@/components/ui/UniversalSearch';

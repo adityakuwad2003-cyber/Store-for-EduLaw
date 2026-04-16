@@ -5,7 +5,7 @@ import {
   Search, Gavel, Scale, Book, 
   ExternalLink, ArrowRight, History,
   Info, ChevronDown, Filter,
-  BookOpen
+  BookOpen, RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
