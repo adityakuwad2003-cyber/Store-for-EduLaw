@@ -150,7 +150,7 @@ export const CaseLawTool: React.FC = () => {
               </button>
 
               <Link
-                to={`/legal-playground/case-law/${caselaw.id}`}
+                to={`/playground-item/${caselaw.id}`}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gold text-gold font-ui font-black uppercase tracking-widest text-[10px] hover:bg-gold/5 transition-all"
               >
                 Details

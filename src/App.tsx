@@ -59,7 +59,7 @@ const ReferralProgram = lazy(() => import('@/pages/ReferralProgram'));
 const CollegeLicensing = lazy(() => import('@/pages/CollegeLicensing'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
 const LegalHub = lazy(() => import('@/pages/LegalHub'));
-const LegalPlayground = lazy(() => import('@/pages/LegalPlayground').then(m => ({ default: m.LegalPlayground })));
+const LegalPlayground = lazy(() => import('@/pages/LegalPlayground'));
 const BlogArticle = lazy(() => import('@/pages/BlogArticle'));
 const LegalNewsIndex = lazy(() => import('@/pages/LegalNewsIndex'));
 const LegalNewsArticle = lazy(() => import('@/pages/LegalNewsArticle'));
@@ -173,13 +173,15 @@ function AppContent() {
             <Route path="/referral" element={<ReferralProgram />} />
             <Route path="/college-licensing" element={<CollegeLicensing />} />
             <Route path="/legal-hub" element={<LegalHub />} />
-            <Route path="/legal-playground" element={<LegalPlayground />} />
-            <Route path="/legal-playground/quiz" element={<QuizPage />} />
-            <Route path="/legal-playground/case-law" element={<CaseLawPage />} />
-            <Route path="/legal-playground/digest" element={<DigestPage />} />
-            <Route path="/legal-playground/flashcards" element={<FlashcardsPage />} />
-            <Route path="/legal-playground/insights" element={<InsightsPage />} />
-            <Route path="/legal-playground/lexicon" element={<LexiconPage />} />
+            <Route path="/legal-playground">
+              <Route index element={<LegalPlayground />} />
+              <Route path="quiz" element={<QuizPage />} />
+              <Route path="case-law" element={<CaseLawPage />} />
+              <Route path="digest" element={<DigestPage />} />
+              <Route path="flashcards" element={<FlashcardsPage />} />
+              <Route path="insights" element={<InsightsPage />} />
+              <Route path="lexicon" element={<LexiconPage />} />
+            </Route>
             <Route path="/playground-item/:id" element={<PlaygroundItemDetail />} />
             <Route path="/blog/:slug" element={<BlogArticle />} />
             <Route path="/legal-news" element={<LegalNewsIndex />} />
