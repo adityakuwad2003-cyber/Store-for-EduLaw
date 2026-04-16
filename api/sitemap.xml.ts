@@ -42,6 +42,7 @@ export default async function handler(req: any, res: any) {
     urls.push(generateUrl(`${baseUrl}/community`, today, "daily", "0.8"));
     urls.push(generateUrl(`${baseUrl}/subscription`, today, "monthly", "0.8"));
     urls.push(generateUrl(`${baseUrl}/college-licensing`, today, "monthly", "0.8"));
+    urls.push(generateUrl(`${baseUrl}/judgement-finder`, today, "daily", "0.95"));
     urls.push(generateUrl(`${baseUrl}/referral`, today, "monthly", "0.6"));
 
     // 1.5 Modular Playground Sub-routes

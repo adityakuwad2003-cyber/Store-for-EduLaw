@@ -179,27 +179,39 @@ export function downloadInvoicePdf(invoice: InvoiceData): void {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
 
+  const descWidth = cols.sac - cols.desc - 4; // Width for description column
+
   invoice.items.forEach((item, idx) => {
+    // Split description into lines to prevent overlapping
+    const lines = doc.splitTextToSize(item.description, descWidth);
+    const rowHeight = Math.max(8, lines.length * 4 + 2); // Dynamic height, min 8mm
+
+    // Check if we need a new page (rough check)
+    if (y + rowHeight > 270) {
+      doc.addPage();
+      y = 20;
+      // Redraw header or just continue
+    }
+
     const rowColor = idx % 2 === 1 ? LIGHT_GRAY : WHITE;
     doc.setFillColor(...rowColor);
-    doc.rect(M, y - 1, W - M * 2, 8, "F");
+    doc.rect(M, y - 1, W - M * 2, rowHeight, "F");
 
-    const rowY = y + 5;
+    const rowY = y + 4;
     doc.setTextColor(...INK);
     doc.text(String(idx + 1), cols.no, rowY);
 
-    // Truncate long descriptions
-    const desc = item.description.length > 38
-      ? item.description.slice(0, 35) + "..."
-      : item.description;
-    doc.text(desc, cols.desc, rowY);
+    // Render multi-line description
+    doc.text(lines, cols.desc, rowY);
+    
+    // Aligned metadata
     doc.text(item.sacCode, cols.sac, rowY);
     doc.text(r2(item.taxableValue).toFixed(2), cols.taxable, rowY, { align: "right" });
     doc.text(r2(item.cgstAmount).toFixed(2), cols.cgst, rowY, { align: "right" });
     doc.text(r2(item.sgstAmount).toFixed(2), cols.sgst, rowY, { align: "right" });
     doc.text(r2(item.total).toFixed(2), cols.total + 15, rowY, { align: "right" });
 
-    y += 8;
+    y += rowHeight;
   });
 
   // ── Totals block ───────────────────────────────────────────────────────────

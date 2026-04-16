@@ -11,10 +11,9 @@ const navLinks = [
   { name: 'Bundles', href: '/bundles', icon: Layers },
   { name: 'Subscription', href: '/subscription', icon: Crown },
   { name: 'Services', href: '/legal-services', icon: Scale },
-  { name: 'Mock Tests', href: '/mock-tests', icon: FileQuestion },
+  { name: 'Find Judgments', href: '/judgement-finder', icon: Gavel },
   { name: 'Templates', href: '/templates', icon: FileText },
-  { name: 'Legal Updates', href: '/legal-hub', icon: MessageSquare },
-  { name: 'Refer & Earn', href: '/referral', icon: Gift },
+  { name: 'Updates', href: '/legal-hub', icon: MessageSquare },
 ];
 
 export function Navbar() {

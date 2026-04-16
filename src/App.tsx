@@ -65,6 +65,7 @@ const LegalNewsIndex = lazy(() => import('@/pages/LegalNewsIndex'));
 const LegalNewsArticle = lazy(() => import('@/pages/LegalNewsArticle'));
 const LegalNewsFeed = lazy(() => import('@/pages/LegalNewsFeed'));
 const PlaygroundItemDetail = lazy(() => import('@/pages/PlaygroundItemDetail').then(m => ({ default: m.PlaygroundItemDetail })));
+const JudgementFinder = lazy(() => import('@/pages/JudgementFinder'));
 
 // Playground Sub-routes
 const QuizPage = lazy(() => import('@/pages/playground/QuizPage'));
@@ -173,6 +174,7 @@ function AppContent() {
             <Route path="/referral" element={<ReferralProgram />} />
             <Route path="/college-licensing" element={<CollegeLicensing />} />
             <Route path="/legal-hub" element={<LegalHub />} />
+            <Route path="/judgement-finder" element={<JudgementFinder />} />
             <Route path="/legal-playground">
               <Route index element={<LegalPlayground />} />
               <Route path="quiz" element={<QuizPage />} />

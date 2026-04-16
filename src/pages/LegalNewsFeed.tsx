@@ -12,8 +12,6 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { shareNewsStoryAction } from '@/lib/newsShare';
 import { useNavigate } from 'react-router-dom';
-import { getRecommendedHook, type PromoHook } from '@/lib/hookEngine';
-import { SubtleHook } from '@/components/playground/SubtleHook';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface NewsItem {
