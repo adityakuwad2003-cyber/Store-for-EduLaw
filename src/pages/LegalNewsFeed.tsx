@@ -210,10 +210,6 @@ function NewsCardViewer({
 
               {/* Actions & Hooks */}
               <div className="mt-auto space-y-4">
-                {/* Study Hook Card */}
-                <div className="mt-auto">
-                  <SubtleHook textToMatch={current.summary + " " + current.title} className="bg-ink/5 border-ink/10" />
-                </div>
 
                 {/* Main Navigation */}
                 <div className="flex items-center justify-between">
@@ -483,6 +479,16 @@ export default function LegalNewsFeed() {
           </button>
         </div>
       </div>
+
+      {/* ── Spotlight Recommendation ── */}
+      {!loading && filtered.length > 0 && (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8">
+          <SubtleHook 
+            textToMatch={filtered[0].summary + " " + filtered[0].title} 
+            className="bg-white/60 border-ink/5 shadow-sm" 
+          />
+        </div>
+      )}
 
       {/* ── News grid ── */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
