@@ -10,6 +10,7 @@ import { useCaseLawsDaily, useCountdownToMidnight } from '../../hooks/useDailyCo
 import { useBookmarks } from '../../hooks/useBookmarks';
 import { IG_GRADIENT, shareFile } from '../../lib/playgroundShare';
 import { generateCaseLawStoryCard } from '../../lib/playgroundCanvas';
+import { SubtleHook } from './SubtleHook';
 
 const subjectColors: Record<string, string> = {
   'Constitutional Law': 'bg-burgundy/10 text-burgundy',
@@ -159,6 +160,12 @@ export const CaseLawTool: React.FC = () => {
           </motion.article>
         ))}
       </div>
+
+      {dailyCaseLaws.length > 0 && (
+        <div className="mt-8">
+          <SubtleHook textToMatch={dailyCaseLaws[0].subject + " " + dailyCaseLaws[0].name} />
+        </div>
+      )}
     </div>
   );
 };

@@ -7,6 +7,7 @@ import {
   IG_GRADIENT, rrPath, drawBadge, drawDivider,
   drawBaseBackground, shareFile,
 } from '../../lib/playgroundShare';
+import { SubtleHook } from './SubtleHook';
 
 const subjectColors: Record<string, string> = {
   'Constitutional Law': 'bg-burgundy/10 text-burgundy',
@@ -231,7 +232,8 @@ export function QuizOfTheDay() {
 
         {/* Share score once all answered */}
         {allDone && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-4">
+             <SubtleHook textToMatch={questions[0].subject} />
             <button
               onClick={handleQuizShare}
               disabled={quizShareBusy}
@@ -243,7 +245,6 @@ export function QuizOfTheDay() {
             </button>
           </motion.div>
         )}
-      </div>
     </div>
   );
 }

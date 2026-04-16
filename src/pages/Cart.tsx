@@ -109,6 +109,17 @@ export function Cart() {
           // Payment successful — save receipts via secure backend API
           try {
             const token = await currentUser.getIdToken();
+            const buyerName  = currentUser.displayName || '';
+            const buyerEmail = currentUser.email || '';
+
+            // Snapshot cart items for invoice (all titles + prices)
+            const cartSnapshot = items.map(i => ({
+              title: (i.item as any).title || (i.item as any).name || 'Document',
+              price: i.item.price,
+            }));
+
+            let invoiceNumber: string | null = null;
+            let invoiceId: string | null = null;
 
             for (let itemIdx = 0; itemIdx < items.length; itemIdx++) {
               const item = items[itemIdx];
@@ -137,18 +148,30 @@ export function Cart() {
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_order_id: response.razorpay_order_id || null,
                   razorpay_signature: response.razorpay_signature,
+                  buyerName,
+                  buyerEmail,
                   // For bundles: pass noteIds so the server can resolve files
                   ...(item.type === 'bundle' && Array.isArray(itemData.noteIds)
                     ? { noteIds: itemData.noteIds.map(String) }
                     : {}),
-                  // Pass coupon info only on the first item to avoid double-incrementing
-                  ...(itemIdx === 0 && couponCode ? { couponCode, discountAmount } : {}),
+                  // Pass coupon + full cart snapshot on first item to create consolidated invoice
+                  ...(itemIdx === 0 ? {
+                    ...(couponCode ? { couponCode, discountAmount } : {}),
+                    cartItems: cartSnapshot,
+                  } : {}),
                 }),
               });
 
               if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.error || 'Failed to save purchase');
+              }
+
+              // Capture invoice details from the first item response
+              if (itemIdx === 0) {
+                const data = await res.json();
+                invoiceNumber = data.invoiceNumber || null;
+                invoiceId     = data.invoiceId || null;
               }
             }
 
@@ -183,14 +206,18 @@ export function Cart() {
               }
             }
 
-            navigate('/order-success', { 
-              state: { 
+            navigate('/order-success', {
+              state: {
                 fromCheckout: true,
                 orderInfo: {
                   orderId: response.razorpay_payment_id,
-                  items: items.map(i => ({ id: i.id, title: (i.item as any).title || (i.item as any).name, price: i.item.price }))
+                  items: items.map(i => ({ id: i.id, title: (i.item as any).title || (i.item as any).name, price: i.item.price })),
+                  invoiceNumber,
+                  invoiceId,
+                  buyerName,
+                  buyerEmail,
                 }
-              } 
+              }
             });
           } catch (err) {
             console.error("Error saving purchase:", err);

@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Check, ShoppingCart, Tag, Zap, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { bundles } from '@/data/notes';
+import { Sparkles, Check, ShoppingCart, Tag, Zap, X } from 'lucide-react';
 import { getAllNotes } from '@/lib/db';
 import { SEO } from '@/components/SEO';
 import type { Note } from '@/types';
-import { BundleCard } from '@/components/ui/BundleCard';
 import { useCartStore } from '@/store';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
@@ -34,7 +32,6 @@ export function Bundles() {
   const [allNotes, setAllNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchFilter, setSearchFilter] = useState('');
-  const [showPrebuilt, setShowPrebuilt] = useState(true);
   const { addBundle, addNote } = useCartStore();
   const [searchParams] = useSearchParams();
   const preselectId = searchParams.get('preselect');
@@ -288,39 +285,6 @@ export function Bundles() {
               </p>
             </div>
           )}
-        </div>
-
-        {/* ── PRE-MADE BUNDLES ── collapsible on mobile */}
-        <div className="mb-10">
-          <button
-            onClick={() => setShowPrebuilt(!showPrebuilt)}
-            className="w-full flex items-center justify-between mb-5 group"
-          >
-            <div className="text-left">
-              <h2 className="font-display text-xl sm:text-2xl text-ink">Pre-made Bundles</h2>
-              <p className="text-sm text-slate-400 font-ui">Curated subject combos at fixed prices</p>
-            </div>
-            <div className="flex items-center gap-1 text-burgundy font-ui text-sm font-semibold">
-              {showPrebuilt ? <><ChevronUp className="w-4 h-4" /> Hide</> : <><ChevronDown className="w-4 h-4" /> Show</>}
-            </div>
-          </button>
-
-          <AnimatePresence>
-            {showPrebuilt && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {bundles.map((bundle, index) => (
-                    <BundleCard key={bundle.id} bundle={bundle} index={index} />
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         {/* ── PRICING TABLE ── responsive */}

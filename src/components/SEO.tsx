@@ -8,6 +8,7 @@ interface SEOProps {
   ogImage?: string;
   twitterCard?: 'summary' | 'summary_large_image';
   googleSiteVerification?: string;
+  structuredData?: object | object[];
 }
 
 export function SEO({
@@ -18,6 +19,7 @@ export function SEO({
   ogImage = '/logo.png', // Relative path from public folder
   twitterCard = 'summary_large_image',
   googleSiteVerification = 'R_4h3YlP8rBf-A9mF8kX5A6B4C3D2E1F0G9H8I7J6K5', // Default placeholder or user provided
+  structuredData,
 }: SEOProps) {
   const siteName = 'The EduLaw Store';
   const fullTitle = `${title} | ${siteName}`;
@@ -65,6 +67,13 @@ export function SEO({
 
       {/* India Specific */}
       <link rel="alternate" hrefLang="en-IN" href={url} />
+
+      {/* JSON-LD Structured Data */}
+      {structuredData && (
+        <script type="application/ld+json">
+          {JSON.stringify(Array.isArray(structuredData) ? structuredData : [structuredData])}
+        </script>
+      )}
     </Helmet>
   );
 }

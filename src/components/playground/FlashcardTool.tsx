@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { SubtleHook } from './SubtleHook';
 
 // --- Types ---
 interface Flashcard { id: string; front: string; back: string; hint?: string; image?: string; }
@@ -264,25 +265,9 @@ export const FlashcardTool: React.FC = () => {
           </div>
         )}
 
-        {/* CTA */}
+        {/* CTA Hook */}
         <div className="mt-10 pt-8 border-t border-ink/8">
-          <p className="font-ui text-sm text-ink/50 font-bold mb-4 text-center">Want to go deeper? Get full subject notes →</p>
-          <div className="flex flex-wrap justify-center gap-2.5">
-            {[
-              { label: 'Contract Law Notes', path: '/marketplace?q=contract+law' },
-              { label: 'Constitutional Law Notes', path: '/marketplace?q=constitutional+law' },
-              { label: 'Criminal Law Notes', path: '/marketplace?q=criminal+law' },
-              { label: 'Civil Procedure Notes', path: '/marketplace?q=cpc' },
-              { label: 'Company Law Notes', path: '/marketplace?q=company+law' },
-              { label: 'View All 46+ Subjects', path: '/marketplace' },
-            ].map(item => (
-              <Link key={item.label} to={item.path}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-ink/10 rounded-xl font-ui text-xs font-bold text-ink/60 hover:border-gold hover:text-gold transition-all shadow-sm"
-              >
-                {item.label} <ArrowRight className="w-3 h-3" />
-              </Link>
-            ))}
-          </div>
+           <SubtleHook textToMatch="notes subjects templates exams" />
         </div>
       </div>
 

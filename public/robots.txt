@@ -1,16 +1,10 @@
 User-agent: *
 Allow: /
-Allow: /marketplace
-Allow: /hub
-Allow: /category/*
-Allow: /product/*
-Allow: /blog/*
-Allow: /community
 
-Disallow: /checkout
 Disallow: /cart
-Disallow: /account
 Disallow: /dashboard
 Disallow: /admin
+Disallow: /login
+Disallow: /order-success
 
 Sitemap: https://www.store.theedulaw.in/sitemap.xml

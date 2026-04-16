@@ -36,7 +36,7 @@ export default async function handler(req: any, res: any) {
     urls.push(generateUrl(`${baseUrl}/legal-news`, today, "daily", "0.95"));
     urls.push(generateUrl(`${baseUrl}/legal-hub`, today, "daily", "0.9"));
     urls.push(generateUrl(`${baseUrl}/mock-tests`, today, "weekly", "0.9"));
-    urls.push(generateUrl(`${baseUrl}/bundles`, today, "weekly", "0.9"));
+    urls.push(generateUrl(`${baseUrl}/bundles`, today, "weekly", "0.9"));   // single entry — not per bundle doc
     urls.push(generateUrl(`${baseUrl}/templates`, today, "weekly", "0.9"));
     urls.push(generateUrl(`${baseUrl}/legal-services`, today, "monthly", "0.8"));
     urls.push(generateUrl(`${baseUrl}/community`, today, "daily", "0.8"));
@@ -52,29 +52,38 @@ export default async function handler(req: any, res: any) {
 
     // 2. Dynamic Categories
     const categories = [
-      "criminal-law", "constitutional-law", "civil-law", "corporate-law", 
-      "family-law", "special-acts", "public-law", "foundation", "evidence", 
+      "criminal-law", "constitutional-law", "civil-law", "corporate-law",
+      "family-law", "special-acts", "public-law", "foundation", "evidence",
       "criminal-procedure", "drafting", "adr", "procedural", "international-law"
     ];
     categories.forEach(cat => {
       urls.push(generateUrl(`${baseUrl}/category/${cat}`, today, "weekly", "0.9"));
     });
 
-    // Fetch dynamic content simultaneously
-    const [notesSnap, bundlesSnap, mockTestsSnap, templatesSnap, blogsSnap, newsSnap] = await Promise.all([
+    // Fetch all dynamic content simultaneously
+    const [
+      notesSnap,
+      bundlesSnap,
+      mockTestsSnap,
+      templatesSnap,
+      blogsSnap,
+      playgroundSnap,
+      legalNewsSnap,
+    ] = await Promise.all([
       adminDb.collection("notes").get(),
       adminDb.collection("bundles").get(),
       adminDb.collection("mockTests").get(),
       adminDb.collection("templates").get(),
       adminDb.collection("blogs").get(),
-      adminDb.collection("playground_content").get()
+      adminDb.collection("playground_content").get(),
+      adminDb.collection("daily_legal_news").get(),   // fix: was missing
     ]);
 
     // Format utility
     const getDate = (doc: any) => {
       const data = doc.data();
-      if (data.updatedAt) return data.updatedAt.toDate().toISOString().split("T")[0];
-      if (data.createdAt) return data.createdAt.toDate().toISOString().split("T")[0];
+      if (data.updatedAt?.toDate) return data.updatedAt.toDate().toISOString().split("T")[0];
+      if (data.createdAt?.toDate) return data.createdAt.toDate().toISOString().split("T")[0];
       if (data.publishedAt) return new Date(data.publishedAt).toISOString().split("T")[0];
       return today;
     };
@@ -85,11 +94,12 @@ export default async function handler(req: any, res: any) {
       urls.push(generateUrl(`${baseUrl}/product/${slug}`, getDate(doc), "monthly", "1.0"));
     });
 
-    // 4. Bundles
+    // 4. Bundles — only individual product pages, /bundles hub already added above
     bundlesSnap.docs.forEach(doc => {
       const slug = doc.data().slug || doc.id;
-      urls.push(generateUrl(`${baseUrl}/bundles`, getDate(doc), "monthly", "0.8")); // Deep bundles links don't seem to exist universally outside marketplace, actually wait: bundles uses note detail
-      urls.push(generateUrl(`${baseUrl}/product/${slug}`, getDate(doc), "monthly", "0.8"));
+      if (slug) {
+        urls.push(generateUrl(`${baseUrl}/product/${slug}`, getDate(doc), "monthly", "0.8"));
+      }
     });
 
     // 5. Mock Tests
@@ -98,11 +108,9 @@ export default async function handler(req: any, res: any) {
       urls.push(generateUrl(`${baseUrl}/mock-tests/${slug}`, getDate(doc), "monthly", "0.9"));
     });
 
-    // 6. Templates
-    templatesSnap.docs.forEach(doc => {
-      const slug = doc.data().slug || doc.id;
-      urls.push(generateUrl(`${baseUrl}/product/${slug}`, getDate(doc), "monthly", "0.8"));
-    });
+    // 6. Templates — no individual detail pages currently, skip product links for templates
+    // (templates page is a store, not individual detail pages)
+    void templatesSnap; // referenced to avoid unused-var warning
 
     // 7. Blogs
     blogsSnap.docs.forEach(doc => {
@@ -110,19 +118,17 @@ export default async function handler(req: any, res: any) {
       urls.push(generateUrl(`${baseUrl}/blog/${slug}`, getDate(doc), "monthly", "0.8"));
     });
 
-    // 8. Legal Playground Items
-    newsSnap.docs.forEach(doc => {
-      const data = doc.data();
-      const type = data.type;
-      const slug = data.slug || doc.id;
-      if (type) {
-        urls.push(generateUrl(`${baseUrl}/legal-playground/${type}/${slug}`, getDate(doc), "monthly", "0.9"));
-      } else {
-        urls.push(generateUrl(`${baseUrl}/legal-news/${doc.id}`, getDate(doc), "monthly", "0.9")); // Fallback for old news structure if any
-      }
+    // 8. Playground Items — route is /playground-item/:id (fix: was wrong pattern)
+    playgroundSnap.docs.forEach(doc => {
+      urls.push(generateUrl(`${baseUrl}/playground-item/${doc.id}`, getDate(doc), "monthly", "0.9"));
     });
 
-    // Add legal pages
+    // 9. Daily Legal News — individual article pages (fix: was missing entirely)
+    legalNewsSnap.docs.forEach(doc => {
+      urls.push(generateUrl(`${baseUrl}/legal-news/${doc.id}`, getDate(doc), "daily", "0.85"));
+    });
+
+    // 10. Legal / policy pages
     urls.push(generateUrl(`${baseUrl}/privacy-policy`, today, "yearly", "0.3"));
     urls.push(generateUrl(`${baseUrl}/terms-of-service`, today, "yearly", "0.3"));
     urls.push(generateUrl(`${baseUrl}/refund-policy`, today, "yearly", "0.3"));

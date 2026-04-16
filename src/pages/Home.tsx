@@ -10,7 +10,7 @@ import { Testimonials } from '@/sections/Testimonials';
 import { FAQSection } from '@/sections/FAQSection';
 
 import { SEO } from '@/components/SEO';
-import { StructuredData, getOrganizationSchema } from '@/components/StructuredData';
+import { StructuredData, getOrganizationSchema, getWebSiteSchema } from '@/components/StructuredData';
 
 export function Home() {
   return (
@@ -21,6 +21,7 @@ export function Home() {
         canonical="/"
       />
       <StructuredData data={getOrganizationSchema()} />
+      <StructuredData data={getWebSiteSchema()} />
       <HeroSection />
       <StatsStrip />
       <CategoriesSection />

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSecureDownloadUrl } from '@/lib/storage';
 import { useCartStore, useWishlistStore } from '@/store';
+import { downloadInvoicePdf, buildInvoiceFromPurchase } from '@/lib/generateInvoicePdf';
 import type { Note } from '@/types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -30,6 +31,8 @@ interface Purchase {
   price: number;
   razorpay_payment_id: string;
   purchasedAt: string | null;
+  invoiceNumber: string | null;
+  invoiceId: string | null;
 }
 
 // ─── Quota Helpers ────────────────────────────────────────────────────────────
@@ -227,6 +230,27 @@ function PurchaseCard({
               </button>
             )}
           </div>
+        )}
+
+        {/* GST Invoice */}
+        {purchase.invoiceNumber && (
+          <button
+            onClick={() => {
+              const inv = buildInvoiceFromPurchase({
+                invoiceNumber:       purchase.invoiceNumber!,
+                buyerName:           '',   // not stored on client; buyer name will show as 'Customer' if empty
+                buyerEmail:          '',
+                cartItems:           [{ title: purchase.title, price: purchase.price }],
+                razorpay_payment_id: purchase.razorpay_payment_id,
+                invoiceDate:         purchase.purchasedAt || undefined,
+              });
+              downloadInvoicePdf(inv);
+            }}
+            className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-ui font-bold text-slate-400 hover:text-burgundy border border-dashed border-slate-200 hover:border-burgundy/30 rounded-xl transition-all"
+          >
+            <Receipt className="w-3 h-3" />
+            GST Invoice — {purchase.invoiceNumber}
+          </button>
         )}
       </div>
     </div>

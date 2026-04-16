@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Brain, Newspaper, Layers, 
+import {
+  Brain, Newspaper, Layers,
   Lightbulb, BookOpen,
-  Zap, Gavel, ArrowUpRight
+  Zap, Gavel, ArrowUpRight,
+  Trophy, ShoppingBag, Scale, FileText
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 
@@ -118,6 +119,28 @@ export const LegalPlayground: React.FC = () => {
         </div>
       </section>
 
+      {/* Quick Path Pills */}
+      <section className="section-container px-4 mb-10 -mt-4">
+        <div className="flex flex-wrap justify-center gap-3">
+          {[
+            { label: 'Full Notes', icon: ShoppingBag, route: '/marketplace', cls: 'bg-burgundy/10 text-burgundy border-burgundy/20 hover:bg-burgundy/20' },
+            { label: 'Mock Tests',     icon: Trophy,      route: '/mock-tests',     cls: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' },
+            { label: 'Legal Templates',icon: FileText,    route: '/templates',      cls: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' },
+            { label: 'Expert Help',    icon: Scale,       route: '/legal-services', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' },
+          ].map(({ label, icon: Icon, route, cls }) => (
+            <Link
+              key={route}
+              to={route}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border font-ui text-xs font-bold hover:scale-105 transition-all ${cls}`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+              <ArrowUpRight className="w-3 h-3 opacity-50" />
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Bento Grid */}
       <section className="section-container px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[280px]">
@@ -134,7 +157,7 @@ export const LegalPlayground: React.FC = () => {
                 ${tool.size === 'lg' ? 'md:col-span-2' : ''}
               `}
             >
-              <Link to={tool.path} className="absolute inset-0 z-10" aria-label={`Open ${tool.title}`} />
+              <Link to={tool.path} className="absolute inset-0 z-30" aria-label={`Open ${tool.title}`} />
               
               <div className="relative z-20 h-full flex flex-col">
                 <div className="flex items-start justify-between mb-auto">
@@ -166,23 +189,72 @@ export const LegalPlayground: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer Support */}
+      {/* Cross-Sell Section */}
       <section className="mt-20 section-container px-4">
-        <div className="bg-ink text-parchment rounded-[3rem] p-8 sm:p-12 text-center overflow-hidden relative">
+        <div className="bg-ink rounded-[3rem] p-8 sm:p-12 overflow-hidden relative">
           <div className="absolute inset-0 bg-gold/5 pointer-events-none" />
           <div className="relative z-10">
-            <h2 className="font-display text-2xl sm:text-3xl mb-4">Want more than just tools?</h2>
-            <p className="font-body text-parchment/60 mb-8 max-w-xl mx-auto text-sm sm:text-base">
-              Explore our curated marketplace for full subject notes, landmark judgement decks, 
-              and expert legal templates.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link to="/marketplace" className="px-8 py-4 bg-gold text-ink rounded-2xl font-ui text-sm font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-xl shadow-gold/20">
-                Browse Marketplace
-              </Link>
-              <Link to="/templates" className="px-8 py-4 bg-white/10 text-white border border-white/20 rounded-2xl font-ui text-sm font-black uppercase tracking-widest hover:bg-white/20 transition-all">
-                Legal Templates
-              </Link>
+            <div className="text-center mb-10">
+              <h2 className="font-display text-2xl sm:text-3xl text-parchment mb-3">Ready to go further?</h2>
+              <p className="font-body text-parchment/60 text-sm sm:text-base max-w-md mx-auto">
+                The playground sharpens your knowledge. These tools help you apply it.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                {
+                  icon: ShoppingBag,
+                  iconCls: 'bg-burgundy/20 text-burgundy',
+                  borderCls: 'border-burgundy/20 hover:border-burgundy/40',
+                  title: 'Notes Marketplace',
+                  desc: '500+ curated study notes. Buy exactly what you need.',
+                  route: '/marketplace',
+                  cta: 'Browse Notes',
+                },
+                {
+                  icon: Trophy,
+                  iconCls: 'bg-gold/20 text-[#c9a84c]',
+                  borderCls: 'border-gold/20 hover:border-gold/40',
+                  title: 'Mock Tests',
+                  desc: 'MCQs based on real exam patterns. Track your progress.',
+                  route: '/mock-tests',
+                  cta: 'Take a Test',
+                },
+                {
+                  icon: FileText,
+                  iconCls: 'bg-indigo-500/20 text-indigo-300',
+                  borderCls: 'border-indigo-500/20 hover:border-indigo-400/40',
+                  title: 'Legal Templates',
+                  desc: 'Court-ready petitions, agreements & notice templates.',
+                  route: '/templates',
+                  cta: 'View Templates',
+                },
+                {
+                  icon: Scale,
+                  iconCls: 'bg-emerald-500/20 text-emerald-400',
+                  borderCls: 'border-emerald-500/20 hover:border-emerald-400/40',
+                  title: 'Expert Legal Help',
+                  desc: 'Vetted advocates for consultations & document drafting.',
+                  route: '/legal-services',
+                  cta: 'Get Help',
+                },
+              ].map(({ icon: Icon, iconCls, borderCls, title, desc, route, cta }) => (
+                <Link
+                  key={route}
+                  to={route}
+                  className={`group flex flex-col p-6 bg-white/5 border rounded-[1.5rem] transition-all duration-300 hover:-translate-y-1 hover:bg-white/10 ${borderCls}`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${iconCls}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-display text-base text-white mb-2">{title}</h4>
+                  <p className="font-body text-xs text-parchment/50 leading-relaxed mb-4 flex-1">{desc}</p>
+                  <span className="font-ui text-[11px] font-black uppercase tracking-widest text-parchment/40 group-hover:text-gold transition-colors flex items-center gap-1">
+                    {cta} <ArrowUpRight className="w-3 h-3" />
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
         </div>

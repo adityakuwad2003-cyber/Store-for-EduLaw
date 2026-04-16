@@ -85,6 +85,31 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── TEMPLATES (public read, admin-only write) ────────────────────────
+    match /templates/{templateId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── BUNDLES (public read, admin-only write) ──────────────────────────
+    match /bundles/{bundleId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── INVOICES (authenticated owner only) ──────────────────────────────
+    match /invoices/{invoiceId} {
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // ── COUPONS (public read for validation, admin-only write) ───────────
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ── EVERYTHING ELSE: DENY ─────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

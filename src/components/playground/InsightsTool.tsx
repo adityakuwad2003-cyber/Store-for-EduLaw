@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Newspaper, ArrowRight, Share2, Check } from 'lucide-react';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { SubtleHook } from './SubtleHook';
 
 // --- Types ---
 interface Article {
@@ -166,6 +167,8 @@ export const InsightsTool: React.FC = () => {
                 </button>
               ))}
             </nav>
+
+            <SubtleHook textToMatch="articles insights research" />
           </div>
         </aside>
 

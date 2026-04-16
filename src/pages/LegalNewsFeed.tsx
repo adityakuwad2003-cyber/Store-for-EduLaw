@@ -13,6 +13,7 @@ import { db } from '@/lib/firebase';
 import { shareNewsStoryAction } from '@/lib/newsShare';
 import { useNavigate } from 'react-router-dom';
 import { getRecommendedHook, type PromoHook } from '@/lib/hookEngine';
+import { SubtleHook } from '@/components/playground/SubtleHook';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface NewsItem {
@@ -210,22 +211,8 @@ function NewsCardViewer({
               {/* Actions & Hooks */}
               <div className="mt-auto space-y-4">
                 {/* Study Hook Card */}
-                <div className="p-4 bg-burgundy/5 border border-burgundy/10 rounded-2xl flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-burgundy/10 flex items-center justify-center text-burgundy shrink-0">
-                      <ShoppingBag className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="font-ui text-[10px] font-black uppercase tracking-widest text-burgundy">Study This Topic</p>
-                      <p className="font-body text-xs text-ink/60">Get comprehensive notes for this {current.category} update.</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => navigate('/templates')}
-                    className="px-4 py-2 bg-burgundy text-parchment rounded-lg font-ui text-[10px] font-bold uppercase tracking-wider hover:bg-burgundy/90 transition-colors shrink-0"
-                  >
-                    View Notes
-                  </button>
+                <div className="mt-auto">
+                  <SubtleHook textToMatch={current.summary + " " + current.title} className="bg-ink/5 border-ink/10" />
                 </div>
 
                 {/* Main Navigation */}
@@ -286,11 +273,11 @@ function HookCard({ hook }: { hook: PromoHook }) {
         <span className="text-lg">{hook.icon}</span>
       </div>
       <h3 className="font-display text-lg leading-tight text-current">{hook.cta}</h3>
-      <p className="text-[11px] font-bold uppercase tracking-widest opacity-60">High Conversion Resource</p>
+      <p className="font-body text-xs opacity-70 line-clamp-2">{hook.description}</p>
       
       <button 
         onClick={() => navigate(hook.link)}
-        className="mt-auto flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-parchment rounded-xl font-ui text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-transform shadow-lg shadow-black/10"
+        className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-parchment rounded-xl font-ui text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-transform shadow-lg shadow-black/10"
       >
         <ShoppingBag className="w-3.5 h-3.5" />
         {hook.label}

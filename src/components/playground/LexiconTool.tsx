@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { glossaryData } from '../../data/glossaryData';
+import { SubtleHook } from './SubtleHook';
 
 export const LexiconTool: React.FC = () => {
   const [search, setSearch] = useState('');
@@ -109,6 +110,10 @@ export const LexiconTool: React.FC = () => {
           </button>
         </div>
       )}
+      {/* Hook */}
+      <div className="mt-8">
+        <SubtleHook textToMatch="lexicon glossary maxims dictionary concepts" />
+      </div>
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
 import { SEO } from '@/components/SEO';
+import { StructuredData, getArticleSchema } from '@/components/StructuredData';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 export interface Article {
@@ -109,6 +110,7 @@ export default function BlogArticle() {
         description={article.excerpt || article.title}
         canonical={`/blog/${slug}`}
       />
+      <StructuredData data={getArticleSchema(article, slug ?? '')} />
 
       {/* Top bar */}
       <div className="pt-20 pb-4 bg-parchment border-b border-ink/10">

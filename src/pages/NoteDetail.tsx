@@ -34,6 +34,7 @@ import { TrustBadges } from '@/components/ui/TrustBadges';
 import { PDFPreview } from '@/components/ui/PDFPreview';
 import { ScalesOfJustice3D } from '@/components/ui/LegalSVGs';
 import { SEO } from '@/components/SEO';
+import { StructuredData, getProductSchema } from '@/components/StructuredData';
 import { ReviewsSection } from '@/components/ui/ReviewsSection';
 
 const LAW_COLLEGES = [
@@ -192,12 +193,13 @@ export function NoteDetail() {
       className="pt-20 min-h-screen bg-slate-50"
       style={{ '--cat-fg': categoryColor, '--cat-bg': `${categoryColor}15` } as any}
     >
-      <SEO 
+      <SEO
         title={`${note.title} | Premium Legal Notes`}
         description={`${(note.publicDescription || note.description).slice(0, 150)}...`}
         canonical={`/product/${note.slug}`}
         ogType="product"
       />
+      <StructuredData data={getProductSchema(note)} />
       
       {/* Breadcrumb - Slimmer & Clean */}
       <div className="bg-white/80 backdrop-blur-md sticky top-20 z-30 border-b border-slate-200/60">
