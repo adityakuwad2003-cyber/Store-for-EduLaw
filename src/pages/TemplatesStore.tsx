@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   FileText, Download, Search, Filter,
   File, Eye, ShoppingCart, ChevronRight, Tag, FileSpreadsheet,
-  Shield, Clock, Award
+  Shield, Clock, Award, Check
 } from 'lucide-react';
 import { legalTemplates } from '@/data/notes';
 import { Navbar } from '@/components/layout/Navbar';

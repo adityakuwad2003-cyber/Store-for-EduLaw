@@ -3,50 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BookMarked, Bookmark, ChevronRight, RefreshCw, Copy, Check } from 'lucide-react';
 import { useConstitutionDaily } from '../../hooks/useDailyContent';
 import { useBookmarks } from '../../hooks/useBookmarks';
-import {
-  IG_GRADIENT, wrapTextCanvas, drawBadge, drawDivider,
-  drawBaseBackground, shareFile,
-} from '../../lib/playgroundShare';
+import { generateConstitutionStoryCard } from '../../lib/playgroundCanvas';
+import { IG_GRADIENT, shareFile } from '../../lib/playgroundShare';
 
-async function generateConstitutionStoryCard(article: {
-  article: string; title: string; plainLanguage: string; keyPoint: string; relatedCase: string;
-}): Promise<Blob | null> {
-  const W = 1080, H = 1920, PAD = 72;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const raw = canvas.getContext('2d');
-  if (!raw) return null;
-  const ctx: CanvasRenderingContext2D = raw;
-  let Y = await drawBaseBackground(ctx, W, H);
-
-  drawBadge(ctx, 'ARTICLE OF THE DAY', W / 2, Y + 28); Y += 76;
-
-  ctx.fillStyle = '#C9A84C'; ctx.font = 'bold 80px Georgia, serif';
-  ctx.textAlign = 'center'; ctx.fillText(article.article, W / 2, Y + 70); Y += 116;
-
-  ctx.fillStyle = '#0D0D0D'; ctx.font = 'bold 54px Georgia, serif';
-  Y = wrapTextCanvas(ctx, article.title, PAD, Y, W - PAD * 2, 72, 'center') + 36;
-
-  drawDivider(ctx, W, Y, PAD); Y += 56;
-  ctx.fillStyle = '#C9A84C'; ctx.font = 'bold 24px Arial, sans-serif';
-  ctx.textAlign = 'left'; ctx.fillText('IN PLAIN LANGUAGE', PAD, Y); Y += 50;
-  ctx.fillStyle = '#0D0D0D'; ctx.font = '38px Arial, sans-serif';
-  Y = wrapTextCanvas(ctx, article.plainLanguage, PAD, Y, W - PAD * 2, 60) + 40;
-
-  drawDivider(ctx, W, Y, PAD); Y += 56;
-  ctx.fillStyle = '#C9A84C'; ctx.font = 'bold 24px Arial, sans-serif';
-  ctx.textAlign = 'left'; ctx.fillText('KEY POINT', PAD, Y); Y += 50;
-  ctx.fillStyle = '#C9A84C'; ctx.font = '36px Arial, sans-serif';
-  Y = wrapTextCanvas(ctx, article.keyPoint, PAD, Y, W - PAD * 2, 56) + 32;
-
-  ctx.fillStyle = 'rgba(13,13,13,0.50)'; ctx.font = 'italic 28px Georgia, serif';
-  Y = wrapTextCanvas(ctx, article.relatedCase, PAD, Y, W - PAD * 2, 44) + 24;
-
-  ctx.fillStyle = 'rgba(13,13,13,0.35)'; ctx.font = '26px Arial, sans-serif';
-  ctx.textAlign = 'center'; ctx.fillText('Explore more at theedulaw.in', W / 2, Math.min(Y + 40, H - 90));
-
-  return new Promise<Blob | null>(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
-}
 
 export function ConstitutionArticleCard() {
   const article = useConstitutionDaily();

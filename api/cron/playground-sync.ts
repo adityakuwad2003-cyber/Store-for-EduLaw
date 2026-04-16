@@ -5,7 +5,13 @@ import { adminDb } from '../_lib/adminInit';
  * Master Playground Sync Cron
  * 1. Generates 3 Daily MCQs via Groq
  * 2. Rotates Case of the Week from Archive
- * 3. Scrapes HC + SC news from RSS (LiveLaw, Bar & Bench), rephrases via Groq into EduLaw voice
+ * 3. Scrapes SC + HC + Tribunal + Current-Affairs news from 11 RSS feeds,
+ *    rephrases via Groq into EduLaw voice, applies 500-item rolling window.
+ *
+ * Deletion policy:
+ *   - News items accumulate in Firestore until total count reaches 500.
+ *   - When ≥ 500, the 25 OLDEST items are removed before inserting new ones.
+ *   - No date-based deletion — items stay as long as the pool is under 500.
  */
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -51,21 +57,46 @@ function parseRssItems(xml: string, defaultCourt: string, today: string): RawRss
     const title = extractCdata(titleMatch[1]);
     if (!title || title.length < 10) continue;
 
-    const rawDesc  = descMatch ? extractCdata(descMatch[1]) : '';
-    // Keep full description for Groq to work with (up to 700 chars)
+    const rawDesc    = descMatch ? extractCdata(descMatch[1]) : '';
     const rawSummary = rawDesc.length > 700 ? rawDesc.slice(0, 697) + '…' : (rawDesc || title);
     const publishedAt = dateMatch ? dateMatch[1].trim() : new Date().toISOString();
 
-    // Skip items older than 72 hours to keep news fresh (but leave enough raw items to reliably fill the 10 SC + 10 HC cap)
+    // Skip items older than 72 hours
     const pubTime = new Date(publishedAt).getTime();
     if (!isNaN(pubTime) && pubTime < Date.now() - 72 * 60 * 60 * 1000) continue;
 
     let court = defaultCourt;
+
     if (defaultCourt === 'Mixed') {
       const low = (title + ' ' + rawSummary).toLowerCase();
-      if      (low.includes('supreme court') || low.includes(' sc ') || low.includes('apex court')) court = 'Supreme Court';
-      else if (low.includes('high court')    || low.includes(' hc '))                               court = 'High Court';
-      else continue;
+      if      (low.includes('supreme court') || low.includes(' sc ') || low.includes('apex court'))     court = 'Supreme Court';
+      else if (low.includes('high court')    || low.includes(' hc '))                                   court = 'High Court';
+      else if (
+        low.includes('nclat') || low.includes('nclt') || low.includes('ngt') ||
+        low.includes('itat')  || low.includes('cestat') || low.includes('sat ') ||
+        low.includes('tdsat') || low.includes('cat ')   || low.includes('tribunals') ||
+        low.includes('tribunal')
+      )                                                                                                  court = 'Tribunal';
+      else continue; // skip items that don't clearly belong to any court
+    }
+
+    if (defaultCourt === 'Tribunal') {
+      court = 'Tribunal'; // explicit
+    }
+
+    if (defaultCourt === 'Current Affairs') {
+      // Broad legal current affairs — include all items from these feeds
+      const low = (title + ' ' + rawSummary).toLowerCase();
+      // Only include if legal/policy flavour detected
+      const legalKeywords = [
+        'law', 'court', 'legal', 'judge', 'judgment', 'bill', 'act', 'ministry',
+        'policy', 'government', 'supreme', 'high court', 'tribunal', 'parliament',
+        'constitution', 'bail', 'fir', 'ordinance', 'legislature', 'petition',
+        'verdict', 'order', 'bench', 'plea', 'case', 'defendant', 'counsel',
+        'advocate', 'cji', 'justice', 'regulation', 'statute',
+      ];
+      if (!legalKeywords.some(kw => low.includes(kw))) continue;
+      court = 'Current Affairs';
     }
 
     items.push({ title, court, rawSummary, publishedAt });
@@ -73,7 +104,7 @@ function parseRssItems(xml: string, defaultCourt: string, today: string): RawRss
   return items;
 }
 
-// ─── Groq: rephrase RSS items in EduLaw's editorial voice ─────────────────────
+// ─── Groq: rephrase RSS items in EduLaw's editorial voice ──────────────────
 async function rephraseForEduLaw(
   apiKey: string,
   rawItems: RawRssItem[],
@@ -99,8 +130,9 @@ Rules:
 - DO NOT invent facts not in the raw summary
 - DO NOT mention sources, URLs, or publication names
 - For High Courts, preserve the specific HC name if mentioned (Delhi HC, Bombay HC, etc.)
+- For Tribinals, preserve the exact tribunal name (NCLAT, NGT, ITAT, CESTAT, SAT, TDSAT, CAT)
 - title: concise professional headline (keep case name)
-- category: one of: Constitutional Law, Criminal Law, Commercial Law, Property Law, Environmental Law, Labour Law, Family Law, Tax Law, Election Law, General
+- category: one of: Constitutional Law, Criminal Law, Commercial Law, Property Law, Environmental Law, Labour Law, Family Law, Tax Law, Election Law, Corporate Law, Current Affairs, General
 
 Input items:
 ${JSON.stringify(inputJson)}
@@ -125,7 +157,6 @@ Respond ONLY with valid JSON: {"items":[{"index":0,"title":"...","summary":"..."
   return rawItems.map((raw, i) => {
     const r = rephrased.find((x: any) => x.index === i) ?? rephrased[i] ?? {};
 
-    // Categorise from title if Groq didn't return one
     const low = raw.title.toLowerCase();
     let category = String(r.category || 'General');
     if (category === 'General') {
@@ -136,8 +167,10 @@ Respond ONLY with valid JSON: {"items":[{"index":0,"title":"...","summary":"..."
       else if (low.includes('environment') || low.includes('pollution') || low.includes('forest'))            category = 'Environmental Law';
       else if (low.includes('labour') || low.includes('employee') || low.includes('wage'))                    category = 'Labour Law';
       else if (low.includes('family') || low.includes('divorce') || low.includes('custody'))                  category = 'Family Law';
-      else if (low.includes('tax') || low.includes('gst'))                                                    category = 'Tax Law';
+      else if (low.includes('tax') || low.includes('gst') || low.includes('income'))                         category = 'Tax Law';
       else if (low.includes('election') || low.includes('evm'))                                               category = 'Election Law';
+      else if (low.includes('company') || low.includes('corporate') || low.includes('nclat') || low.includes('sebi')) category = 'Corporate Law';
+      else if (raw.court === 'Current Affairs')                                                               category = 'Current Affairs';
     }
 
     return {
@@ -161,7 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const today = new Date().toISOString().split('T')[0];
   const results: Record<string, any> = {};
 
-  // ─── 1. Generate Daily MCQs ───────────────────────────────────────────────
+  // ─── 1. Generate Daily MCQs ────────────────────────────────────────────────
   try {
     const topics = ['Constitutional Law', 'BNS 2023', 'BNSS 2023', 'BSA 2023', 'Contract Law', 'Evidence'];
     const topic  = topics[Math.floor(Math.random() * topics.length)];
@@ -187,7 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     results.mcqError = e?.message;
   }
 
-  // ─── 2. Rotate Case of the Week ──────────────────────────────────────────
+  // ─── 2. Rotate Case of the Week ───────────────────────────────────────────
   try {
     const archiveSnap = await adminDb.collection('cases_archive').get();
     if (!archiveSnap.empty) {
@@ -203,12 +236,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     results.caseError = e?.message;
   }
 
-  // ─── 3. Daily Legal News — RSS → Groq rephrase → Firestore ───────────────
+  // ─── 3. Daily Legal News — 11 RSS Feeds → Groq rephrase → Firestore ───────
   try {
+    // ── 11 RSS Feed Sources ──
+    // Supreme Court (2) | High Courts (3) | Tribunals (3) | Current Affairs (3)
     const RSS_FEEDS = [
-      { url: 'https://www.livelaw.in/category/top-stories/supreme-court/feed', court: 'Supreme Court' },
-      { url: 'https://www.livelaw.in/category/top-stories/high-court/feed',    court: 'High Court'   },
-      { url: 'https://www.barandbench.com/feed',                               court: 'Mixed'        },
+      // ── SUPREME COURT ──
+      {
+        url:   'https://www.livelaw.in/category/top-stories/supreme-court/feed',
+        court: 'Supreme Court',
+        label: 'LiveLaw SC',
+      },
+      {
+        url:   'https://blog.scconline.com/category/supreme-court/feed',
+        court: 'Supreme Court',
+        label: 'SCC Online SC',
+      },
+
+      // ── HIGH COURTS ──
+      {
+        url:   'https://www.livelaw.in/category/top-stories/high-court/feed',
+        court: 'High Court',
+        label: 'LiveLaw HC',
+      },
+      {
+        url:   'https://www.barandbench.com/feed',
+        court: 'Mixed',
+        label: 'Bar & Bench',
+      },
+      {
+        url:   'https://theleaflet.in/category/judgments/feed',
+        court: 'Mixed',
+        label: 'The Leaflet',
+      },
+
+      // ── TRIBUNALS ──
+      {
+        url:   'https://indiacorplaw.in/feed',
+        court: 'Tribunal',
+        label: 'IndiaCorpLaw (NCLAT/NCLT)',
+      },
+      {
+        url:   'https://taxmann.com/post/feed',
+        court: 'Tribunal',
+        label: 'Taxmann (ITAT/CESTAT)',
+      },
+      {
+        url:   'https://thewire.in/law/feed',
+        court: 'Mixed',
+        label: 'The Wire Law',
+      },
+
+      // ── LEGAL CURRENT AFFAIRS ──
+      {
+        url:   'https://www.thehindu.com/topic/law/feeder/default.rss',
+        court: 'Current Affairs',
+        label: 'The Hindu Law',
+      },
+      {
+        url:   'https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml',
+        court: 'Current Affairs',
+        label: 'Hindustan Times',
+      },
+      {
+        url:   'https://www.deccanherald.com/rss-feeds/dh-national.rss',
+        court: 'Current Affairs',
+        label: 'Deccan Herald',
+      },
     ];
 
     let rawItems: RawRssItem[] = [];
@@ -220,7 +314,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
           const r = await fetch(feed.url, {
             signal: controller.signal,
-            headers: { 'User-Agent': 'EduLaw-Bot/1.0 (+https://theedulaw.in)', 'Accept': 'application/rss+xml, application/xml, text/xml' },
+            headers: {
+              'User-Agent': 'EduLaw-Bot/1.0 (+https://theedulaw.in)',
+              'Accept': 'application/rss+xml, application/xml, text/xml',
+            },
           });
           clearTimeout(timer);
           if (!r.ok) return [] as RawRssItem[];
@@ -246,10 +343,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return true;
     });
 
-    // Cap at 10 SC + 10 HC
-    const scRaw = rawItems.filter(i => i.court === 'Supreme Court').slice(0, 10);
-    const hcRaw = rawItems.filter(i => i.court === 'High Court').slice(0, 10);
-    rawItems = [...scRaw, ...hcRaw];
+    // ── Cap per court type: 15 SC + 15 HC + 10 Tribunal + 10 Current Affairs = 50 max ──
+    const scRaw   = rawItems.filter(i => i.court === 'Supreme Court').slice(0, 15);
+    const hcRaw   = rawItems.filter(i => i.court === 'High Court').slice(0, 15);
+    const trRaw   = rawItems.filter(i => i.court === 'Tribunal').slice(0, 10);
+    const caRaw   = rawItems.filter(i => i.court === 'Current Affairs').slice(0, 10);
+    rawItems = [...scRaw, ...hcRaw, ...trRaw, ...caRaw];
 
     // Rephrase ALL items through Groq into EduLaw's educational voice
     let newsItems: NewsItem[] = [];
@@ -258,24 +357,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (newsItems.length === 0) {
-      results.newsError = 'No RSS items found within 48 hours';
+      results.newsError = 'No RSS items found within 72 hours';
     } else {
-      // Delete old news items (older than 3 days)
+      // ── 500-item rolling window: delete oldest 25 when pool hits 500 ──
       try {
-        const oldSnap = await adminDb.collection('playground_content')
+        const countSnap = await adminDb.collection('playground_content')
           .where('contentType', '==', 'daily_news')
           .get();
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - 3);
-        const cutoffStr = cutoff.toISOString().split('T')[0];
-        const toDelete = oldSnap.docs.filter(d => {
-          const ds = d.data().dateString as string | undefined;
-          return ds && ds < cutoffStr;
-        });
-        if (toDelete.length > 0) {
-          const delBatch = adminDb.batch();
-          toDelete.forEach(d => delBatch.delete(d.ref));
-          await delBatch.commit();
+        const totalCount = countSnap.size;
+
+        if (totalCount >= 500) {
+          // Sort by createdAt ascending to find the 25 oldest
+          const allDocs = countSnap.docs.map(d => ({
+            ref: d.ref,
+            createdAt: (d.data().createdAt as any)?.toMillis?.() ?? 0,
+          }));
+          allDocs.sort((a, b) => a.createdAt - b.createdAt);
+          const toDelete = allDocs.slice(0, 25);
+
+          if (toDelete.length > 0) {
+            const delBatch = adminDb.batch();
+            toDelete.forEach(d => delBatch.delete(d.ref));
+            await delBatch.commit();
+            results.pruned = toDelete.length;
+          }
         }
       } catch (_) { /* cleanup failure is non-fatal */ }
 
@@ -287,8 +392,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       results.legalNews = newsItems.length;
       results.legalNewsBreakdown = {
-        sc: newsItems.filter(i => i.court === 'Supreme Court').length,
-        hc: newsItems.filter(i => i.court === 'High Court').length,
+        sc:  newsItems.filter(i => i.court === 'Supreme Court').length,
+        hc:  newsItems.filter(i => i.court === 'High Court').length,
+        tr:  newsItems.filter(i => i.court === 'Tribunal').length,
+        ca:  newsItems.filter(i => i.court === 'Current Affairs').length,
       };
     }
   } catch (e: any) {

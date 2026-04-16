@@ -44,10 +44,10 @@ export default async function handler(req: any, res: any) {
     urls.push(generateUrl(`${baseUrl}/college-licensing`, today, "monthly", "0.8"));
     urls.push(generateUrl(`${baseUrl}/referral`, today, "monthly", "0.6"));
 
-    // Playground sections (Anchors)
-    const sections = ["daily-tools", "case-law", "digest", "legal-news", "flashcards", "blogs", "glossary"];
-    sections.forEach(sec => {
-      urls.push(generateUrl(`${baseUrl}/legal-playground#${sec}`, today, "daily", "0.8"));
+    // 1.5 Modular Playground Sub-routes
+    const playgroundRoutes = ["quiz", "case-law", "digest", "flashcards", "insights", "lexicon"];
+    playgroundRoutes.forEach(route => {
+      urls.push(generateUrl(`${baseUrl}/legal-playground/${route}`, today, "daily", "0.85"));
     });
 
     // 2. Dynamic Categories

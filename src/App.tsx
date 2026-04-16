@@ -63,7 +63,17 @@ const LegalPlayground = lazy(() => import('@/pages/LegalPlayground').then(m => (
 const BlogArticle = lazy(() => import('@/pages/BlogArticle'));
 const LegalNewsIndex = lazy(() => import('@/pages/LegalNewsIndex'));
 const LegalNewsArticle = lazy(() => import('@/pages/LegalNewsArticle'));
+const LegalNewsFeed = lazy(() => import('@/pages/LegalNewsFeed'));
 const PlaygroundItemDetail = lazy(() => import('@/pages/PlaygroundItemDetail').then(m => ({ default: m.PlaygroundItemDetail })));
+
+// Playground Sub-routes
+const QuizPage = lazy(() => import('@/pages/playground/QuizPage'));
+const CaseLawPage = lazy(() => import('@/pages/playground/CaseLawPage'));
+const DigestPage = lazy(() => import('@/pages/playground/DigestPage'));
+const FlashcardsPage = lazy(() => import('@/pages/playground/FlashcardsPage'));
+const InsightsPage = lazy(() => import('@/pages/playground/InsightsPage'));
+const LexiconPage = lazy(() => import('@/pages/playground/LexiconPage'));
+
 const TermsOfService = lazy(() => import('@/pages/TermsOfService').then(m => ({ default: m.TermsOfService })));
 const RefundPolicy = lazy(() => import('@/pages/RefundPolicy').then(m => ({ default: m.RefundPolicy })));
 const OrderSuccess = lazy(() => import('@/pages/OrderSuccess'));
@@ -130,14 +140,16 @@ function RefCapture() {
 function AppContent() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  // Standalone pages rendered without Navbar / Footer
+  const isStandalone = location.pathname === '/legal-news-feed';
   const { isBundleModalOpen, bundleModalCount, bundleModalNoteId, setBundleModal } = useUIStore();
 
   return (
     <div className={`min-h-screen ${isAdmin ? 'bg-slate-50' : 'bg-parchment font-ui'}`}>
       <RefCapture />
-      {!isAdmin && <BundleModal isOpen={isBundleModalOpen} onClose={() => setBundleModal(false, 0, null)} noteCount={bundleModalCount} noteId={bundleModalNoteId} />}
-      {!isAdmin && <WishlistNudge />}
-      {!isAdmin && <Navbar />}
+      {!isAdmin && !isStandalone && <BundleModal isOpen={isBundleModalOpen} onClose={() => setBundleModal(false, 0, null)} noteCount={bundleModalCount} noteId={bundleModalNoteId} />}
+      {!isAdmin && !isStandalone && <WishlistNudge />}
+      {!isAdmin && !isStandalone && <Navbar />}
       <main>
         <PageErrorBoundary>
         <Suspense fallback={<FullPageSpinner />}>
@@ -162,10 +174,17 @@ function AppContent() {
             <Route path="/college-licensing" element={<CollegeLicensing />} />
             <Route path="/legal-hub" element={<LegalHub />} />
             <Route path="/legal-playground" element={<LegalPlayground />} />
-            <Route path="/legal-playground/:type/:slug" element={<PlaygroundItemDetail />} />
+            <Route path="/legal-playground/quiz" element={<QuizPage />} />
+            <Route path="/legal-playground/case-law" element={<CaseLawPage />} />
+            <Route path="/legal-playground/digest" element={<DigestPage />} />
+            <Route path="/legal-playground/flashcards" element={<FlashcardsPage />} />
+            <Route path="/legal-playground/insights" element={<InsightsPage />} />
+            <Route path="/legal-playground/lexicon" element={<LexiconPage />} />
+            <Route path="/playground-item/:id" element={<PlaygroundItemDetail />} />
             <Route path="/blog/:slug" element={<BlogArticle />} />
             <Route path="/legal-news" element={<LegalNewsIndex />} />
             <Route path="/legal-news/:id" element={<LegalNewsArticle />} />
+            <Route path="/legal-news-feed" element={<LegalNewsFeed />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
@@ -219,10 +238,10 @@ function AppContent() {
         </Suspense>
         </PageErrorBoundary>
       </main>
-      {!isAdmin && <Footer />}
-      {!isAdmin && <WhatsAppFloat />}
-      {!isAdmin && <SignInPopup />}
-      {!isAdmin && (
+      {!isAdmin && !isStandalone && <Footer />}
+      {!isAdmin && !isStandalone && <WhatsAppFloat />}
+      {!isAdmin && !isStandalone && <SignInPopup />}
+      {!isAdmin && !isStandalone && (
         <div className="fixed bottom-6 right-28 z-[100]">
           <ScholarAI />
         </div>

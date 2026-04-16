@@ -121,3 +121,25 @@ export function useDigestDaily(): JudgmentDigest[] {
 
   return items;
 }
+
+export function useCountdownToMidnight() {
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setUTCHours(24, 0, 0, 0);
+      const diff = tomorrow.getTime() - now.getTime();
+
+      setTimeLeft({
+        hours: Math.floor(diff / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000)
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return timeLeft;
+}

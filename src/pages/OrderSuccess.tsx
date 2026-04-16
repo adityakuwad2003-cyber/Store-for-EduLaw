@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  CheckCircle2, Download, ArrowRight, Package, 
+  CheckCircle2, Download, ArrowRight,
   ShieldCheck, MessageCircle, FileText, ExternalLink 
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function OrderSuccess() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  useAuth(); // keep auth context alive
   const [orderData, setOrderData] = useState<any>(null);
 
   useEffect(() => {

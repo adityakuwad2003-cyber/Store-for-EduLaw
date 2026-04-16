@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Newspaper, Scale, Gavel, Calendar, ArrowRight, RefreshCw } from 'lucide-react';
+import { Newspaper, Scale, Gavel, Building2, Globe, Calendar, ArrowRight, RefreshCw, Share2 } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { SEO } from '@/components/SEO';
@@ -132,6 +132,19 @@ export default function LegalNewsIndex() {
                 </p>
                 <p className="text-xs font-ui text-parchment/50">SC Updates</p>
               </div>
+              <div className="text-center hidden sm:block">
+                <p className="font-display text-2xl text-gold">
+                  {items.filter(i => i.court === 'Tribunal').length}
+                </p>
+                <p className="text-xs font-ui text-parchment/50">Tribunals</p>
+              </div>
+              {/* Shareable feed link */}
+              <Link
+                to="/legal-news-feed"
+                className="ml-auto flex items-center gap-2 px-4 py-2 border border-gold/30 text-gold rounded-xl font-ui text-xs font-bold hover:bg-gold hover:text-ink transition-all"
+              >
+                <Share2 className="w-3.5 h-3.5" /> Share Feed
+              </Link>
             </div>
           )}
         </div>
@@ -182,7 +195,25 @@ export default function LegalNewsIndex() {
                 {/* Cards */}
                 <div className="space-y-3">
                   {byDate[date].map(item => {
-                    const isSC = item.court === 'Supreme Court';
+                    const isSC  = item.court === 'Supreme Court';
+                    const isHC  = item.court === 'High Court';
+                    const isTR  = item.court === 'Tribunal';
+                    const iconBg = isSC ? 'bg-burgundy/10' : isHC ? 'bg-teal-50' : isTR ? 'bg-purple-50' : 'bg-blue-50';
+                    const icon = isSC
+                      ? <Scale className="w-4 h-4 text-burgundy" />
+                      : isHC
+                      ? <Gavel className="w-4 h-4 text-teal-600" />
+                      : isTR
+                      ? <Building2 className="w-4 h-4 text-purple-600" />
+                      : <Globe className="w-4 h-4 text-blue-600" />;
+                    const badgeColour = isSC
+                      ? 'bg-burgundy/10 text-burgundy'
+                      : isHC
+                      ? 'bg-teal-100 text-teal-700'
+                      : isTR
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-blue-100 text-blue-700';
+                    const badgeLabel = isSC ? 'SC' : isHC ? 'HC' : isTR ? 'TRIB' : 'LEGAL';
                     return (
                       <Link
                         key={item.id}
@@ -190,17 +221,15 @@ export default function LegalNewsIndex() {
                         className="group flex items-start gap-4 p-4 bg-white rounded-2xl border border-ink/6 hover:border-gold/30 hover:shadow-md transition-all"
                       >
                         {/* Court icon */}
-                        <div className={`mt-0.5 p-2 rounded-xl shrink-0 ${isSC ? 'bg-burgundy/10' : 'bg-teal-50'}`}>
-                          {isSC
-                            ? <Scale className="w-4 h-4 text-burgundy" />
-                            : <Gavel className="w-4 h-4 text-teal-600" />}
+                        <div className={`mt-0.5 p-2 rounded-xl shrink-0 ${iconBg}`}>
+                          {icon}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           {/* Badges */}
                           <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${isSC ? 'bg-burgundy/10 text-burgundy' : 'bg-teal-100 text-teal-700'}`}>
-                              {isSC ? 'SC' : 'HC'}
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${badgeColour}`}>
+                              {badgeLabel}
                             </span>
                             <span className="text-[10px] font-bold text-mutedgray bg-parchment px-2 py-0.5 rounded-md">
                               {item.category}

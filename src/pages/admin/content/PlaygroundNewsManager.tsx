@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Newspaper, Trash2, Save, RefreshCw,
-  Scale, Gavel, ChevronDown, ChevronUp, X,
+  Scale, Gavel, ChevronDown, ChevronUp, X, Database,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   collection, query, where,
-  getDocs, doc, updateDoc, deleteDoc, serverTimestamp,
+  getDocs, doc, updateDoc, deleteDoc, serverTimestamp, addDoc,
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { ConfirmModal } from '../../../components/admin/ConfirmModal';
+import { SAMPLE_NEWS } from '@/data/sampleNews';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface NewsItem {
@@ -25,10 +26,11 @@ interface NewsItem {
   createdAt?: any;
 }
 
-const COURTS = ['Supreme Court', 'High Court'];
+const COURTS = ['Supreme Court', 'High Court', 'Tribunal', 'Current Affairs'];
 const CATEGORIES = [
   'Constitutional Law', 'Criminal Law', 'Commercial Law', 'Property Law',
-  'Environmental Law', 'Labour Law', 'Family Law', 'Tax Law', 'Election Law', 'General',
+  'Environmental Law', 'Labour Law', 'Family Law', 'Tax Law', 'Election Law',
+  'Corporate Law', 'Current Affairs', 'General',
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -71,7 +73,7 @@ export default function PlaygroundNewsManager() {
     } finally {
       setLoading(false);
     }
-  }, []); // eslint-disable-line
+  }, [dateFilter]); // eslint-disable-line
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
@@ -87,11 +89,48 @@ export default function PlaygroundNewsManager() {
       if (data.newsError) {
         toast.error(`Sync error: ${data.newsError}`);
       } else {
-        toast.success(`Synced ${data.legalNews ?? 0} news items`);
+        const bd = data.legalNewsBreakdown;
+        const detail = bd
+          ? `SC:${bd.sc ?? 0} HC:${bd.hc ?? 0} Trib:${bd.tr ?? 0} CA:${bd.ca ?? 0}`
+          : '';
+        toast.success(`Synced ${data.legalNews ?? 0} items${detail ? ' — ' + detail : ''}${
+          data.pruned ? ` (oldest ${data.pruned} pruned)` : ''
+        }`);
         await fetchItems();
       }
     } catch {
       toast.error('Sync request failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleSeed = async () => {
+    if (!window.confirm(`Are you sure you want to seed ${SAMPLE_NEWS.length} high-quality news samples into Firestore?`)) return;
+    
+    setSyncing(true);
+    try {
+      const collectionRef = collection(db, 'playground_content');
+      const today = new Date().toISOString().split('T')[0];
+      let seededCount = 0;
+
+      for (const item of SAMPLE_NEWS) {
+        await addDoc(collectionRef, {
+          ...item,
+          source: 'EduLaw Digest',
+          publishedAt: new Date().toISOString(),
+          dateString: today,
+          contentType: 'daily_news',
+          createdAt: serverTimestamp(),
+        });
+        seededCount++;
+      }
+
+      toast.success(`Success! Seeded ${seededCount} legal news items.`);
+      await fetchItems();
+    } catch (error) {
+      console.error('Seed error:', error);
+      toast.error('Failed to seed samples');
     } finally {
       setSyncing(false);
     }
@@ -155,14 +194,24 @@ export default function PlaygroundNewsManager() {
             <p className="text-xs text-slate-400 font-ui">{items.length} items across {availableDates.length} day(s)</p>
           </div>
         </div>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="flex items-center gap-2 px-4 py-2 bg-burgundy text-white rounded-xl text-sm font-ui font-semibold hover:bg-burgundy/90 disabled:opacity-60 transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Syncing…' : 'Sync Now'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSeed}
+            disabled={syncing}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-ui font-semibold hover:bg-emerald-100 disabled:opacity-60 transition-colors"
+          >
+            <Database className="w-4 h-4" />
+            Seed Samples
+          </button>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-2 px-4 py-2 bg-burgundy text-white rounded-xl text-sm font-ui font-semibold hover:bg-burgundy/90 disabled:opacity-60 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing…' : 'Sync Now'}
+          </button>
+        </div>
       </div>
 
       {/* Date filter */}
@@ -185,15 +234,21 @@ export default function PlaygroundNewsManager() {
       )}
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-3">
-        {(['all', 'Supreme Court', 'High Court'] as const).map(ct => {
-          const count = ct === 'all' ? displayed.length : displayed.filter(i => i.court === ct).length;
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {([
+          { key: 'all',             label: 'Total',          colour: 'text-slate-900' },
+          { key: 'Supreme Court',   label: 'Supreme Court',  colour: 'text-burgundy'  },
+          { key: 'High Court',      label: 'High Courts',    colour: 'text-teal-600'  },
+          { key: 'Tribunal',        label: 'Tribunals',      colour: 'text-purple-600'},
+          { key: 'Current Affairs', label: 'Current Affairs',colour: 'text-blue-600'  },
+        ] as const).map(ct => {
+          const count = ct.key === 'all'
+            ? displayed.length
+            : displayed.filter(i => i.court === ct.key).length;
           return (
-            <div key={ct} className="bg-white border border-slate-100 rounded-xl p-4 text-center">
-              <p className="text-2xl font-display text-slate-900">{count}</p>
-              <p className="text-xs font-ui text-slate-400 mt-0.5">
-                {ct === 'all' ? 'Total' : ct === 'Supreme Court' ? 'Supreme Court' : 'High Courts'}
-              </p>
+            <div key={ct.key} className="bg-white border border-slate-100 rounded-xl p-4 text-center">
+              <p className={`text-2xl font-display ${ct.colour}`}>{count}</p>
+              <p className="text-xs font-ui text-slate-400 mt-0.5">{ct.label}</p>
             </div>
           );
         })}
@@ -224,12 +279,28 @@ export default function PlaygroundNewsManager() {
                   onClick={() => { setExpandedId(isExpanded ? null : item.id); if (isEditing) setEditing(null); }}
                 >
                   <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${isSC ? 'bg-burgundy/10' : 'bg-teal-50'}`}>
-                    {isSC ? <Scale className="w-4 h-4 text-burgundy" /> : <Gavel className="w-4 h-4 text-teal-600" />}
+                    {item.court === 'Supreme Court' ? (
+                    <Scale className="w-4 h-4 text-burgundy" />
+                  ) : item.court === 'High Court' ? (
+                    <Gavel className="w-4 h-4 text-teal-600" />
+                  ) : item.court === 'Tribunal' ? (
+                    <span className="text-[10px] font-black text-purple-600">T</span>
+                  ) : (
+                    <span className="text-[10px] font-black text-blue-600">CA</span>
+                  )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${isSC ? 'bg-burgundy/10 text-burgundy' : 'bg-teal-100 text-teal-700'}`}>
-                        {isSC ? 'SC' : 'HC'}
+                      <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${
+                        item.court === 'Supreme Court'   ? 'bg-burgundy/10 text-burgundy'
+                        : item.court === 'High Court'    ? 'bg-teal-100 text-teal-700'
+                        : item.court === 'Tribunal'      ? 'bg-purple-100 text-purple-700'
+                        : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {item.court === 'Supreme Court' ? 'SC'
+                          : item.court === 'High Court' ? 'HC'
+                          : item.court === 'Tribunal'   ? 'TRIB'
+                          : 'CA'}
                       </span>
                       <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
                         {item.category}
