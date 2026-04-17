@@ -97,6 +97,8 @@ export default function MockTestsManager() {
         });
         toast.success('Test created successfully');
       }
+      // Auto-ping Google to pick up the new/updated mock test in sitemap
+      fetch('/api/ping-google', { method: 'POST' }).catch(() => null);
       setIsEditorOpen(false);
       fetchTests();
     } catch (error) {

@@ -678,6 +678,8 @@ export default function NotesManager() {
       }
 
       toast.success(editingId ? 'Note updated successfully!' : 'Note created and files uploaded!');
+      // Auto-ping Google to pick up the new/updated note in sitemap
+      fetch('/api/ping-google', { method: 'POST' }).catch(() => null);
       closeEditor();
       fetchNotes();
     } catch (err: any) {

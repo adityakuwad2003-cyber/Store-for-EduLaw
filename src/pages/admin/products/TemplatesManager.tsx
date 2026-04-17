@@ -81,6 +81,8 @@ export default function TemplatesManager() {
         });
         toast.success('Template created successfully');
       }
+      // Auto-ping Google to pick up the new/updated template in sitemap
+      fetch('/api/ping-google', { method: 'POST' }).catch(() => null);
       setIsEditorOpen(false);
       fetchTemplates();
     } catch (error) {
