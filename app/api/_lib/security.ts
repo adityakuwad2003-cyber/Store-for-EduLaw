@@ -124,7 +124,14 @@ export async function verifyAdmin(req: any): Promise<string> {
     throw Object.assign(new Error("Invalid or expired token."), { status: 401 });
   }
 
+  const fallbackAdmins = [
+    'adityakuwad2003@gmail.com',
+    'aditya@theedulaw.in',
+    'law.vikalp@gmail.com'
+  ];
+
   const adminEmailsList = [
+    ...fallbackAdmins,
     ...(process.env.ADMIN_EMAILS || "").split(","),
     ...(process.env.VITE_ADMIN_EMAILS || "").split(",")
   ].map(e => e.trim().toLowerCase()).filter(Boolean);

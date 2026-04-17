@@ -248,13 +248,13 @@ ${combined}`;
   }
 }
 
+import { setCorsHeaders } from './_lib/security';
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const _allowedOrigins = ['https://store.theedulaw.in', 'https://www.store.theedulaw.in', 'http://localhost:5173'];
-  const _reqOrigin = (req.headers.origin as string) || '';
-  res.setHeader('Access-Control-Allow-Origin', _allowedOrigins.includes(_reqOrigin) ? _reqOrigin : _allowedOrigins[0]);
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  const origin = (req.headers.origin as string) || '';
+  setCorsHeaders(res, origin, 'GET, OPTIONS');
+  
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET')     return res.status(405).json({ error: 'Method Not Allowed' });
 

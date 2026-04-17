@@ -283,7 +283,12 @@ function JudgeCard({ judge }: { judge: JudgeProfile }) {
     setExpanded(true);
     setLoading(true);
     try {
-      const res = await fetch(`/api/judgment-search?act=const&query=${encodeURIComponent(judge.name.replace('Justice ', ''))}&mode=keyword&court=all`);
+      const token = currentUser ? await currentUser.getIdToken() : '';
+      const res = await fetch(`/api/judgment-search?act=const&query=${encodeURIComponent(judge.name.replace('Justice ', ''))}&mode=keyword&court=all`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setJudgments((data.results ?? []).slice(0, 4).map((r: any) => ({
@@ -1018,8 +1023,13 @@ export default function JudgementFinder() {
     setStatus('searching'); // re-set after clearResults
 
     try {
+      const token = await currentUser.getIdToken();
       const params = new URLSearchParams({ act: actId, query: query.trim(), mode, court });
-      const res  = await fetch(`/api/judgment-search?${params}`);
+      const res  = await fetch(`/api/judgment-search?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await res.json();
 
       if (!res.ok) {
