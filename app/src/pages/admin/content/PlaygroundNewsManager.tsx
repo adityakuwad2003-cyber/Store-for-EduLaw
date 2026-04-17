@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { SAMPLE_NEWS } from '@/data/sampleNews';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface NewsItem {
@@ -40,6 +41,7 @@ export default function PlaygroundNewsManager() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editing, setEditing]       = useState<Partial<NewsItem> | null>(null);
   const [saving, setSaving]         = useState(false);
+  const { currentUser }             = useAuth();
 
   // ── Archive filters ───────────────────────────────────────────────────────
   const [dateFilter, setDateFilter]         = useState<string>('');   // '' = all dates
@@ -106,7 +108,12 @@ export default function PlaygroundNewsManager() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const res = await fetch('/api/cron/playground-sync');
+      const token = await currentUser?.getIdToken();
+      const res = await fetch('/api/cron/playground-sync', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await res.json();
       if (data.newsError) {
         toast.error(`Sync error: ${data.newsError}`);
@@ -138,6 +145,7 @@ export default function PlaygroundNewsManager() {
           source: 'EduLaw Digest',
           publishedAt: new Date().toISOString(),
           dateString: today,
+          type: 'news',
           contentType: 'daily_news',
           createdAt: serverTimestamp(),
         });
@@ -172,6 +180,8 @@ export default function PlaygroundNewsManager() {
         court:     editing.court    ?? 'Supreme Court',
         summary:   editing.summary  ?? '',
         category:  editing.category ?? 'General',
+        type:      'news',
+        contentType: 'daily_news',
         updatedAt: serverTimestamp(),
       });
       setItems(prev => prev.map(i => i.id === editing.id ? { ...i, ...editing } as NewsItem : i));

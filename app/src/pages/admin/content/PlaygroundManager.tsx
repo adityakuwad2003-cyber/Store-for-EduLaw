@@ -232,11 +232,22 @@ export default function PlaygroundManager() {
     setSaving(true);
     try {
       const { id, createdAt, ...data } = editing as any;
+      
+      // Zero Regression: Ensure news items satisfy both query patterns
+      const finalData = {
+        ...data,
+        updatedAt: serverTimestamp(),
+        ...(data.type === 'news' ? { contentType: 'daily_news' } : {})
+      };
+
       if (id) {
-        await updateDoc(doc(db, 'playground_content', id), { ...data, updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, 'playground_content', id), finalData);
         toast.success('Item updated');
       } else {
-        await addDoc(collection(db, 'playground_content'), { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        await addDoc(collection(db, 'playground_content'), { 
+          ...finalData, 
+          createdAt: serverTimestamp() 
+        });
         toast.success('Item added');
       }
       closeForm();

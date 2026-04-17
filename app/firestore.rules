@@ -2,18 +2,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ── HELPERS ──────────────────────────────────────────────────────────
+    function isAdmin() {
+      return request.auth != null && 
+             request.auth.token.email.lower() in [
+               'adityakuwad2003@gmail.com',
+               'aditya@theedulaw.in',
+               'law.vikalp@gmail.com'
+             ];
+    }
+
     // ── PRODUCTS (public read, no client writes) ──────────────────────────
     // Anyone can browse the store. Only the Firebase Admin SDK (backend) can
     // create or update products — never from the browser directly.
     match /products/{productId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── NOTES (same as products — public read, admin-only write) ──────────
     match /notes/{noteId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── REVIEWS (public read, authenticated write) ────────────────────────
@@ -24,7 +34,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false;
+      allow update, delete: if isAdmin();
     }
 
     // ── PURCHASES (authenticated owner only) ─────────────────────────────
@@ -36,7 +46,7 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid
                     && purchaseId.matches(request.auth.uid + '_.*');
-      allow update, delete: if false;
+      allow update, delete: if isAdmin();
     }
 
     // ── USERS (authenticated owner only) ─────────────────────────────────
@@ -52,62 +62,62 @@ service cloud.firestore {
                     // Prevent client from modifying admin-controlled fields
                     && !('isBanned' in request.resource.data)
                     && !('subscription' in request.resource.data);
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     // ── BLOG ARTICLES (public read, admin-only write) ────────────────────
     match /blog_articles/{articleId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── PLAYGROUND CONTENT (public read, admin-only write) ───────────────
     match /playground_content/{docId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── FLASHCARD DECKS (public read, admin-only write) ──────────────────
     match /flashcard_decks/{deckId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── LEGAL GLOSSARY (public read, admin-only write) ───────────────────
     match /glossary_terms/{termId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── DAILY LEGAL NEWS (public read, admin-only write) ────────────────
     match /daily_legal_news/{docId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── TEMPLATES (public read, admin-only write) ────────────────────────
     match /templates/{templateId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── BUNDLES (public read, admin-only write) ──────────────────────────
     match /bundles/{bundleId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── INVOICES (authenticated owner only) ──────────────────────────────
     match /invoices/{invoiceId} {
       allow read: if request.auth != null
                   && resource.data.userId == request.auth.uid;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── COUPONS (public read for validation, admin-only write) ───────────
     match /coupons/{couponId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // ── VAKIL LAWYERS (authenticated owner write, authenticated read) ────
@@ -116,7 +126,7 @@ service cloud.firestore {
     match /vakil_lawyers/{uid} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null && request.auth.uid == uid;
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     // ── VAKIL INQUIRIES (public create, authenticated read/update) ────────
