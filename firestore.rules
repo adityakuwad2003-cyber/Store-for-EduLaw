@@ -110,6 +110,25 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── VAKIL LAWYERS (authenticated owner write, authenticated read) ────
+    // A signed-in lawyer can create/update their own KYC profile document.
+    // Any authenticated user (including admin) can read lawyer profiles.
+    match /vakil_lawyers/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // ── VAKIL INQUIRIES (public create, authenticated read/update) ────────
+    // Anyone (no login needed) can submit a client inquiry — lowering friction
+    // is intentional for lead capture. Only authenticated users can read or
+    // update inquiries (admin panel, matched lawyer).
+    match /vakil_inquiries/{docId} {
+      allow create: if true;
+      allow read, update: if request.auth != null;
+      allow delete: if false;
+    }
+
     // ── EVERYTHING ELSE: DENY ─────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
