@@ -327,8 +327,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     ];
 
-    let rawItems: RawRssItem[] = [];
-
+    const rssStatus: Record<string, string> = {};
     const feedResults = await Promise.allSettled(
       RSS_FEEDS.map(async feed => {
         const controller = new AbortController();
@@ -342,11 +341,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
           });
           clearTimeout(timer);
-          if (!r.ok) return [] as RawRssItem[];
+          if (!r.ok) {
+            rssStatus[feed.label || feed.court] = `HTTP ${r.status}`;
+            return [] as RawRssItem[];
+          }
           const xml = await r.text();
+          rssStatus[feed.label || feed.court] = 'OK';
           return parseRssItems(xml, feed.court, today);
-        } catch {
+        } catch (err: any) {
           clearTimeout(timer);
+          rssStatus[feed.label || feed.court] = err.name === 'AbortError' ? 'Timeout' : (err.message || 'Error');
           return [] as RawRssItem[];
         }
       })
@@ -355,6 +359,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const result of feedResults) {
       if (result.status === 'fulfilled') rawItems.push(...result.value);
     }
+
+    results.rssStatus = rssStatus;
 
     // Deduplicate by title
     const seen = new Set<string>();

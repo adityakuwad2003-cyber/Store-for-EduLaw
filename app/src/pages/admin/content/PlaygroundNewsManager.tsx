@@ -114,19 +114,27 @@ export default function PlaygroundNewsManager() {
           'Authorization': `Bearer ${token}`
         }
       });
-      const data = await res.json();
-      if (data.newsError) {
-        toast.error(`Sync error: ${data.newsError}`);
-      } else {
-        const bd = data.legalNewsBreakdown;
-        const detail = bd
-          ? `SC:${bd.sc ?? 0} HC:${bd.hc ?? 0} Trib:${bd.tr ?? 0} CA:${bd.ca ?? 0}`
-          : '';
-        toast.success(`Synced ${data.legalNews ?? 0} items${detail ? ' — ' + detail : ''}`);
-        await fetchItems();
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error (${res.status})`);
       }
-    } catch {
-      toast.error('Sync request failed');
+
+      const data = await res.json();
+      
+      if (data.newsError) {
+        toast.warning(`Sync Alert: ${data.newsError}`);
+        if (data.legalNews === 0) return;
+      } 
+      
+      const bd = data.legalNewsBreakdown;
+      const detail = bd
+        ? `SC:${bd.sc ?? 0} HC:${bd.hc ?? 0} Trib:${bd.tr ?? 0} CA:${bd.ca ?? 0}`
+        : '';
+      toast.success(`Synced ${data.legalNews || 0} news items${detail ? ' — ' + detail : ''}`);
+      await fetchItems();
+    } catch (err: any) {
+      toast.error(err.message || 'Sync request failed');
     } finally {
       setSyncing(false);
     }
