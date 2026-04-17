@@ -61,11 +61,14 @@ const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy').then(m => ({ de
 const LegalHub = lazy(() => import('@/pages/LegalHub'));
 const LegalPlayground = lazy(() => import('@/pages/LegalPlayground'));
 const BlogArticle = lazy(() => import('@/pages/BlogArticle'));
-const LegalNewsIndex = lazy(() => import('@/pages/LegalNewsIndex'));
 const LegalNewsArticle = lazy(() => import('@/pages/LegalNewsArticle'));
 const LegalNewsFeed = lazy(() => import('@/pages/LegalNewsFeed'));
 const PlaygroundItemDetail = lazy(() => import('@/pages/PlaygroundItemDetail').then(m => ({ default: m.PlaygroundItemDetail })));
 const JudgementFinder = lazy(() => import('@/pages/JudgementFinder'));
+const VakilConnect = lazy(() => import('@/pages/VakilConnect'));
+const VakilLawyerOnboard = lazy(() => import('@/pages/VakilLawyerOnboard'));
+const VakilLawyerDashboard = lazy(() => import('@/pages/VakilLawyerDashboard'));
+const VakilAdminPanel = lazy(() => import('@/pages/admin/VakilAdminPanel'));
 
 // Playground Sub-routes
 const QuizPage = lazy(() => import('@/pages/playground/QuizPage'));
@@ -186,9 +189,12 @@ function AppContent() {
             </Route>
             <Route path="/playground-item/:id" element={<PlaygroundItemDetail />} />
             <Route path="/blog/:slug" element={<BlogArticle />} />
-            <Route path="/legal-news" element={<LegalNewsIndex />} />
+            <Route path="/legal-news" element={<LegalNewsFeed />} />
             <Route path="/legal-news/:id" element={<LegalNewsArticle />} />
             <Route path="/legal-news-feed" element={<LegalNewsFeed />} />
+            <Route path="/vakil-connect" element={<VakilConnect />} />
+            <Route path="/vakil-connect/lawyer-onboard" element={<VakilLawyerOnboard />} />
+            <Route path="/vakil-dashboard" element={<VakilLawyerDashboard />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
@@ -231,6 +237,9 @@ function AppContent() {
               <Route path="support" element={<SupportTickets />} />
               <Route path="referrals" element={<ReferralsManager />} />
               <Route path="service-requests" element={<ServiceRequests />} />
+
+              {/* VakilConnect */}
+              <Route path="vakil-connect" element={<VakilAdminPanel />} />
 
               {/* System */}
               <Route path="glossary" element={<LegalGlossary />} />

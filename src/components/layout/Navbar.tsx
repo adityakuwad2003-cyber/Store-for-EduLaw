@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ShoppingCart, User, ChevronDown, LogOut, FileQuestion, FileText, MessageSquare, Gift, Store, Layers, Crown, Scale, ShieldCheck, Search, Gavel } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, ChevronDown, LogOut, FileText, Store, Layers, Crown, Scale, ShieldCheck, Search, Gavel, Newspaper, Briefcase } from 'lucide-react';
 import { useCartStore } from '@/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { UniversalSearch } from '@/components/ui/UniversalSearch';
@@ -9,13 +9,14 @@ import { UniversalSearch } from '@/components/ui/UniversalSearch';
 // v2.1.2 - Force update for Find Judgments visibility
 // v2.1.3 - Force refresh & prominence
 const navLinks = [
-  { name: 'Find Judgments', href: '/judgement-finder', icon: Gavel, isNew: true },
+  { name: 'Case Law Finder', href: '/judgement-finder', icon: Gavel, isNew: true },
   { name: 'Marketplace', href: '/marketplace', icon: Store },
+  { name: 'Live News', href: '/legal-news', icon: Newspaper },
   { name: 'Bundles', href: '/bundles', icon: Layers },
   { name: 'Subscription', href: '/subscription', icon: Crown },
   { name: 'Services', href: '/legal-services', icon: Scale },
+  { name: 'VakilConnect', href: '/vakil-connect', icon: Briefcase, isNew: true },
   { name: 'Templates', href: '/templates', icon: FileText },
-  { name: 'Updates', href: '/legal-hub', icon: MessageSquare },
 ];
 
 export function Navbar() {
@@ -25,7 +26,7 @@ export function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
   const { getTotalItems } = useCartStore();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, isPro, isMax } = useAuth();
   
   const isAuthenticated = !!currentUser;
   const isAdmin = !!(currentUser?.email &&
@@ -160,17 +161,24 @@ export function Navbar() {
                     className="flex items-center gap-2 p-2 hover:bg-burgundy/10 rounded-xl transition-colors"
                     aria-label="User menu"
                   >
-                    {currentUser?.photoURL ? (
-                      <img 
-                        src={currentUser.photoURL} 
-                        alt="Profile" 
-                        className="w-8 h-8 rounded-full border border-parchment-dark object-cover" 
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-burgundy to-burgundy-light flex items-center justify-center">
-                        <User className="w-4 h-4 text-parchment" />
-                      </div>
-                    )}
+                    <div className="relative">
+                      {currentUser?.photoURL ? (
+                        <img
+                          src={currentUser.photoURL}
+                          alt="Profile"
+                          className="w-8 h-8 rounded-full border border-parchment-dark object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-burgundy to-burgundy-light flex items-center justify-center">
+                          <User className="w-4 h-4 text-parchment" />
+                        </div>
+                      )}
+                      {(isPro || isMax) && (
+                        <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center shadow-sm ${isMax ? 'bg-gold' : 'bg-burgundy'}`}>
+                          <Crown className="w-2.5 h-2.5 text-white" />
+                        </span>
+                      )}
+                    </div>
                     <ChevronDown className="w-4 h-4 text-mutedgray hidden lg:block" />
                   </button>
 
@@ -183,7 +191,15 @@ export function Navbar() {
                         className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-xl border border-parchment-dark overflow-hidden z-50"
                       >
                         <div className="p-3 border-b border-parchment-dark bg-gradient-to-r from-burgundy/5 to-transparent">
-                          <p className="font-ui font-medium text-ink truncate">{currentUser?.displayName || 'Student'}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-ui font-medium text-ink truncate">{currentUser?.displayName || 'Student'}</p>
+                            {(isPro || isMax) && (
+                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 ${isMax ? 'bg-gold/20 text-gold' : 'bg-burgundy/15 text-burgundy'}`}>
+                                <Crown className="w-2.5 h-2.5" />
+                                {isMax ? 'Max' : 'Pro'}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-mutedgray truncate">{currentUser?.email || 'No email provided'}</p>
                         </div>
                         <Link

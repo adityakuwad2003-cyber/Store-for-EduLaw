@@ -8,7 +8,7 @@ import {
   Ticket, Share2, Building2, Mail,
   Bell, LayoutDashboard, PenTool,
   MessageSquare, Newspaper,
-  UserCog, Video, Brain, Activity
+  UserCog, Video, Brain, Activity, Briefcase
 } from 'lucide-react';
 import { useAdminAuth } from '../../hooks/admin/useAdminAuth';
 
@@ -36,6 +36,9 @@ const NAV_ITEMS = [
     { name: 'Support Tickets', path: '/admin/support', icon: MessageSquare, permission: 'support' },
     { name: 'Email Campaigns', path: '/admin/email-campaigns', icon: Mail, permission: 'email' },
     { name: 'Push Notifications', path: '/admin/notifications', icon: Bell, permission: 'notifications' },
+  ]},
+  { group: 'VakilConnect', items: [
+    { name: 'VakilConnect Admin', path: '/admin/vakil-connect', icon: Briefcase, permission: 'super_admin' },
   ]},
   { group: 'Content & System', items: [
     { name: 'Blog Manager', path: '/admin/blog', icon: PenTool, permission: 'blog' },
