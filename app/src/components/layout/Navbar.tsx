@@ -8,6 +8,7 @@ import { UniversalSearch } from '@/components/ui/UniversalSearch';
 
 // v2.1.2 - Force update for Find Judgments visibility
 // v2.1.3 - Force refresh & prominence
+// v2.2.1 - Force Refresh for Logo Transparency & Sync Diagnostics
 const navLinks = [
   { name: 'Case Law Finder', href: '/judgement-finder', icon: Gavel, isNew: true },
   { name: 'Marketplace', href: '/marketplace', icon: Store },
