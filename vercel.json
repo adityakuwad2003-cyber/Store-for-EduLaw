@@ -1,4 +1,12 @@
 {
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "store.theedulaw.in" }],
+      "destination": "https://www.store.theedulaw.in/$1",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap.xml" },
     { "source": "/((?!api/|.*\\..*).*)", "destination": "/index.html" }
@@ -44,8 +52,9 @@
     }
   ],
 
-  "crons": [{
-    "path": "/api/cron/playground-sync",
-    "schedule": "0 0 * * *" 
-  }]
+  "crons": [
+    { "path": "/api/cron/playground-sync",   "schedule": "0 0 * * *" },
+    { "path": "/api/cron/daily-newsletter",  "schedule": "0 3 * * *" },
+    { "path": "/api/cron/monthly-digest",    "schedule": "0 4 1 * *" }
+  ]
 }

@@ -26,7 +26,7 @@ export function SEO({
 }: SEOProps) {
   const siteName = 'The EduLaw Store';
   const fullTitle = `${title} | ${siteName}`;
-  const baseUrl = 'https://store.theedulaw.in';
+  const baseUrl = 'https://www.store.theedulaw.in';
   
   // Ensure canonical URL is absolute
   const url = canonical ? `${baseUrl}${canonical.startsWith('/') ? '' : '/'}${canonical}` : baseUrl;

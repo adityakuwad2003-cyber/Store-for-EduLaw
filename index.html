@@ -12,21 +12,61 @@
     <!-- Open Graph (fallback for crawlers before React hydrates) -->
     <meta property="og:site_name" content="The EduLaw Store" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://store.theedulaw.in/" />
+    <meta property="og:url" content="https://www.store.theedulaw.in/" />
     <meta property="og:title" content="Buy Legal Study Materials, Courses &amp; Notes | The EduLaw Store" />
     <meta property="og:description" content="Shop India's best legal education resources. Law notes, mock tests &amp; courses for CLAT, judiciary &amp; LLB students." />
-    <meta property="og:image" content="https://store.theedulaw.in/logo.png" />
+    <meta property="og:image" content="https://www.store.theedulaw.in/logo.png" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Buy Legal Study Materials, Courses &amp; Notes | The EduLaw Store" />
     <meta name="twitter:description" content="Shop India's best legal education resources. Law notes, mock tests &amp; courses for CLAT, judiciary &amp; LLB students." />
-    <meta name="twitter:image" content="https://store.theedulaw.in/logo.png" />
+    <meta name="twitter:image" content="https://www.store.theedulaw.in/logo.png" />
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
-    <link rel="canonical" href="https://store.theedulaw.in/" />
+    <link rel="canonical" href="https://www.store.theedulaw.in/" />
+
+    <!-- Static JSON-LD (visible to ALL crawlers before JS runs) -->
+    <script type="application/ld+json">
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "The EduLaw",
+        "url": "https://www.store.theedulaw.in",
+        "logo": "https://www.store.theedulaw.in/logo.png",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+91-7756040198",
+          "contactType": "customer service",
+          "areaServed": "IN",
+          "availableLanguage": ["English", "Hindi"]
+        },
+        "sameAs": [
+          "https://www.facebook.com/theedulaw",
+          "https://www.instagram.com/theedulaw",
+          "https://in.linkedin.com/company/the-edu-law"
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "The EduLaw Store",
+        "url": "https://www.store.theedulaw.in",
+        "description": "India's premier legal education store — law notes, mock tests, templates and more.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://www.store.theedulaw.in/marketplace?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      }
+    ]
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -15,8 +15,8 @@ export const getOrganizationSchema = () => ({
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "The EduLaw",
-  "url": "https://store.theedulaw.in",
-  "logo": "https://store.theedulaw.in/logo.png",
+  "url": "https://www.store.theedulaw.in",
+  "logo": "https://www.store.theedulaw.in/logo.png",
   "contactPoint": {
     "@type": "ContactPoint",
     "telephone": "+91-7756040198",
@@ -36,13 +36,13 @@ export const getWebSiteSchema = () => ({
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "The EduLaw Store",
-  "url": "https://store.theedulaw.in",
+  "url": "https://www.store.theedulaw.in",
   "description": "India's premier legal education store — law notes, mock tests, templates and more.",
   "potentialAction": {
     "@type": "SearchAction",
     "target": {
       "@type": "EntryPoint",
-      "urlTemplate": "https://store.theedulaw.in/marketplace?q={search_term_string}"
+      "urlTemplate": "https://www.store.theedulaw.in/marketplace?q={search_term_string}"
     },
     "query-input": "required name=search_term_string"
   }
@@ -54,7 +54,7 @@ export const getArticleSchema = (article: any, slug: string) => ({
   "@type": "Article",
   "headline": article.title,
   "description": article.excerpt || article.title,
-  "url": `https://store.theedulaw.in/blog/${slug}`,
+  "url": `https://www.store.theedulaw.in/blog/${slug}`,
   "datePublished": article.createdAt
     ? (typeof article.createdAt.toDate === 'function'
         ? article.createdAt.toDate().toISOString()
@@ -63,20 +63,20 @@ export const getArticleSchema = (article: any, slug: string) => ({
   "author": {
     "@type": "Organization",
     "name": "The EduLaw",
-    "url": "https://store.theedulaw.in"
+    "url": "https://www.store.theedulaw.in"
   },
   "publisher": {
     "@type": "Organization",
     "name": "The EduLaw",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://store.theedulaw.in/logo.png"
+      "url": "https://www.store.theedulaw.in/logo.png"
     }
   },
-  "image": article.coverImage || "https://store.theedulaw.in/logo.png",
+  "image": article.coverImage || "https://www.store.theedulaw.in/logo.png",
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": `https://store.theedulaw.in/blog/${slug}`
+    "@id": `https://www.store.theedulaw.in/blog/${slug}`
   }
 });
 
@@ -98,14 +98,14 @@ export const getProductSchema = (note: any) => ({
   "@type": "Product",
   "name": note.title,
   "description": note.description,
-  "image": `https://store.theedulaw.in${note.thumbnailUrl}`,
+  "image": `https://www.store.theedulaw.in${note.thumbnailUrl}`,
   "brand": {
     "@type": "Brand",
     "name": "The EduLaw"
   },
   "offers": {
     "@type": "Offer",
-    "url": `https://store.theedulaw.in/product/${note.slug}`,
+    "url": `https://www.store.theedulaw.in/product/${note.slug}`,
     "priceCurrency": "INR",
     "price": note.price,
     "availability": "https://schema.org/InStock",
