@@ -101,6 +101,12 @@ export default function BlogManager() {
         });
         toast.success('Article published to drafts');
       }
+
+      // Auto-ping Google to re-crawl sitemap when content is published
+      if (payload.status === 'published') {
+        fetch('/api/ping-google', { method: 'POST' }).catch(() => null);
+      }
+
       setIsEditorOpen(false);
       fetchArticles();
     } catch (error) {

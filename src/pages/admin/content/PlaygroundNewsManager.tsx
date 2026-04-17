@@ -144,6 +144,7 @@ export default function PlaygroundNewsManager() {
         seededCount++;
       }
       toast.success(`Success! Seeded ${seededCount} legal news items.`);
+      fetch('/api/ping-google', { method: 'POST' }).catch(() => null);
       await fetchItems();
     } catch (error) {
       console.error('Seed error:', error);
@@ -176,6 +177,8 @@ export default function PlaygroundNewsManager() {
       setItems(prev => prev.map(i => i.id === editing.id ? { ...i, ...editing } as NewsItem : i));
       setEditing(null);
       toast.success('News item updated');
+      // Auto-ping Google whenever a news item is saved
+      fetch('/api/ping-google', { method: 'POST' }).catch(() => null);
     } catch {
       toast.error('Failed to save changes');
     } finally {

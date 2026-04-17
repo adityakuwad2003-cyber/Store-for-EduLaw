@@ -142,7 +142,8 @@ ${urls.join("\n")}
 </urlset>`;
 
     res.setHeader("Content-Type", "application/xml");
-    res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate");
+    // 10-min CDN cache — fresh enough for new content, light on Firestore reads
+    res.setHeader("Cache-Control", "s-maxage=600, stale-while-revalidate=86400");
     res.status(200).send(sitemap);
 
   } catch (error) {
