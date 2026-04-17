@@ -19,7 +19,7 @@ export const getOrganizationSchema = () => ({
   "logo": "https://store.theedulaw.in/logo.png",
   "contactPoint": {
     "@type": "ContactPoint",
-    "telephone": "+91-XXXXXXXXXX",
+    "telephone": "+91-7756040198",
     "contactType": "customer service",
     "areaServed": "IN",
     "availableLanguage": ["English", "Hindi"]
@@ -78,6 +78,18 @@ export const getArticleSchema = (article: any, slug: string) => ({
     "@type": "WebPage",
     "@id": `https://store.theedulaw.in/blog/${slug}`
   }
+});
+
+// Helper to generate BreadcrumbList schema
+export const getBreadcrumbSchema = (items: { name: string; url: string }[]) => ({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": items.map((item, i) => ({
+    "@type": "ListItem",
+    "position": i + 1,
+    "name": item.name,
+    "item": item.url,
+  })),
 });
 
 // Helper to generate Product Schema

@@ -9,6 +9,8 @@ interface SEOProps {
   twitterCard?: 'summary' | 'summary_large_image';
   googleSiteVerification?: string;
   structuredData?: object | object[];
+  /** Pass true for private/user-only pages (cart, dashboard, login) */
+  noindex?: boolean;
 }
 
 export function SEO({
@@ -20,6 +22,7 @@ export function SEO({
   twitterCard = 'summary_large_image',
   googleSiteVerification = 'R_4h3YlP8rBf-A9mF8kX5A6B4C3D2E1F0G9H8I7J6K5', // Default placeholder or user provided
   structuredData,
+  noindex = false,
 }: SEOProps) {
   const siteName = 'The EduLaw Store';
   const fullTitle = `${title} | ${siteName}`;
@@ -37,7 +40,7 @@ export function SEO({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={url} />
-      <meta name="robots" content="index, follow" />
+      <meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow'} />
       <meta name="geo.region" content="IN" />
       <meta name="geo.placename" content="Pune, Maharashtra, India" />
       {googleSiteVerification && (

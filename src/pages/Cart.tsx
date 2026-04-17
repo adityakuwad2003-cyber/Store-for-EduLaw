@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { SEO } from '@/components/SEO';
 import {
   ShoppingCart, Trash2, ArrowRight, Package, FileText,
   Tag, Shield, Check, AlertCircle, Loader2,
@@ -33,7 +34,7 @@ export function Cart() {
     try { parsed = JSON.parse(raw); } catch { return; }
     if (!parsed?.code || couponCode) return; // skip if malformed or coupon already active
 
-    verifyCoupon(parsed.code, getSubtotal()).then((result) => {
+    verifyCoupon(parsed.code, getSubtotal(), currentUser?.uid).then((result) => {
       if (result.valid && result.discount) {
         applyCoupon(parsed.code, result.discount);
         toast.success(`₹${result.discount} off applied!`, {
@@ -48,7 +49,7 @@ export function Cart() {
 
   const handleApplyCoupon = async (code: string): Promise<boolean> => {
     const subtotal = getSubtotal();
-    const result = await verifyCoupon(code, subtotal);
+    const result = await verifyCoupon(code, subtotal, currentUser?.uid);
 
     if (result.valid && result.discount) {
       applyCoupon(code, result.discount);
@@ -256,6 +257,7 @@ export function Cart() {
 
   return (
     <div className="pt-24 pb-32 min-h-screen bg-parchment">
+      <SEO title="Shopping Cart — EduLaw" noindex />
       <div className="section-container">
         <div className="mb-8">
           <h1 className="font-display text-4xl text-ink font-bold mb-2">My Cart</h1>

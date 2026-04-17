@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ScalesOfJustice3D } from '@/components/ui/LegalSVGs';
+import { SEO } from '@/components/SEO';
 
 export function NotFound() {
   const location = useLocation();
   return (
     <div className="pt-20 min-h-screen bg-parchment flex items-center justify-center px-4">
+      <SEO title="Page Not Found — EduLaw" noindex />
       <div className="text-center max-w-md">
         <div className="w-32 h-32 mx-auto mb-6 opacity-30">
           <ScalesOfJustice3D className="w-full h-full" />

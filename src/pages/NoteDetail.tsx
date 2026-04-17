@@ -34,7 +34,7 @@ import { TrustBadges } from '@/components/ui/TrustBadges';
 import { PDFPreview } from '@/components/ui/PDFPreview';
 import { ScalesOfJustice3D } from '@/components/ui/LegalSVGs';
 import { SEO } from '@/components/SEO';
-import { StructuredData, getProductSchema } from '@/components/StructuredData';
+import { StructuredData, getProductSchema, getBreadcrumbSchema } from '@/components/StructuredData';
 import { ReviewsSection } from '@/components/ui/ReviewsSection';
 
 const LAW_COLLEGES = [
@@ -200,6 +200,11 @@ export function NoteDetail() {
         ogType="product"
       />
       <StructuredData data={getProductSchema(note)} />
+      <StructuredData data={getBreadcrumbSchema([
+        { name: 'Home', url: 'https://store.theedulaw.in/' },
+        { name: 'Marketplace', url: 'https://store.theedulaw.in/marketplace' },
+        { name: note.title, url: `https://store.theedulaw.in/product/${note.slug}` },
+      ])} />
       
       {/* Breadcrumb - Slimmer & Clean */}
       <div className="bg-white/80 backdrop-blur-md sticky top-20 z-30 border-b border-slate-200/60">

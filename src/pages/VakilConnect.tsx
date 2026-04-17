@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { SEO } from '@/components/SEO';
 import {
   Scale, ShieldCheck, Users, Briefcase,
   Star, CheckCircle2, ArrowRight, Zap,
@@ -53,15 +53,27 @@ const FAQS = [
   },
 ];
 
+// ── FAQ Schema ────────────────────────────────────────────────────────────────
+const vakilFaqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQS.map(faq => ({
+    "@type": "Question",
+    "name": faq.q,
+    "acceptedAnswer": { "@type": "Answer", "text": faq.a },
+  })),
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function VakilConnect() {
   return (
     <div className="min-h-screen bg-parchment">
-      <Helmet>
-        <title>VakilConnect × TheEduLaw — Find a Verified Advocate | EduLaw</title>
-        <meta name="description" content="Connect with verified advocates in your city. AI-matched legal consultation — free to submit, fast turnaround. Lawyers: get leads with 1 free month." />
-        <link rel="canonical" href="https://store.theedulaw.in/vakil-connect" />
-      </Helmet>
+      <SEO
+        title="VakilConnect — Find Verified Advocates Online"
+        description="Connect with verified advocates across India — free to submit. AI matches you with a specialist in criminal, family, property or corporate law within 24 hours."
+        canonical="/vakil-connect"
+        structuredData={vakilFaqSchema}
+      />
 
       {/* ── HERO ── */}
       <section className="relative bg-ink overflow-hidden">

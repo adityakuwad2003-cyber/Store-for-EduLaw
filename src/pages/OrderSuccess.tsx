@@ -3,7 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   CheckCircle2, ArrowRight,
-  ShieldCheck, MessageCircle, FileText, ExternalLink, Receipt
+  ShieldCheck, MessageCircle, FileText, ExternalLink, Receipt, BookOpen
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -46,7 +46,7 @@ export default function OrderSuccess() {
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
       <Navbar />
-      <SEO title="Order Successful — EduLaw" description="Your purchase was successful. Access your notes from your dashboard." />
+      <SEO title="Order Confirmed — EduLaw" description="Your purchase was successful. Access your notes from your dashboard." noindex />
 
       <main className="pt-32 pb-24">
         <div className="section-container px-6">
@@ -74,10 +74,24 @@ export default function OrderSuccess() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="font-ui text-lg text-slate-500 max-w-xl mx-auto"
+                className="font-ui text-lg text-slate-500 max-w-xl mx-auto mb-8"
               >
                 Your notes are ready. Access and download them anytime from your dashboard.
               </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Link
+                  to="/dashboard"
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-burgundy text-white rounded-2xl font-ui font-black text-sm uppercase tracking-wider shadow-xl shadow-burgundy/20 hover:bg-burgundy/90 active:scale-[0.98] transition-all"
+                >
+                  <BookOpen className="w-5 h-5" />
+                  View My Notes
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </motion.div>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">

@@ -8,7 +8,7 @@ import { NoteCard } from '@/components/ui/NoteCard';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { useCartStore } from '@/store';
 import { SEO } from '@/components/SEO';
-import { StructuredData, getOrganizationSchema } from '@/components/StructuredData';
+import { StructuredData, getOrganizationSchema, getBreadcrumbSchema } from '@/components/StructuredData';
 import { motion } from 'framer-motion';
 import { ScalesOfJustice3D, LegalScroll3D, LaurelWreath } from '@/components/ui/LegalSVGs';
 import { BadgeCheck, ShieldCheck, Trophy } from 'lucide-react';
@@ -126,7 +126,19 @@ export function Marketplace() {
         canonical={selectedCategory ? `/category/${selectedCategory}` : '/marketplace'}
       />
       <StructuredData data={getOrganizationSchema()} />
-      
+      <StructuredData data={getBreadcrumbSchema(
+        selectedCategory && categoryData
+          ? [
+              { name: 'Home', url: 'https://store.theedulaw.in/' },
+              { name: 'Marketplace', url: 'https://store.theedulaw.in/marketplace' },
+              { name: categoryData.name, url: `https://store.theedulaw.in/category/${selectedCategory}` },
+            ]
+          : [
+              { name: 'Home', url: 'https://store.theedulaw.in/' },
+              { name: 'Marketplace', url: 'https://store.theedulaw.in/marketplace' },
+            ]
+      )} />
+
       {/* ── HERO SECTION ────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden border-b border-gold/10 bg-[#FDFBF7]">
         {/* Background Decorations */}

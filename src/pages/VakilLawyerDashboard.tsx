@@ -139,6 +139,8 @@ export default function VakilLawyerDashboard() {
     <div className="min-h-screen bg-parchment">
       <Helmet>
         <title>Advocate Dashboard — VakilConnect × TheEduLaw</title>
+        <meta name="description" content="Manage your matched client inquiries, subscription status, and advocate profile on VakilConnect." />
+        <meta name="robots" content="noindex, follow" />
       </Helmet>
 
       {/* Top bar */}

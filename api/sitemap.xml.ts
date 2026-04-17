@@ -44,6 +44,7 @@ export default async function handler(req: any, res: any) {
     urls.push(generateUrl(`${baseUrl}/college-licensing`, today, "monthly", "0.8"));
     urls.push(generateUrl(`${baseUrl}/judgement-finder`, today, "daily", "0.95"));
     urls.push(generateUrl(`${baseUrl}/referral`, today, "monthly", "0.6"));
+    urls.push(generateUrl(`${baseUrl}/vakil-connect`, today, "monthly", "0.8"));
 
     // 1.5 Modular Playground Sub-routes
     const playgroundRoutes = ["quiz", "case-law", "digest", "flashcards", "insights", "lexicon"];
@@ -76,8 +77,8 @@ export default async function handler(req: any, res: any) {
       adminDb.collection("mockTests").get(),
       adminDb.collection("templates").get(),
       adminDb.collection("blogs").get(),
-      adminDb.collection("playground_content").get(),
-      adminDb.collection("daily_legal_news").get(),   // fix: was missing
+      adminDb.collection("playground_content").where("contentType", "!=", "daily_news").get(),
+      adminDb.collection("playground_content").where("contentType", "==", "daily_news").get(),
     ]);
 
     // Format utility
@@ -119,14 +120,15 @@ export default async function handler(req: any, res: any) {
       urls.push(generateUrl(`${baseUrl}/blog/${slug}`, getDate(doc), "monthly", "0.8"));
     });
 
-    // 8. Playground Items — route is /playground-item/:id (fix: was wrong pattern)
+    // 8. Playground Items (non-news content) — route is /playground-item/:id
     playgroundSnap.docs.forEach(doc => {
       urls.push(generateUrl(`${baseUrl}/playground-item/${doc.id}`, getDate(doc), "monthly", "0.9"));
     });
 
-    // 9. Daily Legal News — individual article pages (fix: was missing entirely)
+    // 9. Legal News Articles — individual article pages at /legal-news/:id
+    // Reads from playground_content where contentType == 'daily_news'
     legalNewsSnap.docs.forEach(doc => {
-      urls.push(generateUrl(`${baseUrl}/legal-news/${doc.id}`, getDate(doc), "daily", "0.85"));
+      urls.push(generateUrl(`${baseUrl}/legal-news/${doc.id}`, getDate(doc), "weekly", "0.85"));
     });
 
     // 10. Legal / policy pages

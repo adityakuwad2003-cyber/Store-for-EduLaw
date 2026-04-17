@@ -469,6 +469,8 @@ export default function VakilLawyerOnboard() {
       <SuccessPopup />
       <Helmet>
         <title>Register as Advocate — VakilConnect × TheEduLaw</title>
+        <meta name="description" content="Join VakilConnect as a verified advocate. Complete your Bar Council KYC in 4 steps and start receiving matched client leads — 1 month free trial, then ₹999/month." />
+        <meta name="robots" content="noindex, follow" />
       </Helmet>
 
       {/* Top bar */}

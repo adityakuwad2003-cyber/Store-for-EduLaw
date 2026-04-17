@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
+import { SEO } from '@/components/SEO';
 import { 
   Scale, Mail, Lock, Eye, EyeOff, ArrowRight,
   UserPlus 
@@ -65,6 +66,7 @@ export function Login() {
 
   return (
     <div className="pt-20 min-h-screen bg-parchment flex items-center justify-center py-12">
+      <SEO title="Sign In — EduLaw" noindex />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

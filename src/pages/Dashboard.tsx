@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { SEO } from '@/components/SEO';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Download, LogOut, User, ArrowRight,
   ShoppingBag, Shield, Loader2, AlertCircle, Clock,
   FileText, Heart, ShoppingCart, Trash2, Receipt,
   Bookmark, Package, ChevronDown, ChevronUp, Search,
-  CheckCircle2, X, Files,
+  CheckCircle2, X, Files, Crown,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSecureDownloadUrl } from '@/lib/storage';
 import { useCartStore, useWishlistStore } from '@/store';
@@ -33,6 +36,53 @@ interface Purchase {
   purchasedAt: string | null;
   invoiceNumber: string | null;
   invoiceId: string | null;
+  type?: string; // 'subscription' records must be filtered out of My Library
+}
+
+interface SubNote {
+  id: string;
+  title: string;
+  fileKey: string;
+  category?: string;
+  subject?: string;
+  price: number;
+}
+
+// ─── Watermark Helper ─────────────────────────────────────────────────────────
+async function watermarkAndDownload(signedUrl: string, email: string, title: string) {
+  const { PDFDocument, rgb, degrees } = await import('pdf-lib');
+  const response = await fetch(signedUrl);
+  if (!response.ok) throw new Error('Failed to fetch PDF for watermarking.');
+  const bytes = await response.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(bytes);
+  const pages = pdfDoc.getPages();
+  for (const page of pages) {
+    const { width, height } = page.getSize();
+    page.drawText(email, {
+      x: width / 2 - 80,
+      y: height / 2,
+      size: 22,
+      color: rgb(0.65, 0.65, 0.65),
+      opacity: 0.18,
+      rotate: degrees(45),
+    });
+    page.drawText('EduLaw — Licensed copy', {
+      x: 20,
+      y: 18,
+      size: 7,
+      color: rgb(0.65, 0.65, 0.65),
+      opacity: 0.35,
+    });
+  }
+  const watermarkedBytes = await pdfDoc.save();
+  const blob = new Blob([watermarkedBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${title.replace(/[^a-z0-9]/gi, '_')}_watermarked.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
 }
 
 // ─── Quota Helpers ────────────────────────────────────────────────────────────
@@ -259,13 +309,20 @@ function PurchaseCard({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function Dashboard() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, isPro, isMax } = useAuth();
   const location = useLocation();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // ── Subscriber Downloads state ──────────────────────────────────────────────
+  const [subNotes, setSubNotes] = useState<SubNote[]>([]);
+  const [loadingSubNotes, setLoadingSubNotes] = useState(false);
+  const [subUsed, setSubUsed] = useState(0);
+  const [subDownloading, setSubDownloading] = useState<string | null>(null);
+  const [subSearch, setSubSearch] = useState('');
 
   const { items: wishlistItems, remove: removeFromWishlist } = useWishlistStore();
   const { addNote } = useCartStore();
@@ -338,16 +395,97 @@ export function Dashboard() {
     }
   }, [currentUser]);
 
-  const totalSpent = purchases.reduce((sum, p) => sum + (p.price || 0), 0);
-  const totalFiles = useMemo(() => getTotalFileCount(purchases), [purchases]);
+  // ── Fetch all notes + current month usage for subscriber downloads ──────────
+  useEffect(() => {
+    if (!currentUser || (!isPro && !isMax)) return;
+    const fetchSubData = async () => {
+      setLoadingSubNotes(true);
+      try {
+        // Fetch notes (and bundles for Max subscribers) — collection is 'notes' not 'products'
+        const collectionsToFetch = isMax ? ['notes', 'bundles'] : ['notes'];
+        const allSnaps = await Promise.all(
+          collectionsToFetch.map(c => getDocs(collection(db, c)))
+        );
+        const notes: SubNote[] = [];
+        allSnaps.forEach(snap => {
+          snap.forEach(docSnap => {
+            const d = docSnap.data();
+            const fk: string = d.fileKey || d.fileKeys?.[0]?.key || '';
+            if (fk && fk.includes('/')) {
+              notes.push({
+                id: docSnap.id,
+                title: d.title || 'Untitled',
+                fileKey: fk,
+                category: d.category,
+                subject: d.subject,
+                price: d.price || 0,
+              });
+            }
+          });
+        });
+        setSubNotes(notes.sort((a, b) => a.title.localeCompare(b.title)));
+
+        // Current month's quota usage
+        const monthKey = new Date().toISOString().slice(0, 7);
+        const userSnap = await getDoc(doc(db, 'users', currentUser.uid));
+        const used: number = userSnap.data()?.subscriptionUsage?.downloads?.[monthKey] ?? 0;
+        setSubUsed(used);
+      } catch (err) {
+        console.error('Failed to load subscriber notes:', err);
+      } finally {
+        setLoadingSubNotes(false);
+      }
+    };
+    fetchSubData();
+  }, [currentUser, isPro, isMax]);
+
+  const handleSubscriptionDownload = useCallback(async (note: SubNote) => {
+    if (!currentUser) return;
+    const limit = isMax ? 5 : 3;
+    if (subUsed >= limit) {
+      toast.error(`Monthly download limit reached (${limit} notes/month).`);
+      return;
+    }
+    setSubDownloading(note.id);
+    try {
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/get-download-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: note.fileKey, productId: note.id, subscriptionDownload: true }),
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Could not generate download link.');
+      }
+      const { url } = await res.json();
+      await watermarkAndDownload(url, currentUser.email || 'licensed', note.title);
+      setSubUsed(prev => prev + 1);
+      toast.success(`Downloading "${note.title}" (watermarked)…`);
+    } catch (err: any) {
+      console.error('Subscription download error:', err);
+      toast.error(err.message || 'Download failed. Please try again.');
+    } finally {
+      setSubDownloading(null);
+    }
+  }, [currentUser, isMax, subUsed]);
+
+  // Filter out subscription payment records — they are NOT downloadable notes
+  const notePurchases = useMemo(
+    () => purchases.filter(p => p.type !== 'subscription'),
+    [purchases]
+  );
+
+  const totalSpent = notePurchases.reduce((sum, p) => sum + (p.price || 0), 0);
+  const totalFiles = useMemo(() => getTotalFileCount(notePurchases), [notePurchases]);
 
   const sortedPurchases = useMemo(() =>
-    [...purchases].sort((a, b) => {
+    [...notePurchases].sort((a, b) => {
       const da = a.purchasedAt ? new Date(a.purchasedAt).getTime() : 0;
       const db = b.purchasedAt ? new Date(b.purchasedAt).getTime() : 0;
       return db - da;
     }),
-    [purchases]
+    [notePurchases]
   );
 
   const filteredPurchases = useMemo(() => {
@@ -378,6 +516,7 @@ export function Dashboard() {
 
   return (
     <div className="pt-20 min-h-screen bg-parchment">
+      <SEO title="My Dashboard — EduLaw" noindex />
       {/* ── Header ── */}
       <div className="bg-ink py-10">
         <div className="section-container">
@@ -435,7 +574,7 @@ export function Dashboard() {
               <BookOpen className="w-5 h-5 text-burgundy" />
             </div>
             <div>
-              <p className="font-display text-2xl text-ink leading-none">{purchases.length}</p>
+              <p className="font-display text-2xl text-ink leading-none">{notePurchases.length}</p>
               <p className="text-xs text-mutedgray mt-0.5">Documents</p>
             </div>
           </div>
@@ -460,6 +599,176 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* ── Subscriber Downloads (Pro / Max) ── */}
+        {(isPro || isMax) && (
+          <div id="subscriber-downloads" className="mb-10">
+
+            {/* Header + quota */}
+            <div className={`rounded-2xl p-5 mb-5 border ${isMax ? 'bg-gradient-to-r from-amber-50 to-parchment border-gold/30' : 'bg-gradient-to-r from-burgundy/5 to-parchment border-burgundy/20'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${isMax ? 'bg-gold/20' : 'bg-burgundy/10'}`}>
+                    <Crown className={`w-5 h-5 ${isMax ? 'text-gold' : 'text-burgundy'}`} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-display text-xl text-ink">{isMax ? 'Max' : 'Pro'} Subscriber Downloads</h2>
+                      <span className={`text-[9px] font-ui font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${isMax ? 'bg-gold/20 text-amber-700' : 'bg-burgundy/10 text-burgundy'}`}>
+                        {isMax ? 'MAX' : 'PRO'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-mutedgray mt-0.5">
+                      Search any note below → click Download → PDF is watermarked with your email and saved
+                    </p>
+                  </div>
+                </div>
+                {/* Quota pill */}
+                <div className={`shrink-0 flex items-center gap-3 px-4 py-2.5 rounded-xl border ${
+                  subUsed >= (isMax ? 5 : 3)
+                    ? 'bg-red-50 border-red-200'
+                    : isMax ? 'bg-gold/10 border-gold/30' : 'bg-burgundy/8 border-burgundy/20'
+                }`}>
+                  <div>
+                    <p className={`font-display text-2xl leading-none ${subUsed >= (isMax ? 5 : 3) ? 'text-red-500' : isMax ? 'text-amber-700' : 'text-burgundy'}`}>
+                      {(isMax ? 5 : 3) - subUsed}
+                    </p>
+                    <p className="text-[10px] text-mutedgray font-ui mt-0.5">downloads left</p>
+                  </div>
+                  <div className="w-px h-8 bg-current opacity-20" />
+                  <div>
+                    <p className="font-ui font-bold text-xs text-ink">{subUsed} / {isMax ? 5 : 3} used</p>
+                    <p className="text-[10px] text-mutedgray font-ui">this month</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="mt-4 h-1.5 bg-white/70 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    subUsed >= (isMax ? 5 : 3) ? 'bg-red-400' : isMax ? 'bg-gold' : 'bg-burgundy'
+                  }`}
+                  style={{ width: `${Math.min(100, (subUsed / (isMax ? 5 : 3)) * 100)}%` }}
+                />
+              </div>
+              {subUsed >= (isMax ? 5 : 3) && (
+                <p className="mt-2 text-xs text-red-500 font-ui font-bold">
+                  Monthly limit reached — downloads reset at the start of your next billing cycle.
+                </p>
+              )}
+            </div>
+
+            {/* Search box */}
+            {!loadingSubNotes && subNotes.length > 0 && (
+              <div className="relative mb-4 w-full sm:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mutedgray" />
+                <input
+                  type="text"
+                  value={subSearch}
+                  onChange={e => setSubSearch(e.target.value)}
+                  placeholder="Search notes to download…"
+                  className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl font-ui text-sm placeholder:text-slate-300 focus:outline-none focus:border-burgundy/40 focus:ring-2 focus:ring-burgundy/10"
+                />
+                {subSearch && (
+                  <button onClick={() => setSubSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Notes grid */}
+            {loadingSubNotes ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl p-5 animate-pulse border border-slate-100">
+                    <div className="h-1 w-full bg-parchment-dark rounded-full mb-4" />
+                    <div className="flex gap-3 mb-4">
+                      <div className="w-10 h-10 bg-parchment-dark rounded-xl shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-parchment-dark rounded w-3/4" />
+                        <div className="h-3 bg-parchment-dark rounded w-1/2" />
+                      </div>
+                    </div>
+                    <div className="h-10 bg-parchment-dark rounded-xl" />
+                  </div>
+                ))}
+              </div>
+            ) : subNotes.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-2xl border border-slate-100">
+                <BookOpen className="w-10 h-10 text-parchment-dark mx-auto mb-3" />
+                <p className="font-ui font-bold text-sm text-ink mb-1">No notes available yet</p>
+                <p className="text-xs text-mutedgray">Notes will appear here once they're added to the catalogue.</p>
+              </div>
+            ) : (() => {
+              const q = subSearch.trim().toLowerCase();
+              const visible = q ? subNotes.filter(n => n.title.toLowerCase().includes(q) || (n.category || '').toLowerCase().includes(q) || (n.subject || '').toLowerCase().includes(q)) : subNotes;
+              return visible.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-2xl border border-slate-100">
+                  <Search className="w-8 h-8 text-parchment-dark mx-auto mb-3" />
+                  <p className="font-ui text-sm text-mutedgray">No notes match "{subSearch}"</p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {visible.map((note, idx) => {
+                    const isThisDownloading = subDownloading === note.id;
+                    const isLimitReached = subUsed >= (isMax ? 5 : 3);
+                    return (
+                      <motion.div
+                        key={note.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03 }}
+                        className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-burgundy/20 transition-all overflow-hidden"
+                      >
+                        <div className={`h-1 w-full ${isMax ? 'bg-gradient-to-r from-gold to-amber-400' : 'bg-gradient-to-r from-burgundy to-burgundy-light'}`} />
+                        <div className="p-5">
+                          <div className="flex items-start gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-burgundy/8 flex items-center justify-center shrink-0">
+                              <BookOpen className="w-5 h-5 text-burgundy" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {note.category && (
+                                <span className="text-[9px] font-ui font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-parchment text-mutedgray mb-1 inline-block">
+                                  {note.category}
+                                </span>
+                              )}
+                              <h3 className="font-ui font-bold text-ink text-sm leading-snug line-clamp-2">{note.title}</h3>
+                              <p className="text-[11px] text-mutedgray mt-1">
+                                <span className="font-display text-gold font-bold">₹{note.price}</span>
+                                {' · '}watermarked PDF
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleSubscriptionDownload(note)}
+                            disabled={isThisDownloading || isLimitReached}
+                            className={`w-full py-3 rounded-2xl font-ui font-bold text-sm transition-all flex items-center justify-center gap-2.5 ${
+                              isLimitReached
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : isMax
+                                  ? 'bg-gradient-to-r from-amber-500 to-gold text-white shadow-lg shadow-gold/20 hover:opacity-90 active:scale-[0.98]'
+                                  : 'bg-burgundy text-parchment hover:bg-burgundy-light shadow-lg shadow-burgundy/20 active:scale-[0.98]'
+                            }`}
+                          >
+                            {isThisDownloading ? (
+                              <><Loader2 className="w-4 h-4 animate-spin" />Watermarking…</>
+                            ) : isLimitReached ? (
+                              <>Monthly limit reached</>
+                            ) : (
+                              <><Download className="w-4 h-4" />Download (watermarked)</>
+                            )}
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* ── My Library ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
@@ -499,21 +808,33 @@ export function Dashboard() {
               </div>
             ))}
           </div>
-        ) : purchases.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-slate-100">
+        ) : notePurchases.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl border border-slate-100">
             <div className="w-16 h-16 bg-parchment rounded-2xl flex items-center justify-center mx-auto mb-4">
               <BookOpen className="w-8 h-8 text-mutedgray" />
             </div>
-            <h3 className="font-display text-xl text-ink mb-2">Your library is empty</h3>
+            <h3 className="font-display text-xl text-ink mb-2">No individually purchased notes yet</h3>
             <p className="text-mutedgray text-sm mb-6 max-w-xs mx-auto">
-              Browse our marketplace and purchase notes to start building your legal library.
+              {(isPro || isMax)
+                ? 'Your subscriber downloads are above. You can also buy individual notes to keep permanently.'
+                : 'Browse our marketplace and purchase notes to start building your legal library.'}
             </p>
-            <Link
-              to="/marketplace"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-burgundy text-parchment rounded-xl font-ui font-medium hover:bg-burgundy-light transition-colors"
-            >
-              Browse Marketplace <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              {(isPro || isMax) && (
+                <button
+                  onClick={() => document.getElementById('subscriber-downloads')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-burgundy/10 text-burgundy border border-burgundy/20 rounded-xl font-ui font-medium text-sm hover:bg-burgundy/15 transition-colors"
+                >
+                  <Crown className="w-4 h-4" /> Go to Subscriber Downloads
+                </button>
+              )}
+              <Link
+                to="/marketplace"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-burgundy text-parchment rounded-xl font-ui font-medium text-sm hover:bg-burgundy-light transition-colors"
+              >
+                Browse Marketplace <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         ) : filteredPurchases.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl border border-slate-100">
