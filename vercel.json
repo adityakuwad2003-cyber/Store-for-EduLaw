@@ -4,7 +4,7 @@
       "source": "/(.*)",
       "has": [{ "type": "host", "value": "store.theedulaw.in" }],
       "destination": "https://www.store.theedulaw.in/$1",
-      "permanent": true
+      "statusCode": 301
     }
   ],
   "rewrites": [
