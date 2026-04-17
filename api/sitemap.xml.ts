@@ -76,7 +76,7 @@ export default async function handler(req: any, res: any) {
       adminDb.collection("bundles").get(),
       adminDb.collection("mockTests").get(),
       adminDb.collection("templates").get(),
-      adminDb.collection("blogs").get(),
+      adminDb.collection("blog_articles").get(),
       adminDb.collection("playground_content").where("contentType", "!=", "daily_news").get(),
       adminDb.collection("playground_content").where("contentType", "==", "daily_news").get(),
     ]);
