@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduLaw — Exam Calendar Card Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, Arial, sans-serif;
+      background: #0e0e0e; color: #f0f0f0;
+      min-height: 100vh; padding: 32px 24px;
+    }
+    header { text-align: center; margin-bottom: 32px; }
+    header h1 { font-size: 22px; color: #C9A84C; margin-bottom: 6px; }
+    header p  { font-size: 13px; color: #666; }
+
+    .cards {
+      display: flex; gap: 32px; flex-wrap: wrap;
+      justify-content: center; align-items: flex-start;
+    }
+    .card-wrap { text-align: center; }
+    .card-label { color: #888; font-size: 12px; letter-spacing: .05em; margin-bottom: 10px; }
+    canvas {
+      display: block; margin: 0 auto;
+      border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.6);
+      max-height: 80vh; width: auto; cursor: pointer;
+    }
+    .dl-btn {
+      display: inline-block; margin-top: 12px;
+      padding: 10px 24px; background: #C9A84C; color: #1C1009;
+      border: none; border-radius: 8px; font-weight: 700;
+      font-size: 13px; cursor: pointer; transition: opacity .2s;
+    }
+    .dl-btn:hover { opacity: .82; }
+    footer {
+      text-align: center; margin-top: 36px;
+      font-size: 12px; color: #444;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚖ EduLaw — Exam Calendar Card Generator</h1>
+  <p>Click Download or click the canvas to save. Dates are indicative — verify official notifications.</p>
+</header>
+
+<div class="cards">
+  <div class="card-wrap">
+    <div class="card-label">INSTAGRAM STORY &nbsp;9:16&nbsp; (1080 × 1920)</div>
+    <canvas id="storyCanvas"></canvas>
+    <button class="dl-btn" onclick="dl('storyCanvas','edulaw-exam-calendar-story.png')">⬇ Download Story</button>
+  </div>
+  <div class="card-wrap">
+    <div class="card-label">INSTAGRAM POST &nbsp;1:1&nbsp; (1080 × 1080)</div>
+    <canvas id="postCanvas"></canvas>
+    <button class="dl-btn" onclick="dl('postCanvas','edulaw-exam-calendar-post.png')">⬇ Download Post</button>
+  </div>
+</div>
+
+<footer>All dates are estimated — always verify through official notifications before sharing.</footer>
+
+<script>
+// ── Colour tokens ─────────────────────────────────────────────────────────────
+const PARCHMENT  = '#FDFBF7';
+const INK        = '#1C1009';
+const GOLD       = '#C9A84C';
+const GOLD_LIGHT = '#E8C97A';
+const GOLD_DARK  = '#9A6B10';
+const BURGUNDY   = '#6B1E2E';
+
+// ── Exam data (update dates when official notifications drop) ────────────────
+const EXAMS = [
+  {
+    name    : 'UP PCS (J) Prelims',
+    detail  : 'Uttar Pradesh Judicial Service',
+    subjects: 'CPC  •  BNS  •  BNSS  •  Evidence  •  Contract',
+    date    : new Date('2026-06-21'),
+    month   : 'JUN 2026',
+    accent  : '#7C3AED',   // violet
+    est     : true,
+  },
+  {
+    name    : 'Delhi Judicial Service',
+    detail  : 'Delhi Higher Judicial Service Exam',
+    subjects: 'Constitution  •  BNS  •  Evidence  •  CPC',
+    date    : new Date('2026-07-19'),
+    month   : 'JUL 2026',
+    accent  : '#1D4ED8',   // blue
+    est     : true,
+  },
+  {
+    name    : 'Rajasthan Judiciary',
+    detail  : 'RJS Civil Judge Prelims',
+    subjects: 'BNS  •  BNSS  •  Contract  •  Transfer of Property',
+    date    : new Date('2026-08-16'),
+    month   : 'AUG 2026',
+    accent  : '#B45309',   // amber
+    est     : true,
+  },
+  {
+    name    : 'AIBE XX',
+    detail  : 'All India Bar Examination',
+    subjects: 'All Subjects  •  Professional Ethics  •  Drafting',
+    date    : new Date('2026-11-22'),
+    month   : 'NOV 2026',
+    accent  : '#047857',   // green
+    est     : true,
+  },
+  {
+    name    : 'CLAT PG 2027',
+    detail  : 'Common Law Admission Test PG',
+    subjects: 'Constitution  •  IPR  •  Torts  •  Criminal  •  Contract',
+    date    : new Date('2026-12-06'),
+    month   : 'DEC 2026',
+    accent  : BURGUNDY,
+    est     : false,
+  },
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function daysUntil(date) {
+  const d = Math.ceil((date - new Date()) / 86400000);
+  return d > 0 ? d : 0;
+}
+
+function rrPath(ctx, x, y, w, h, r) {
+  const R = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + R, y);
+  ctx.lineTo(x + w - R, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + R);
+  ctx.lineTo(x + w, y + h - R);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - R, y + h);
+  ctx.lineTo(x + R, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - R);
+  ctx.lineTo(x, y + R);
+  ctx.quadraticCurveTo(x, y, x + R, y);
+  ctx.closePath();
+}
+
+function goldBar(ctx, W, y, h) {
+  const g = ctx.createLinearGradient(0, 0, W, 0);
+  g.addColorStop(0,   GOLD);
+  g.addColorStop(0.5, GOLD_LIGHT);
+  g.addColorStop(1,   GOLD);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, y, W, h);
+}
+
+// ── Logo badge ────────────────────────────────────────────────────────────────
+function drawLogo(ctx, W, PAD, isStory) {
+  const sz  = isStory ? 30 : 26;
+  const lbl = 'EduLaw';
+  ctx.font = `bold ${sz}px Georgia, serif`;
+  const tw  = ctx.measureText(lbl).width;
+  const pH  = isStory ? 54 : 46;
+  const pW  = tw + sz * 2 + 16;
+  const pR  = pH / 2;
+  const px  = W - PAD - pW;
+  const py  = PAD - 8;
+
+  // Pill
+  ctx.fillStyle = 'rgba(253,251,247,0.93)';
+  rrPath(ctx, px, py, pW, pH, pR); ctx.fill();
+  ctx.strokeStyle = 'rgba(201,168,76,0.60)';
+  ctx.lineWidth = 1.5;
+  rrPath(ctx, px, py, pW, pH, pR); ctx.stroke();
+
+  // Scale glyph
+  ctx.fillStyle = GOLD;
+  ctx.font = `${sz - 4}px Arial, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('⚖', px + 14, py + pH * 0.67);
+
+  // Text
+  ctx.fillStyle = GOLD_DARK;
+  ctx.font = `bold ${sz}px Georgia, serif`;
+  ctx.fillText(lbl, px + 14 + sz + 2, py + pH * 0.67);
+
+  ctx.textAlign = 'left';
+}
+
+// ── Exam row ──────────────────────────────────────────────────────────────────
+function drawRow(ctx, exam, x, y, W, rowH, isStory) {
+  const PAD_INNER = isStory ? 22 : 18;
+  const days      = daysUntil(exam.date);
+
+  // Row card
+  ctx.fillStyle = 'rgba(255,255,255,0.58)';
+  rrPath(ctx, x, y, W, rowH, 20); ctx.fill();
+  ctx.strokeStyle = 'rgba(201,168,76,0.22)';
+  ctx.lineWidth   = 1;
+  rrPath(ctx, x, y, W, rowH, 20); ctx.stroke();
+
+  // Left accent bar
+  ctx.fillStyle = exam.accent;
+  rrPath(ctx, x + 2, y + 14, 6, rowH - 28, 3); ctx.fill();
+
+  // Month badge
+  const bW = isStory ? 162 : 128;
+  const bH = isStory ? 68  : 50;
+  const bX = x + PAD_INNER + 10;
+  const bY = y + (rowH - bH) / 2;
+  ctx.fillStyle = exam.accent;
+  rrPath(ctx, bX, bY, bW, bH, 10); ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.font      = `bold ${isStory ? 22 : 17}px Arial, sans-serif`;
+  const midX    = bX + bW / 2;
+  if (exam.est) {
+    ctx.fillText(exam.month, midX, bY + bH * 0.52);
+    ctx.font      = `${isStory ? 17 : 13}px Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText('est.', midX, bY + bH * 0.82);
+  } else {
+    ctx.fillText(exam.month, midX, bY + bH * 0.64);
+  }
+
+  // Exam name + subjects
+  const tX    = bX + bW + (isStory ? 22 : 16);
+  const nameY = y + rowH * (isStory ? 0.38 : 0.40);
+  const subjY = y + rowH * (isStory ? 0.64 : 0.68);
+
+  ctx.fillStyle = INK;
+  ctx.textAlign = 'left';
+  ctx.font      = `bold ${isStory ? 30 : 22}px Georgia, serif`;
+  ctx.fillText(exam.name, tX, nameY);
+
+  const availW = W - (tX - x) - (isStory ? 160 : 130);
+  ctx.fillStyle = 'rgba(28,16,9,0.48)';
+  ctx.font      = `${isStory ? 21 : 16}px Arial, sans-serif`;
+  let subj = exam.subjects;
+  while (ctx.measureText(subj).width > availW && subj.length > 8) subj = subj.slice(0, -2);
+  if (subj !== exam.subjects) subj += '…';
+  ctx.fillText(subj, tX, subjY);
+
+  // Days-away badge
+  if (days > 0) {
+    const dW = isStory ? 120 : 96;
+    const dH = isStory ? 46  : 36;
+    const dX = x + W - dW - (isStory ? 18 : 14);
+    const dY = y + (rowH - dH) / 2;
+    ctx.fillStyle = 'rgba(28,16,9,0.07)';
+    rrPath(ctx, dX, dY, dW, dH, 8); ctx.fill();
+    ctx.fillStyle   = GOLD_DARK;
+    ctx.textAlign   = 'center';
+    ctx.font        = `bold ${isStory ? 22 : 17}px Arial, sans-serif`;
+    ctx.fillText(`${days}d away`, dX + dW / 2, dY + dH * 0.67);
+  }
+
+  ctx.textAlign = 'left';
+}
+
+// ── Main draw ─────────────────────────────────────────────────────────────────
+function draw(canvasId, W, H, isStory) {
+  const canvas = document.getElementById(canvasId);
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const PAD    = isStory ? 60 : 52;
+  const BAR    = isStory ? 10 : 8;
+  const rowH   = isStory ? 232 : 126;
+  const rowGap = isStory ? 18  : 10;
+
+  // ── Background ──────────────────────────────────────────────────────────────
+  ctx.fillStyle = PARCHMENT;
+  ctx.fillRect(0, 0, W, H);
+
+  // Warm centre glow
+  const glow = ctx.createRadialGradient(W * .5, H * .25, 0, W * .5, H * .5, H * .65);
+  glow.addColorStop(0,   'rgba(255,245,215,0.40)');
+  glow.addColorStop(1,   'rgba(253,251,247,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  // Bottom warm tint
+  const bot = ctx.createLinearGradient(0, H * .7, 0, H);
+  bot.addColorStop(0, 'rgba(230,210,170,0)');
+  bot.addColorStop(1, 'rgba(230,210,170,0.16)');
+  ctx.fillStyle = bot; ctx.fillRect(0, 0, W, H);
+
+  // ── Top gold bar ─────────────────────────────────────────────────────────────
+  goldBar(ctx, W, 0, BAR);
+
+  // ── Logo ──────────────────────────────────────────────────────────────────────
+  drawLogo(ctx, W, PAD, isStory);
+
+  // ── Header ───────────────────────────────────────────────────────────────────
+  let Y = isStory ? 78 : 62;
+
+  // "EXAM CALENDAR 2026" pill
+  const pillTxt  = 'EXAM CALENDAR  2026';
+  const pillSz   = isStory ? 22 : 18;
+  ctx.font       = `bold ${pillSz}px Arial, sans-serif`;
+  const pillW    = ctx.measureText(pillTxt).width + 40;
+  const pillH    = isStory ? 42 : 34;
+  ctx.fillStyle  = 'rgba(107,30,46,0.09)';
+  rrPath(ctx, PAD, Y - pillH * .68, pillW, pillH, pillH / 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(107,30,46,0.28)'; ctx.lineWidth = 1.2;
+  rrPath(ctx, PAD, Y - pillH * .68, pillW, pillH, pillH / 2); ctx.stroke();
+  ctx.fillStyle  = BURGUNDY; ctx.textAlign = 'left';
+  ctx.fillText(pillTxt, PAD + 20, Y);
+  Y += isStory ? 58 : 44;
+
+  if (isStory) {
+    // Two-line big title
+    ctx.fillStyle = INK;
+    ctx.font      = 'bold 82px Georgia, serif';
+    ctx.fillText('Plan Your', PAD, Y);    Y += 92;
+    ctx.fillStyle = GOLD_DARK;
+    ctx.fillText('Preparation.', PAD, Y); Y += 46;
+  } else {
+    // Single compact title
+    ctx.fillStyle = INK;
+    ctx.font      = 'bold 58px Georgia, serif';
+    ctx.fillText('Plan Your Prep.', PAD, Y); Y += 68;
+  }
+
+  // Subtitle
+  ctx.fillStyle = 'rgba(28,16,9,0.45)';
+  ctx.font      = `${isStory ? 26 : 21}px Arial, sans-serif`;
+  ctx.fillText('Start 4 weeks early — gain the decisive edge.', PAD, Y);
+  Y += isStory ? 46 : 36;
+
+  // Gold divider
+  ctx.strokeStyle = 'rgba(201,168,76,0.35)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(PAD, Y); ctx.lineTo(W - PAD, Y); ctx.stroke();
+  Y += isStory ? 32 : 22;
+
+  // ── Exam rows ─────────────────────────────────────────────────────────────────
+  const rowW = W - PAD * 2;
+  for (const exam of EXAMS) {
+    drawRow(ctx, exam, PAD, Y, rowW, rowH, isStory);
+    Y += rowH + rowGap;
+  }
+
+  // ── CTA box (pinned to bottom) ────────────────────────────────────────────────
+  const ctaH  = isStory ? 218 : 148;
+  const ctaY  = H - ctaH - BAR - (isStory ? 14 : 10);
+  const ctaW  = W - PAD * 2;
+
+  ctx.fillStyle   = 'rgba(107,30,46,0.06)';
+  rrPath(ctx, PAD, ctaY, ctaW, ctaH, 22); ctx.fill();
+  ctx.strokeStyle = 'rgba(107,30,46,0.14)'; ctx.lineWidth = 1.5;
+  rrPath(ctx, PAD, ctaY, ctaW, ctaH, 22); ctx.stroke();
+
+  let cY = ctaY + (isStory ? 46 : 32);
+  ctx.fillStyle = 'rgba(28,16,9,0.42)';
+  ctx.font      = `${isStory ? 24 : 19}px Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('MCQs  •  Notes  •  Mock Tests  •  Case Laws', W / 2, cY);
+  cY += isStory ? 52 : 40;
+
+  ctx.fillStyle = GOLD_DARK;
+  ctx.font      = `bold ${isStory ? 44 : 34}px Georgia, serif`;
+  ctx.fillText('store.theedulaw.in', W / 2, cY);
+  cY += isStory ? 48 : 36;
+
+  ctx.fillStyle = 'rgba(28,16,9,0.30)';
+  ctx.font      = `${isStory ? 20 : 16}px Arial, sans-serif`;
+  ctx.fillText('Dates are indicative — verify official notifications', W / 2, cY);
+
+  ctx.textAlign = 'left';
+
+  // ── Bottom gold bar ───────────────────────────────────────────────────────────
+  goldBar(ctx, W, H - BAR, BAR);
+}
+
+// ── Download ─────────────────────────────────────────────────────────────────
+function dl(id, name) {
+  const a    = document.createElement('a');
+  a.download = name;
+  a.href     = document.getElementById(id).toDataURL('image/png');
+  a.click();
+}
+
+// Click canvas to download
+document.getElementById('storyCanvas').onclick = () => dl('storyCanvas', 'edulaw-exam-calendar-story.png');
+document.getElementById('postCanvas').onclick  = () => dl('postCanvas',  'edulaw-exam-calendar-post.png');
+
+// ── Render ────────────────────────────────────────────────────────────────────
+draw('storyCanvas', 1080, 1920, true);
+draw('postCanvas',  1080, 1080, false);
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+dist-ssr
+**/dist-ssr
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+*.local
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor/Internal
+.vscode/
+.idea/
+.claude/
+.gemini/
+.vercel/
+
+# Mobile MCP specific
+# Add any mobile specific excludes if needed

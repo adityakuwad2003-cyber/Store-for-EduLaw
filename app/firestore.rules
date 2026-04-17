@@ -1,0 +1,137 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── PRODUCTS (public read, no client writes) ──────────────────────────
+    // Anyone can browse the store. Only the Firebase Admin SDK (backend) can
+    // create or update products — never from the browser directly.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── NOTES (same as products — public read, admin-only write) ──────────
+    match /notes/{noteId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── REVIEWS (public read, authenticated write) ────────────────────────
+    // Anyone can read reviews (needed to show star ratings to all visitors).
+    // Only a logged-in user can create a review for themselves.
+    // No one can update or delete reviews from the client.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ── PURCHASES (authenticated owner only) ─────────────────────────────
+    // A user can only read or create their OWN purchases.
+    // Update and delete are always denied.
+    match /purchases/{purchaseId} {
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && purchaseId.matches(request.auth.uid + '_.*');
+      allow update, delete: if false;
+    }
+
+    // ── USERS (authenticated owner only) ─────────────────────────────────
+    // A logged-in user can read and write their own profile document.
+    // This allows AuthContext to upsert user docs on login.
+    // Sensitive fields (isBanned, subscription) can only be written server-side
+    // via the Admin SDK — client writes are restricted to safe fields only.
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    // Prevent client from modifying admin-controlled fields
+                    && !('isBanned' in request.resource.data)
+                    && !('subscription' in request.resource.data);
+      allow delete: if false;
+    }
+
+    // ── BLOG ARTICLES (public read, admin-only write) ────────────────────
+    match /blog_articles/{articleId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── PLAYGROUND CONTENT (public read, admin-only write) ───────────────
+    match /playground_content/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── FLASHCARD DECKS (public read, admin-only write) ──────────────────
+    match /flashcard_decks/{deckId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── LEGAL GLOSSARY (public read, admin-only write) ───────────────────
+    match /glossary_terms/{termId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── DAILY LEGAL NEWS (public read, admin-only write) ────────────────
+    match /daily_legal_news/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── TEMPLATES (public read, admin-only write) ────────────────────────
+    match /templates/{templateId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── BUNDLES (public read, admin-only write) ──────────────────────────
+    match /bundles/{bundleId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── INVOICES (authenticated owner only) ──────────────────────────────
+    match /invoices/{invoiceId} {
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // ── COUPONS (public read for validation, admin-only write) ───────────
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── VAKIL LAWYERS (authenticated owner write, authenticated read) ────
+    // A signed-in lawyer can create/update their own KYC profile document.
+    // Any authenticated user (including admin) can read lawyer profiles.
+    match /vakil_lawyers/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // ── VAKIL INQUIRIES (public create, authenticated read/update) ────────
+    // Anyone (no login needed) can submit a client inquiry — lowering friction
+    // is intentional for lead capture. Only authenticated users can read or
+    // update inquiries (admin panel, matched lawyer).
+    match /vakil_inquiries/{docId} {
+      allow create: if true;
+      allow read, update: if request.auth != null;
+      allow delete: if false;
+    }
+
+    // ── EVERYTHING ELSE: DENY ─────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

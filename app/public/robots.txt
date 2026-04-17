@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+Disallow: /cart
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /login
+Disallow: /order-success
+Disallow: /vakil-dashboard
+
+Sitemap: https://www.store.theedulaw.in/sitemap.xml
