@@ -79,11 +79,12 @@ export function Navbar() {
           <nav className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 shrink-0 group">
-              <div className="relative w-10 h-10 lg:w-12 lg:h-12 transition-transform duration-300 group-hover:scale-105">
+              <div className="relative w-10 h-10 lg:w-12 lg:h-12 transition-transform duration-300 group-hover:scale-105 filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)]">
                 <img 
                   src="/images/edulaw-logo.png" 
                   alt="EduLaw" 
-                  className="w-full h-full object-contain mix-blend-multiply filter drop-shadow-[0_0_1px_rgba(0,0,0,0.1)]"
+                  className="w-full h-full object-contain"
+                  style={{ mixBlendMode: 'multiply' }}
                 />
               </div>
               <div className="flex flex-col hidden sm:flex">
