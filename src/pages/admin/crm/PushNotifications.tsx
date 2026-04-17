@@ -1,19 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
+import {
   Bell, Plus, X, Save,
-  Smartphone, Zap, Edit
+  Smartphone, Zap, Edit, Users, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { 
-  collection, query, orderBy, 
-  getDocs, doc, updateDoc, 
-  addDoc, serverTimestamp 
+import {
+  collection, query, orderBy,
+  getDocs, doc, updateDoc,
+  addDoc, serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { DataTable } from '../../../components/admin/DataTable';
 import type { Column } from '../../../components/admin/DataTable';
 import { StatusBadge } from '../../../components/admin/StatusBadge';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface PushNotification {
   id: string;
@@ -31,10 +32,13 @@ interface PushNotification {
 }
 
 export default function PushNotifications() {
+  const { currentUser } = useAuth();
   const [notifications, setNotifications] = useState<PushNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState<string | null>(null); // notif id being sent
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingNotif, setEditingNotif] = useState<Partial<PushNotification> | null>(null);
+  const [audienceCounts, setAudienceCounts] = useState<Record<string, number>>({});
 
   // ── DATA FETCHING ──
   const fetchNotifications = useCallback(async () => {
@@ -52,9 +56,31 @@ export default function PushNotifications() {
     }
   }, []);
 
+  // ── Fetch real audience counts for each segment ──
+  const fetchAudienceCounts = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const token = await currentUser.getIdToken();
+      const segments = ['all', 'premium', 'active_today'];
+      const results = await Promise.all(
+        segments.map(async (target) => {
+          const res = await fetch(`/api/admin/audience-count?target=${target}`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          const data = await res.json();
+          return [target, data.count ?? 0] as [string, number];
+        })
+      );
+      setAudienceCounts(Object.fromEntries(results));
+    } catch {
+      // Non-critical; silently fail
+    }
+  }, [currentUser]);
+
   useEffect(() => {
     fetchNotifications();
-  }, [fetchNotifications]);
+    fetchAudienceCounts();
+  }, [fetchNotifications, fetchAudienceCounts]);
 
   // ── ACTIONS ──
   const handleSave = async (data: Partial<PushNotification>) => {
@@ -88,25 +114,44 @@ export default function PushNotifications() {
   };
 
   const handleSendNow = async (notif: PushNotification) => {
-    if (!confirm(`Broadcast "${notif.title}" to ${notif.target} immediately?`)) return;
-    
-    setLoading(true);
+    const audienceLabel = notif.target.replace('_', ' ');
+    const estimatedCount = notif.target === 'all'
+      ? audienceCounts['all']
+      : notif.target === 'premium'
+      ? audienceCounts['premium']
+      : notif.target === 'active_today'
+      ? audienceCounts['active_today']
+      : audienceCounts['all'];
+
+    const countText = estimatedCount != null ? ` (~${estimatedCount} users)` : '';
+    if (!confirm(`Broadcast "${notif.title}" to ${audienceLabel}${countText} immediately?\n\nThis will send emails to the target audience.`)) return;
+
+    if (!currentUser) { toast.error('Not authenticated'); return; }
+
+    setSending(notif.id);
     try {
-      // Logic for FCM / OneSignal / Pusher integration
-      // const res = await fetch('/api/admin/push-broadcast', { ... });
-      
-      await updateDoc(doc(db, 'push_notifications', notif.id), {
-        status: 'sent',
-        sentAt: serverTimestamp(),
-        sentCount: 12450 // Mocked for UI feedback
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ notificationId: notif.id }),
       });
-      
-      toast.success('Push broadcast initiated successfully');
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send');
+
+      const sentCount = data.sentCount ?? 0;
+      toast.success(`Broadcast sent to ${sentCount} user${sentCount !== 1 ? 's' : ''}!`, {
+        description: data.simulated ? 'Simulated (no RESEND_API_KEY configured)' : 'Emails dispatched via Resend',
+      });
       fetchNotifications();
-    } catch (error) {
-      toast.error('Failed to send notification');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send notification');
     } finally {
-      setLoading(false);
+      setSending(null);
     }
   };
 
@@ -164,12 +209,15 @@ export default function PushNotifications() {
             <Edit className="w-4 h-4" />
           </button>
           {row.status === 'draft' && (
-            <button 
+            <button
               onClick={(e) => { e.stopPropagation(); handleSendNow(row); }}
-              className="p-2 hover:bg-gold/10 text-gold rounded-lg transition-all"
-              title="Push Now"
+              disabled={sending === row.id}
+              className="p-2 hover:bg-gold/10 text-gold rounded-lg transition-all disabled:opacity-40"
+              title={`Push Now${audienceCounts[row.target] != null ? ` (~${audienceCounts[row.target]} users)` : ''}`}
             >
-              <Zap className="w-4 h-4" />
+              {sending === row.id
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Zap className="w-4 h-4" />}
             </button>
           )}
         </div>
@@ -198,6 +246,29 @@ export default function PushNotifications() {
           <Plus className="w-5 h-5" /> New Alert
         </button>
       </div>
+
+      {/* ── LIVE AUDIENCE COUNTER ── */}
+      {Object.keys(audienceCounts).length > 0 && (
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: 'All Users', key: 'all', icon: Users, color: 'text-slate-600 bg-slate-50' },
+            { label: 'Premium', key: 'premium', icon: Zap, color: 'text-gold bg-gold/5' },
+            { label: 'Active Today', key: 'active_today', icon: Smartphone, color: 'text-emerald-600 bg-emerald-50' },
+          ].map(({ label, key, icon: Icon, color }) => (
+            <div key={key} className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+                <Icon className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-display font-bold text-slate-900">
+                  {audienceCounts[key] != null ? audienceCounts[key].toLocaleString('en-IN') : '—'}
+                </p>
+                <p className="text-[10px] font-ui font-black text-slate-400 uppercase tracking-widest">{label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <DataTable
         columns={columns}

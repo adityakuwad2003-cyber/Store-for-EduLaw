@@ -1,7 +1,7 @@
 /**
  * Verifies a coupon code via the backend API (avoids Firestore client-side restrictions).
  */
-export async function verifyCoupon(code: string, subtotal: number): Promise<{
+export async function verifyCoupon(code: string, subtotal: number, userId?: string): Promise<{
   valid: boolean;
   discount?: number;
   message?: string;
@@ -10,7 +10,7 @@ export async function verifyCoupon(code: string, subtotal: number): Promise<{
     const res = await fetch('/api/verify-coupon', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: code.toUpperCase().trim(), subtotal }),
+      body: JSON.stringify({ code: code.toUpperCase().trim(), subtotal, userId }),
     });
 
     const data = await res.json();

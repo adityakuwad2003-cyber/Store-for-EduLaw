@@ -10,6 +10,7 @@
  */
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./_lib/adminInit";
 import {
   setCorsHeaders, verifyBearerToken, isRateLimited,
@@ -82,7 +83,7 @@ export default async function handler(req: any, res: any) {
   }
 
   // ── 2. Validate inputs ──────────────────────────────────────────────────
-  const { fileName: rawFileName, productId } = req.body || {};
+  const { fileName: rawFileName, productId, subscriptionDownload } = req.body || {};
 
   const fileName = cleanFilePath(typeof rawFileName === "string" ? rawFileName : "");
   if (!isSafeFilePath(fileName)) {
@@ -93,30 +94,57 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: "Invalid productId." });
   }
 
-  // ── 3. Verify purchase in Firestore ────────────────────────────────────
-  try {
-    // Query by userId + productId (works for all new auto-ID purchases)
-    const purchaseQuery = await adminDb.collection("purchases")
-      .where("userId", "==", verifiedUserId)
-      .where("productId", "==", productId)
-      .limit(1)
-      .get();
+  // ── 3a. Subscription download path ─────────────────────────────────────
+  if (subscriptionDownload === true) {
+    try {
+      const userDoc = await adminDb.collection("users").doc(verifiedUserId).get();
+      const userData = userDoc.data();
+      const sub = userData?.subscription;
 
-    // Fallback: legacy purchases used doc ID format "${userId}_${productId}"
-    let hasPurchase = !purchaseQuery.empty;
-    if (!hasPurchase) {
-      const legacySnap = await adminDb.collection("purchases")
-        .doc(`${verifiedUserId}_${productId}`)
+      if (!sub || sub.status !== "active") {
+        return res.status(403).json({ error: "No active subscription." });
+      }
+
+      const monthKey = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+      const used: number = userData?.subscriptionUsage?.downloads?.[monthKey] ?? 0;
+      const limit = sub.planId === "pro" ? 3 : 5;
+
+      if (used >= limit) {
+        return res.status(429).json({ error: `Monthly download limit reached (${limit} notes/month).`, used, limit });
+      }
+
+      // Atomically increment usage before issuing the URL
+      await adminDb.collection("users").doc(verifiedUserId).update({
+        [`subscriptionUsage.downloads.${monthKey}`]: FieldValue.increment(1),
+      });
+    } catch (err) {
+      console.error("Subscription quota check failed:", err);
+      return res.status(500).json({ error: "Could not verify subscription quota." });
+    }
+  } else {
+    // ── 3b. Verify purchase in Firestore ──────────────────────────────────
+    try {
+      const purchaseQuery = await adminDb.collection("purchases")
+        .where("userId", "==", verifiedUserId)
+        .where("productId", "==", productId)
+        .limit(1)
         .get();
-      hasPurchase = legacySnap.exists;
-    }
 
-    if (!hasPurchase) {
-      return res.status(403).json({ error: "Forbidden: You have not purchased this document." });
+      let hasPurchase = !purchaseQuery.empty;
+      if (!hasPurchase) {
+        const legacySnap = await adminDb.collection("purchases")
+          .doc(`${verifiedUserId}_${productId}`)
+          .get();
+        hasPurchase = legacySnap.exists;
+      }
+
+      if (!hasPurchase) {
+        return res.status(403).json({ error: "Forbidden: You have not purchased this document." });
+      }
+    } catch (err) {
+      console.error("Firestore purchase check failed:", err);
+      return res.status(500).json({ error: "Could not verify purchase." });
     }
-  } catch (err) {
-    console.error("Firestore purchase check failed:", err);
-    return res.status(500).json({ error: "Could not verify purchase." });
   }
 
   // ── 4. Generate presigned Cloudflare R2 GET URL (expires in 15 min) ────

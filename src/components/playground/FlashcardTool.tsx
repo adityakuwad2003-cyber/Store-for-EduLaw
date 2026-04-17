@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { 
-  Brain, Layers, Share2, ChevronRight, X, 
-  ChevronLeft, ArrowRight 
+import {
+  Brain, Layers, Share2, ChevronRight, X,
+  ChevronLeft,
 } from 'lucide-react';
 import { collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';

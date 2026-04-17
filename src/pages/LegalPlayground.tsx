@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   Brain, Newspaper, Layers,
-  Lightbulb, BookOpen,
+  BookOpen,
   Zap, Gavel, ArrowUpRight,
   Trophy, ShoppingBag, Scale, FileText
 } from 'lucide-react';
@@ -21,59 +21,48 @@ const PLAYGROUND_TOOLS = [
     tag: 'Interactive'
   },
   {
+    id: 'blogs',
+    title: 'Legal Blogs',
+    description: 'Bite-sized analysis of high-impact legal developments and news simplified.',
+    icon: Newspaper,
+    path: '/legal-hub',
+    color: 'bg-gold/10 text-[#7a5c1e]',
+    hoverColor: 'hover:border-gold/30',
+    size: 'md',
+    tag: 'Read'
+  },
+  {
+    id: 'flashcards',
+    title: 'Interactive Flashcards',
+    description: 'Master legal doctrines and definitions with bite-sized knowledge cards.',
+    icon: Layers,
+    path: '/legal-hub', // They are currently in the hub, or I can deep link if I add id
+    color: 'bg-purple-50 text-purple-700',
+    hoverColor: 'hover:border-purple-300',
+    size: 'sm',
+    tag: 'Study'
+  },
+  {
+    id: 'lexicon',
+    title: 'Legal Glossary',
+    description: 'A comprehensive dictionary of legal terms and maxims for law practitioners.',
+    icon: BookOpen,
+    path: '/legal-hub',
+    color: 'bg-indigo-50 text-indigo-700',
+    hoverColor: 'hover:border-indigo-300',
+    size: 'sm',
+    tag: 'Glossary'
+  },
+  {
     id: 'case-law',
     title: 'Landmark Judgements',
     description: 'Bite-sized summaries of the cases that shaped Indian Law. Essential for exams.',
     icon: Gavel,
     path: '/legal-playground/case-law',
-    color: 'bg-gold/10 text-[#7a5c1e]',
-    hoverColor: 'hover:border-gold/30',
-    size: 'md',
-    tag: 'Deep Dive'
-  },
-  {
-    id: 'digest',
-    title: 'Daily Legal News',
-    description: 'Stay updated with the latest from High Courts, Supreme Court, and Tribunals.',
-    icon: Newspaper,
-    path: '/legal-playground/digest',
     color: 'bg-blue-50 text-blue-700',
     hoverColor: 'hover:border-blue-300',
-    size: 'sm',
-    tag: 'Daily'
-  },
-  {
-    id: 'flashcards',
-    title: 'Knowledge Cards',
-    description: 'Interactive flashcards for quick revision of complex legal subjects and definitions.',
-    icon: Layers,
-    path: '/legal-playground/flashcards',
-    color: 'bg-purple-50 text-purple-700',
-    hoverColor: 'hover:border-purple-300',
     size: 'md',
-    tag: 'Study Tool'
-  },
-  {
-    id: 'insights',
-    title: 'Legal Insights',
-    description: 'Detailed analysis of current legal developments, geopolitics, and landmark laws.',
-    icon: Lightbulb,
-    path: '/legal-playground/insights',
-    color: 'bg-amber-50 text-amber-700',
-    hoverColor: 'hover:border-amber-300',
-    size: 'md',
-    tag: 'Articles'
-  },
-  {
-    id: 'lexicon',
-    title: 'Legal Lexicon',
-    description: 'A comprehensive dictionary of legal terms and maxims to master the language of law.',
-    icon: BookOpen,
-    path: '/legal-playground/lexicon',
-    color: 'bg-indigo-50 text-indigo-700',
-    hoverColor: 'hover:border-indigo-300',
-    size: 'sm',
-    tag: 'Glossary'
+    tag: 'Deep Dive'
   }
 ];
 

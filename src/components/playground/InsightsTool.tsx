@@ -5,6 +5,8 @@ import { Newspaper, ArrowRight, Share2, Check } from 'lucide-react';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { SubtleHook } from './SubtleHook';
+import { useAuth } from '../../contexts/AuthContext';
+import { PlaygroundPaywall } from '../ui/PlaygroundPaywall';
 
 // --- Types ---
 interface Article {
@@ -139,6 +141,11 @@ export const InsightsTool: React.FC = () => {
     ...(articlesByCategory['Other Insights']?.length ? ['Other Insights'] : []),
   ];
 
+  const { currentUser: insightsCurrentUser, loading: authLoading } = useAuth();
+  const isGated = !authLoading && !insightsCurrentUser;
+  const FREE_ARTICLE_LIMIT = 4;
+  const flatArticles = activeCategories.flatMap(cat => articlesByCategory[cat] ?? []);
+
   return (
     <div className="flex flex-col gap-10">
       <header>
@@ -181,21 +188,43 @@ export const InsightsTool: React.FC = () => {
             <div className="text-center py-20 bg-white/40 rounded-3xl border border-dashed border-ink/10">
               <p className="font-ui text-sm text-ink/40">New insights being published soon.</p>
             </div>
-          ) : (
-            activeCategories.map(cat => (
-              <div key={cat} id={`blog-cat-${slugifyCategory(cat)}`} className="scroll-mt-32">
-                <div className="flex items-center gap-4 mb-6">
-                  <h3 className="font-display text-xl text-ink pr-4 whitespace-nowrap">{cat}</h3>
-                  <div className="h-px bg-gold/20 flex-1" />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {(articlesByCategory[cat] ?? []).map(article => (
-                    <ArticleCard key={article.id} article={article} />
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
+          ) : (() => {
+            let articlesRendered = 0;
+            return (
+              <>
+                {activeCategories.map(cat => {
+                  const catArticles = articlesByCategory[cat] ?? [];
+                  const freeSlice = isGated
+                    ? catArticles.slice(0, Math.max(0, FREE_ARTICLE_LIMIT - articlesRendered))
+                    : catArticles;
+                  articlesRendered += freeSlice.length;
+                  if (freeSlice.length === 0) return null;
+                  return (
+                    <div key={cat} id={`blog-cat-${slugifyCategory(cat)}`} className="scroll-mt-32">
+                      <div className="flex items-center gap-4 mb-6">
+                        <h3 className="font-display text-xl text-ink pr-4 whitespace-nowrap">{cat}</h3>
+                        <div className="h-px bg-gold/20 flex-1" />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {freeSlice.map(article => (
+                          <ArticleCard key={article.id} article={article} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                {isGated && flatArticles.length > FREE_ARTICLE_LIMIT && (
+                  <PlaygroundPaywall
+                    section="insights"
+                    itemsShown={FREE_ARTICLE_LIMIT}
+                    totalItems={flatArticles.length}
+                    className="md:col-span-2"
+                  />
+                )}
+              </>
+            );
+          })()}
+
         </main>
       </div>
     </div>

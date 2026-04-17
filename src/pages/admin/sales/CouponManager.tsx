@@ -19,6 +19,7 @@ interface Coupon {
   code: string;
   type: 'percentage' | 'fixed'; // Maps to discountType
   value: number;               // Maps to discountValue
+  maxDiscount?: number;        // Maps to maxDiscount (monetary cap for % coupons)
   minOrderAmount: number;      // Maps to minOrder
   usageLimit?: number;         // Maps to maxUses
   usageCount: number;          // Maps to usesCount
@@ -87,6 +88,7 @@ export default function CouponManager() {
         code: data.code.toUpperCase(),
         discountType: data.type === 'percentage' ? 'percent' : 'flat',
         discountValue: Number(data.value),
+        maxDiscount: Number(data.maxDiscount || 0),
         minOrder: Number(data.minOrderAmount || 0),
         maxUses: Number(data.usageLimit || 0),
         usesCount: data.usageCount || 0,
@@ -308,31 +310,52 @@ export default function CouponManager() {
                   </div>
                 </div>
 
+                {/* Max discount cap — only for percentage coupons */}
+                {editingCoupon?.type === 'percentage' && (
+                  <div>
+                    <label htmlFor="max-discount" className="input-label">Max Discount Cap (₹)</label>
+                    <div className="relative">
+                      <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        id="max-discount"
+                        type="number"
+                        min="0"
+                        value={(editingCoupon as any)?.maxDiscount || ''}
+                        onChange={e => setEditingCoupon(v => ({ ...v, maxDiscount: Number(e.target.value) } as any))}
+                        className="admin-input pl-10"
+                        placeholder="e.g. 1000 — leave blank for no cap"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1 ml-1">e.g. 50% off up to ₹1,000. Leave 0 for unlimited.</p>
+                  </div>
+                )}
+
                 <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-6">
                    <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">Conversion Guardrails</h3>
                    <div className="grid grid-cols-2 gap-6">
                       <div>
                         <label htmlFor="min-order" className="input-label">Min. Order (₹)</label>
-                        <input 
+                        <input
                           id="min-order"
                           type="number"
                           value={editingCoupon?.minOrderAmount || ''}
                           onChange={e => setEditingCoupon(v => ({ ...v, minOrderAmount: Number(e.target.value) }))}
-                          className="admin-input" 
+                          className="admin-input"
                         />
                       </div>
                       <div>
                         <label htmlFor="usage-limit" className="input-label">Usage Limit (Total)</label>
-                        <input 
+                        <input
                           id="usage-limit"
                           type="number"
                           value={editingCoupon?.usageLimit || ''}
                           onChange={e => setEditingCoupon(v => ({ ...v, usageLimit: Number(e.target.value) }))}
-                          className="admin-input" 
+                          className="admin-input"
                           placeholder="e.g. 100"
                         />
                       </div>
                    </div>
+                   <p className="text-[10px] text-slate-400">Each coupon can be used only once per user account.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">

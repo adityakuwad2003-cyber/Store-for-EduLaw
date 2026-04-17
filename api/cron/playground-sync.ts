@@ -20,12 +20,14 @@ interface RawRssItem {
   court: string;
   rawSummary: string;
   publishedAt: string;
+  sourceUrl: string;  // real URL from RSS <link> tag
 }
 
 interface NewsItem {
   title: string;
   source: 'EduLaw Digest';
-  url: '#';
+  url: string;       // real source URL (or '#' if unavailable)
+  sourceUrl: string; // same — kept separately for clarity
   court: string;
   summary: string;
   publishedAt: string;
@@ -52,6 +54,10 @@ function parseRssItems(xml: string, defaultCourt: string, today: string): RawRss
     const titleMatch = block.match(/<title>([\s\S]*?)<\/title>/);
     const descMatch  = block.match(/<description>([\s\S]*?)<\/description>/);
     const dateMatch  = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
+    // Extract original article URL from <link> or <guid isPermaLink="true">
+    const linkMatch  = block.match(/<link>([\s\S]*?)<\/link>/) ||
+                       block.match(/<link\s[^>]*href="([^"]+)"/) ||
+                       block.match(/<guid\s+isPermaLink="true">([\s\S]*?)<\/guid>/);
 
     if (!titleMatch) continue;
     const title = extractCdata(titleMatch[1]);
@@ -60,6 +66,8 @@ function parseRssItems(xml: string, defaultCourt: string, today: string): RawRss
     const rawDesc    = descMatch ? extractCdata(descMatch[1]) : '';
     const rawSummary = rawDesc.length > 700 ? rawDesc.slice(0, 697) + '…' : (rawDesc || title);
     const publishedAt = dateMatch ? dateMatch[1].trim() : new Date().toISOString();
+    // Preserve the original article URL — strip CDATA if present
+    const sourceUrl = linkMatch ? extractCdata(linkMatch[1]).trim() : '';
 
     // Skip items older than 72 hours
     const pubTime = new Date(publishedAt).getTime();
@@ -99,7 +107,7 @@ function parseRssItems(xml: string, defaultCourt: string, today: string): RawRss
       court = 'Current Affairs';
     }
 
-    items.push({ title, court, rawSummary, publishedAt });
+    items.push({ title, court, rawSummary, publishedAt, sourceUrl });
   }
   return items;
 }
@@ -173,10 +181,12 @@ Respond ONLY with valid JSON: {"items":[{"index":0,"title":"...","summary":"..."
       else if (raw.court === 'Current Affairs')                                                               category = 'Current Affairs';
     }
 
+    const safeUrl = raw.sourceUrl && raw.sourceUrl.startsWith('http') ? raw.sourceUrl : '#';
     return {
       title:       String(r.title     || raw.title),
       source:      'EduLaw Digest' as const,
-      url:         '#' as const,
+      url:         safeUrl,
+      sourceUrl:   safeUrl,
       court:       raw.court,
       summary:     String(r.summary   || raw.rawSummary),
       publishedAt: raw.publishedAt,
@@ -359,30 +369,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (newsItems.length === 0) {
       results.newsError = 'No RSS items found within 72 hours';
     } else {
-      // ── 500-item rolling window: delete oldest 25 when pool hits 500 ──
-      try {
-        const countSnap = await adminDb.collection('playground_content')
-          .where('contentType', '==', 'daily_news')
-          .get();
-        const totalCount = countSnap.size;
-
-        if (totalCount >= 500) {
-          // Sort by createdAt ascending to find the 25 oldest
-          const allDocs = countSnap.docs.map(d => ({
-            ref: d.ref,
-            createdAt: (d.data().createdAt as any)?.toMillis?.() ?? 0,
-          }));
-          allDocs.sort((a, b) => a.createdAt - b.createdAt);
-          const toDelete = allDocs.slice(0, 25);
-
-          if (toDelete.length > 0) {
-            const delBatch = adminDb.batch();
-            toDelete.forEach(d => delBatch.delete(d.ref));
-            await delBatch.commit();
-            results.pruned = toDelete.length;
-          }
-        }
-      } catch (_) { /* cleanup failure is non-fatal */ }
+      // Articles are NEVER deleted — they accumulate indefinitely for indexing.
+      // Each article gets a permanent URL (/legal-news/:id) that Google can index.
 
       // Write rephrased items
       const newsBatch = adminDb.batch();

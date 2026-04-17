@@ -4,8 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight, ChevronLeft, CheckCircle2, XCircle,
   Trophy, RotateCcw, Home, BookOpen, Clock,
-  Target, Lightbulb, ArrowLeft, AlertCircle, Award
+  Target, Lightbulb, ArrowLeft, AlertCircle, Award,
+  Lock, Crown, Check,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import type { User } from 'firebase/auth';
 import { premiumMcqBooklets } from '@/data/premiumMcqData';
 import { mcqBooklets, type MCQBooklet, type MCQQuestion } from '@/data/mcqData';
 import { mockTests as notesMockTests } from '@/data/notes';
@@ -588,10 +591,64 @@ function ResultScreen({ booklet, answers, totalSeconds, onRetry }: ResultScreenP
   );
 }
 
+// ─── Booklet Locked Screen ───────────────────────────────────────────────────
+
+function BookletLockedScreen({ booklet, currentUser }: { booklet: { title: string; subtitle?: string; subject?: string }; currentUser: User | null }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-lg mx-auto px-4 py-12 text-center"
+    >
+      <div className="w-20 h-20 rounded-full bg-gold/10 border-2 border-gold/20 flex items-center justify-center mx-auto mb-6">
+        <Lock className="w-9 h-9 text-gold" />
+      </div>
+      <h1 className="font-display text-3xl text-ink mb-2">{booklet.title}</h1>
+      {booklet.subtitle && <p className="font-body text-mutedgray mb-4">{booklet.subtitle}</p>}
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold/10 text-gold rounded-full font-ui text-[10px] font-black uppercase tracking-widest mb-8">
+        <Crown className="w-3 h-3" /> Pro &amp; Max Only
+      </div>
+
+      <div className="bg-burgundy/5 border border-burgundy/15 rounded-2xl p-6 mb-8 text-left">
+        <p className="font-ui font-bold text-sm text-ink mb-3">What you get with Pro / Max:</p>
+        <ul className="space-y-2 text-sm font-body text-ink/70">
+          <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500 shrink-0" /> Access to all premium MCQ booklets</li>
+          <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500 shrink-0" /> Case Law Finder searches every month</li>
+          <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500 shrink-0" /> Daily legal news, digests &amp; insights — unlimited</li>
+        </ul>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <Link
+          to="/subscription"
+          className="w-full min-h-[48px] flex items-center justify-center gap-2 bg-gradient-to-r from-burgundy to-burgundy/80 text-parchment rounded-xl font-ui font-bold text-sm hover:shadow-lg hover:shadow-burgundy/25 transition-all"
+        >
+          <Crown className="w-4 h-4 text-gold" /> Subscribe — From ₹499/mo
+        </Link>
+        {!currentUser && (
+          <Link
+            to="/login"
+            className="w-full min-h-[48px] flex items-center justify-center border border-ink/15 rounded-xl font-ui text-sm text-mutedgray hover:text-ink hover:border-ink/30 transition-all"
+          >
+            Already subscribed? Sign In
+          </Link>
+        )}
+        <Link
+          to="/mock-tests"
+          className="w-full min-h-[44px] flex items-center justify-center rounded-xl font-ui text-sm text-mutedgray hover:text-ink transition-colors"
+        >
+          ← Back to All Booklets
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function MCQQuiz() {
   const { bookletId } = useParams<{ bookletId: string }>();
+  const { currentUser, isPro, isMax } = useAuth();
 
   // ─── Data Unification & Mapping ───────────────────────────────────────────
   // Map the mockTests from notes.ts (Mastery Path) to the MCQQuiz format
@@ -763,13 +820,17 @@ export default function MCQQuiz() {
         <AnimatePresence mode="wait">
           {phase === 'start' && (
             <motion.div key="start" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <StartScreen
-                booklet={booklet}
-                onStart={handleStart}
-                isNoteMCQ={isNoteMCQ}
-                difficultyFilter={difficultyFilter}
-                onDifficultyChange={d => { setDifficultyFilter(d); setCurrentIdx(0); setAnswers({}); }}
-              />
+              {(booklet?.isPremium === true) && !(isPro || isMax) ? (
+                <BookletLockedScreen booklet={booklet} currentUser={currentUser} />
+              ) : (
+                <StartScreen
+                  booklet={booklet}
+                  onStart={handleStart}
+                  isNoteMCQ={isNoteMCQ}
+                  difficultyFilter={difficultyFilter}
+                  onDifficultyChange={d => { setDifficultyFilter(d); setCurrentIdx(0); setAnswers({}); }}
+                />
+              )}
             </motion.div>
           )}
 

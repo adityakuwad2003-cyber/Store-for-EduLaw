@@ -262,7 +262,6 @@ export default function LegalNewsArticle() {
             </Link>
           </div>
 
-          </div>
         </motion.div>
       </article>
     </div>

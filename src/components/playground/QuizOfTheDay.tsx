@@ -245,6 +245,7 @@ export function QuizOfTheDay() {
             </button>
           </motion.div>
         )}
+      </div>
     </div>
   );
 }

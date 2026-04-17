@@ -8,12 +8,22 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
+
+export interface UserSubscription {
+  planId: string;   // 'pro' | 'max' | any legacy value
+  status: 'active' | 'expired' | 'none';
+  expiresAt?: string;
+}
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
+  subscription: UserSubscription | null;
+  isSubscribed: boolean;        // true if subscription.status === 'active'
+  isPro: boolean;               // planId === 'pro' && active
+  isMax: boolean;               // planId === 'max' && active
   signInWithGoogle: () => Promise<void>;
   loginWithEmail: (e: string, p: string) => Promise<void>;
   signupWithEmail: (e: string, p: string) => Promise<void>;
@@ -40,18 +50,15 @@ async function upsertUserDoc(user: User) {
         displayName: user.displayName || "",
         photoURL: user.photoURL || "",
         lastLoginAt: serverTimestamp(),
-        // createdAt is only written on first document creation via merge
       },
       { merge: true }
     );
-    // Only set createdAt if the document is brand new (won't overwrite existing)
     await setDoc(
       doc(db, "users", user.uid),
       { createdAt: serverTimestamp() },
       { merge: true }
     );
   } catch (err) {
-    // Non-fatal — app works fine even if this Firestore write fails
     console.warn("Could not upsert user doc:", err);
   }
 }
@@ -59,21 +66,47 @@ async function upsertUserDoc(user: User) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
 
+  // Auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);
-      // Create/update Firestore record whenever auth state resolves to a real user
       if (user) upsertUserDoc(user);
+      else setSubscription(null);
     });
-    return unsubscribe;
+    return unsubscribeAuth;
   }, []);
+
+  // Subscription listener — real-time Firestore watch on users/{uid}
+  useEffect(() => {
+    if (!currentUser) { setSubscription(null); return; }
+    const unsubDoc = onSnapshot(
+      doc(db, "users", currentUser.uid),
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        const sub = data?.subscription ?? null;
+        if (sub && typeof sub === "object") {
+          setSubscription(sub as UserSubscription);
+        } else {
+          setSubscription(null);
+        }
+      },
+      () => setSubscription(null) // silently handle permission errors
+    );
+    return unsubDoc;
+  }, [currentUser]);
+
+  const isActive = subscription?.status === "active";
+  const isSubscribed = isActive;
+  const isPro = isActive && subscription?.planId === "pro";
+  const isMax = isActive && subscription?.planId === "max";
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
-    // upsertUserDoc is called by onAuthStateChanged above
   };
 
   const loginWithEmail = async (email: string, pass: string) => {
@@ -91,6 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextType = {
     currentUser,
     loading,
+    subscription,
+    isSubscribed,
+    isPro,
+    isMax,
     signInWithGoogle,
     loginWithEmail,
     signupWithEmail,

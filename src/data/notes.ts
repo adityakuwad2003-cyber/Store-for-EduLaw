@@ -256,76 +256,78 @@ export const bundles: Bundle[] = [
 
 export const subscriptionPlans: SubscriptionPlan[] = [
   {
-    id: "monthly",
-    name: "Monthly",
+    id: "pro",
+    name: "Pro",
     price: 499,
     period: "month",
     features: [
-      "Unlimited in-browser access to all 46 notes",
-      "Download any 5 notes per month (watermarked)",
+      "30 Judgment Finder searches per month",
+      "30 MCQs for each purchased note",
+      "Monthly Judgment Digest",
+      "Daily Legal Newsletter",
+      "Download any 3 notes per month (watermarked)",
       "Early access to new notes",
-      "10% discount on legal services",
       "Priority support",
     ],
-    downloadsPerMonth: 5,
-    serviceDiscount: 10,
+    downloadsPerMonth: 3,
+    serviceDiscount: 0,
   },
   {
-    id: "annual",
-    name: "Annual",
-    price: 3999,
-    period: "year",
-    monthlyEquivalent: 333,
-    savings: 1989,
-    badge: "Save 33%",
+    id: "max",
+    name: "Max",
+    price: 999,
+    period: "month",
+    badge: "Best Value",
     features: [
-      "Everything in Monthly",
-      "Download any 8 notes per month",
-      "20% discount on legal services",
-      "Free legal consultation (1/quarter)",
-      "Dedicated account manager",
+      "50 Judgment Finder searches per day",
+      "Unlimited MCQs for each purchased note",
+      "Monthly Judgment Digest",
+      "Daily Legal Newsletter",
+      "Download any 5 notes per month (watermarked)",
+      "Early access to new notes & features",
+      "Priority support + dedicated account manager",
     ],
-    downloadsPerMonth: 8,
-    serviceDiscount: 20,
+    downloadsPerMonth: 5,
+    serviceDiscount: 0,
   }
 ];
 
 export const legalServices: LegalService[] = [
-  { 
-    id: "drafting", 
-    name: "Document Drafting", 
-    price: "₹999+", 
-    icon: "FileText", 
-    description: "Agreements, MOUs, contracts, affidavits drafted by qualified lawyers",
-    features: ["Custom drafted documents", "2 revision rounds", "48-hour delivery", "Legal review included"],
+  {
+    id: "consultation",
+    name: "Legal Consultation",
+    price: "From ₹399",
+    icon: "MessageCircle",
+    description: "30-min video call with a qualified advocate — any legal matter. Senior advocate ₹799. HC/SC specialist ₹1,499.",
+    features: ["30-min video call", "Actionable legal roadmap", "Written post-call summary", "Pro/Max: 1-2 free calls/month"],
+    turnaroundTime: "Same day"
+  },
+  {
+    id: "notice",
+    name: "Legal Notice",
+    price: "From ₹799",
+    icon: "Scale",
+    description: "Demand notices, consumer complaints, cheque-bounce. Drafted on Advocate Letterhead. 24h urgency +₹500.",
+    features: ["Expert drafted on Letterhead", "Sent via Registered Post", "1 free revision", "48h standard · 24h urgent"],
     turnaroundTime: "48 hours"
   },
-  { 
-    id: "notice", 
-    name: "Legal Notice", 
-    price: "₹1,499+", 
-    icon: "Scale", 
-    description: "Demand notices, cease & desist, property disputes",
-    features: ["Expert drafted notice", "Legal strategy advice", "Response handling", "Court filing support"],
-    turnaroundTime: "24 hours"
+  {
+    id: "review",
+    name: "Contract Review",
+    price: "From ₹999",
+    icon: "Search",
+    description: "Line-by-line contract analysis with red-flags and suggested edits. Up to 10 pages at base price.",
+    features: ["Clause-by-clause analysis", "Redlining & suggested edits", "15-min explainer call", "10-30 pages: ₹1,999"],
+    turnaroundTime: "48 hours"
   },
-  { 
-    id: "review", 
-    name: "Contract Review", 
-    price: "₹1,999+", 
-    icon: "Search", 
-    description: "Line-by-line contract analysis with risk flagging",
-    features: ["Comprehensive analysis", "Risk identification", "Amendment suggestions", "Negotiation tips"],
-    turnaroundTime: "72 hours"
-  },
-  { 
-    id: "consultation", 
-    name: "Legal Consultation", 
-    price: "₹599/30 min", 
-    icon: "MessageCircle", 
-    description: "Video call with advocate — any legal matter",
-    features: ["Expert advocate", "Video consultation", "Written summary", "Follow-up questions"],
-    turnaroundTime: "Same day"
+  {
+    id: "drafting",
+    name: "Document Drafting",
+    price: "From ₹499",
+    icon: "FileText",
+    description: "Standard templates from ₹499. Custom agreements from ₹1,499. Complex multi-party docs from ₹2,499.",
+    features: ["Fixed quote before payment", "Standard templates ₹499+", "Custom drafting ₹1,499+", "Multiple revisions included"],
+    turnaroundTime: "2-4 days"
   },
 ];
 

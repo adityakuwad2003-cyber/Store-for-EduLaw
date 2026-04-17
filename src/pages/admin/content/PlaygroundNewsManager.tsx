@@ -1,15 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Newspaper, Trash2, Save, RefreshCw,
-  Scale, Gavel, ChevronDown, ChevronUp, X, Database,
+  Newspaper, Save, RefreshCw,
+  Scale, Gavel, ChevronDown, ChevronUp, X, Database, Filter,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   collection, query, where,
-  getDocs, doc, updateDoc, deleteDoc, serverTimestamp, addDoc,
+  getDocs, doc, updateDoc, serverTimestamp, addDoc,
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
-import { ConfirmModal } from '../../../components/admin/ConfirmModal';
 import { SAMPLE_NEWS } from '@/data/sampleNews';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -35,20 +34,22 @@ const CATEGORIES = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function PlaygroundNewsManager() {
-  const [items, setItems]         = useState<NewsItem[]>([]);
-  const [loading, setLoading]     = useState(false);
-  const [syncing, setSyncing]     = useState(false);
+  const [items, setItems]           = useState<NewsItem[]>([]);
+  const [loading, setLoading]       = useState(false);
+  const [syncing, setSyncing]       = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editing, setEditing]     = useState<Partial<NewsItem> | null>(null);
-  const [saving, setSaving]       = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<NewsItem | null>(null);
-  const [dateFilter, setDateFilter] = useState<string>('');
+  const [editing, setEditing]       = useState<Partial<NewsItem> | null>(null);
+  const [saving, setSaving]         = useState(false);
+
+  // ── Archive filters ───────────────────────────────────────────────────────
+  const [dateFilter, setDateFilter]         = useState<string>('');   // '' = all dates
+  const [courtFilter, setCourtFilter]       = useState<string>('');   // '' = all courts
+  const [categoryFilter, setCategoryFilter] = useState<string>('');   // '' = all categories
+  const [showFilters, setShowFilters]       = useState(false);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      // Simple where-only query (no composite index required);
-      // sort client-side to avoid Firestore index errors.
       const q = query(
         collection(db, 'playground_content'),
         where('contentType', '==', 'daily_news'),
@@ -62,7 +63,7 @@ export default function PlaygroundNewsManager() {
         return tb - ta;
       });
       setItems(all);
-      // Default to most recent date
+      // Default to most recent date on first load
       if (all.length > 0 && !dateFilter) {
         const latest = all.reduce((a, b) => (a.dateString > b.dateString ? a : b)).dateString;
         setDateFilter(latest);
@@ -73,12 +74,33 @@ export default function PlaygroundNewsManager() {
     } finally {
       setLoading(false);
     }
-  }, [dateFilter]); // eslint-disable-line
+  }, []); // eslint-disable-line
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
-  const availableDates = [...new Set(items.map(i => i.dateString))].sort((a, b) => b.localeCompare(a));
-  const displayed = dateFilter ? items.filter(i => i.dateString === dateFilter) : items;
+  // ── Derived data ──────────────────────────────────────────────────────────
+  const availableDates = useMemo(
+    () => [...new Set(items.map(i => i.dateString))].sort((a, b) => b.localeCompare(a)),
+    [items],
+  );
+
+  const displayed = useMemo(() => items.filter(i => {
+    if (dateFilter     && i.dateString !== dateFilter)     return false;
+    if (courtFilter    && i.court      !== courtFilter)    return false;
+    if (categoryFilter && i.category   !== categoryFilter) return false;
+    return true;
+  }), [items, dateFilter, courtFilter, categoryFilter]);
+
+  const archiveStats = useMemo(() => ({
+    total: items.length,
+    sc:    items.filter(i => i.court === 'Supreme Court').length,
+    hc:    items.filter(i => i.court === 'High Court').length,
+    tr:    items.filter(i => i.court === 'Tribunal').length,
+    ca:    items.filter(i => i.court === 'Current Affairs').length,
+    days:  availableDates.length,
+  }), [items, availableDates]);
+
+  const activeFilters = [dateFilter, courtFilter, categoryFilter].filter(Boolean).length;
 
   // ── Trigger cron sync ─────────────────────────────────────────────────────
   const handleSync = async () => {
@@ -93,9 +115,7 @@ export default function PlaygroundNewsManager() {
         const detail = bd
           ? `SC:${bd.sc ?? 0} HC:${bd.hc ?? 0} Trib:${bd.tr ?? 0} CA:${bd.ca ?? 0}`
           : '';
-        toast.success(`Synced ${data.legalNews ?? 0} items${detail ? ' — ' + detail : ''}${
-          data.pruned ? ` (oldest ${data.pruned} pruned)` : ''
-        }`);
+        toast.success(`Synced ${data.legalNews ?? 0} items${detail ? ' — ' + detail : ''}`);
         await fetchItems();
       }
     } catch {
@@ -107,13 +127,11 @@ export default function PlaygroundNewsManager() {
 
   const handleSeed = async () => {
     if (!window.confirm(`Are you sure you want to seed ${SAMPLE_NEWS.length} high-quality news samples into Firestore?`)) return;
-    
     setSyncing(true);
     try {
       const collectionRef = collection(db, 'playground_content');
       const today = new Date().toISOString().split('T')[0];
       let seededCount = 0;
-
       for (const item of SAMPLE_NEWS) {
         await addDoc(collectionRef, {
           ...item,
@@ -125,7 +143,6 @@ export default function PlaygroundNewsManager() {
         });
         seededCount++;
       }
-
       toast.success(`Success! Seeded ${seededCount} legal news items.`);
       await fetchItems();
     } catch (error) {
@@ -150,10 +167,10 @@ export default function PlaygroundNewsManager() {
     try {
       const ref = doc(db, 'playground_content', editing.id);
       await updateDoc(ref, {
-        title:    editing.title    ?? '',
-        court:    editing.court    ?? 'Supreme Court',
-        summary:  editing.summary  ?? '',
-        category: editing.category ?? 'General',
+        title:     editing.title    ?? '',
+        court:     editing.court    ?? 'Supreme Court',
+        summary:   editing.summary  ?? '',
+        category:  editing.category ?? 'General',
         updatedAt: serverTimestamp(),
       });
       setItems(prev => prev.map(i => i.id === editing.id ? { ...i, ...editing } as NewsItem : i));
@@ -163,20 +180,6 @@ export default function PlaygroundNewsManager() {
       toast.error('Failed to save changes');
     } finally {
       setSaving(false);
-    }
-  };
-
-  // ── Delete ────────────────────────────────────────────────────────────────
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await deleteDoc(doc(db, 'playground_content', deleteTarget.id));
-      setItems(prev => prev.filter(i => i.id !== deleteTarget.id));
-      toast.success('Item deleted');
-    } catch {
-      toast.error('Failed to delete');
-    } finally {
-      setDeleteTarget(null);
     }
   };
 
@@ -190,8 +193,10 @@ export default function PlaygroundNewsManager() {
             <Newspaper className="w-5 h-5 text-red-500" />
           </div>
           <div>
-            <h1 className="text-xl font-display text-slate-900">Live Legal News</h1>
-            <p className="text-xs text-slate-400 font-ui">{items.length} items across {availableDates.length} day(s)</p>
+            <h1 className="text-xl font-display text-slate-900">Live Legal News Archive</h1>
+            <p className="text-xs text-slate-400 font-ui">
+              {archiveStats.total} articles across {archiveStats.days} day(s) — articles are never deleted
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -214,10 +219,64 @@ export default function PlaygroundNewsManager() {
         </div>
       </div>
 
-      {/* Date filter */}
-      {availableDates.length > 1 && (
+      {/* Archive stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {([
+          { label: 'Total',          value: archiveStats.total, colour: 'text-slate-900'  },
+          { label: 'Supreme Court',  value: archiveStats.sc,    colour: 'text-burgundy'   },
+          { label: 'High Courts',    value: archiveStats.hc,    colour: 'text-teal-600'   },
+          { label: 'Tribunals',      value: archiveStats.tr,    colour: 'text-purple-600' },
+          { label: 'Current Affairs',value: archiveStats.ca,    colour: 'text-blue-600'   },
+        ]).map(ct => (
+          <div key={ct.label} className="bg-white border border-slate-100 rounded-xl p-4 text-center">
+            <p className={`text-2xl font-display ${ct.colour}`}>{ct.value}</p>
+            <p className="text-xs font-ui text-slate-400 mt-0.5">{ct.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter bar */}
+      <div className="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <span className="text-sm font-ui font-semibold text-slate-700">Archive Filters</span>
+            {activeFilters > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-burgundy text-white text-[10px] font-black">
+                {activeFilters} active
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {activeFilters > 0 && (
+              <button
+                onClick={() => { setDateFilter(''); setCourtFilter(''); setCategoryFilter(''); }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-xs font-ui font-semibold hover:bg-slate-200 transition-colors"
+              >
+                <X className="w-3 h-3" /> Clear all
+              </button>
+            )}
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-xs font-ui font-semibold hover:bg-slate-200 transition-colors"
+            >
+              {showFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {showFilters ? 'Hide' : 'Expand'}
+            </button>
+          </div>
+        </div>
+
+        {/* Date pills (always shown) */}
         <div className="flex gap-2 flex-wrap">
-          {availableDates.map(d => (
+          <button
+            onClick={() => setDateFilter('')}
+            className={`px-3 py-1 rounded-lg text-xs font-ui font-bold transition-colors ${
+              !dateFilter ? 'bg-burgundy text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+          >
+            All Dates
+          </button>
+          {availableDates.slice(0, showFilters ? undefined : 7).map(d => (
             <button
               key={d}
               onClick={() => setDateFilter(d)}
@@ -230,28 +289,47 @@ export default function PlaygroundNewsManager() {
               {d}
             </button>
           ))}
+          {!showFilters && availableDates.length > 7 && (
+            <button
+              onClick={() => setShowFilters(true)}
+              className="px-3 py-1 rounded-lg text-xs font-ui font-bold text-slate-400 bg-slate-50 hover:bg-slate-100 transition-colors"
+            >
+              +{availableDates.length - 7} more
+            </button>
+          )}
         </div>
-      )}
 
-      {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {([
-          { key: 'all',             label: 'Total',          colour: 'text-slate-900' },
-          { key: 'Supreme Court',   label: 'Supreme Court',  colour: 'text-burgundy'  },
-          { key: 'High Court',      label: 'High Courts',    colour: 'text-teal-600'  },
-          { key: 'Tribunal',        label: 'Tribunals',      colour: 'text-purple-600'},
-          { key: 'Current Affairs', label: 'Current Affairs',colour: 'text-blue-600'  },
-        ] as const).map(ct => {
-          const count = ct.key === 'all'
-            ? displayed.length
-            : displayed.filter(i => i.court === ct.key).length;
-          return (
-            <div key={ct.key} className="bg-white border border-slate-100 rounded-xl p-4 text-center">
-              <p className={`text-2xl font-display ${ct.colour}`}>{count}</p>
-              <p className="text-xs font-ui text-slate-400 mt-0.5">{ct.label}</p>
+        {/* Court + Category selects (shown when expanded) */}
+        {showFilters && (
+          <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+            <div>
+              <label className="block text-xs font-ui font-semibold text-slate-500 mb-1">Court / Forum</label>
+              <select
+                value={courtFilter}
+                onChange={e => setCourtFilter(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-ui text-slate-700 focus:outline-none focus:border-burgundy"
+              >
+                <option value="">All Courts</option>
+                {COURTS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-          );
-        })}
+            <div>
+              <label className="block text-xs font-ui font-semibold text-slate-500 mb-1">Topic / Category</label>
+              <select
+                value={categoryFilter}
+                onChange={e => setCategoryFilter(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-ui text-slate-700 focus:outline-none focus:border-burgundy"
+              >
+                <option value="">All Topics</option>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
+        <p className="text-xs font-ui text-slate-400">
+          Showing <strong className="text-slate-700">{displayed.length}</strong> of {items.length} articles
+        </p>
       </div>
 
       {/* List */}
@@ -262,7 +340,19 @@ export default function PlaygroundNewsManager() {
       ) : displayed.length === 0 ? (
         <div className="text-center py-16 space-y-2">
           <Newspaper className="w-8 h-8 text-slate-200 mx-auto" />
-          <p className="text-sm font-ui text-slate-400">No news items. Click "Sync Now" to scrape fresh news.</p>
+          <p className="text-sm font-ui text-slate-400">
+            {items.length === 0
+              ? 'No articles yet. Click "Sync Now" to scrape fresh news.'
+              : 'No articles match the selected filters.'}
+          </p>
+          {activeFilters > 0 && (
+            <button
+              onClick={() => { setDateFilter(''); setCourtFilter(''); setCategoryFilter(''); }}
+              className="text-xs font-ui font-bold text-burgundy hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -280,14 +370,14 @@ export default function PlaygroundNewsManager() {
                 >
                   <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${isSC ? 'bg-burgundy/10' : 'bg-teal-50'}`}>
                     {item.court === 'Supreme Court' ? (
-                    <Scale className="w-4 h-4 text-burgundy" />
-                  ) : item.court === 'High Court' ? (
-                    <Gavel className="w-4 h-4 text-teal-600" />
-                  ) : item.court === 'Tribunal' ? (
-                    <span className="text-[10px] font-black text-purple-600">T</span>
-                  ) : (
-                    <span className="text-[10px] font-black text-blue-600">CA</span>
-                  )}
+                      <Scale className="w-4 h-4 text-burgundy" />
+                    ) : item.court === 'High Court' ? (
+                      <Gavel className="w-4 h-4 text-teal-600" />
+                    ) : item.court === 'Tribunal' ? (
+                      <span className="text-[10px] font-black text-purple-600">T</span>
+                    ) : (
+                      <span className="text-[10px] font-black text-blue-600">CA</span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -304,6 +394,9 @@ export default function PlaygroundNewsManager() {
                       </span>
                       <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
                         {item.category}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-300 bg-slate-50 px-2 py-0.5 rounded-md">
+                        {item.dateString}
                       </span>
                     </div>
                     <p className="text-sm font-ui font-semibold text-slate-800 leading-snug line-clamp-2">{item.title}</p>
@@ -386,13 +479,7 @@ export default function PlaygroundNewsManager() {
                           >
                             Edit
                           </button>
-                          <button
-                            onClick={() => setDeleteTarget(item)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 text-red-500 text-xs font-ui font-semibold hover:bg-red-100 transition-colors"
-                          >
-                            <Trash2 className="w-3 h-3" /> Delete
-                          </button>
-                          <span className="ml-auto text-[10px] font-ui text-slate-400">{item.dateString}</span>
+                          <span className="ml-auto text-[10px] font-ui text-slate-400">{item.source} · {item.dateString}</span>
                         </div>
                       </div>
                     )}
@@ -403,16 +490,6 @@ export default function PlaygroundNewsManager() {
           })}
         </div>
       )}
-
-      {/* Delete confirm */}
-      <ConfirmModal
-        isOpen={!!deleteTarget}
-        title="Delete news item?"
-        message={deleteTarget ? `"${deleteTarget.title}" will be permanently removed from the Live News panel.` : ''}
-        confirmLabel="Delete"
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </div>
   );
 }

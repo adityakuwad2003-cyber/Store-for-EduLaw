@@ -429,7 +429,7 @@ async function handleSaveCoupon(req: any, res: any) {
   try { await verifyAdmin(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
 
   const body = req.body || {};
-  const { id, code, discountType, discountValue, minOrder, maxUses, usesCount, validUntil, applicableTo, isActive, description } = body;
+  const { id, code, discountType, discountValue, maxDiscount, minOrder, maxUses, usesCount, validUntil, applicableTo, isActive, description } = body;
 
   if (!code || discountValue === undefined || discountValue === null) {
     return res.status(400).json({ error: "Code and discountValue are required." });
@@ -439,6 +439,7 @@ async function handleSaveCoupon(req: any, res: any) {
     code: String(code).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 32),
     discountType: discountType === "percent" ? "percent" : "flat",
     discountValue: sanitizeNumber(discountValue),
+    maxDiscount: sanitizeNumber(maxDiscount), // monetary cap for % coupons (0 = no cap)
     minOrder: sanitizeNumber(minOrder),
     maxUses: sanitizeNumber(maxUses),
     validUntil: typeof validUntil === "string" ? validUntil : null,
@@ -551,6 +552,206 @@ async function handleSendCampaign(req: any, res: any) {
   }
 }
 
+// ── list-mcqs: returns MCQ summaries for all notes ───────────────────────────
+async function handleListMcqs(req: any, res: any) {
+  if (req.method !== "GET") return res.status(405).json({ error: "Method Not Allowed" });
+  const ip = getClientIp(req);
+  if (isRateLimited(`list-mcqs:${ip}`, { windowMs: 60_000, maxRequests: 30 }))
+    return res.status(429).json({ error: "Too many requests." });
+  try { await verifyAdmin(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
+
+  const snap = await adminDb.collection("note_mcqs").get();
+  const mcqs = snap.docs.map((doc) => {
+    const d = doc.data();
+    return {
+      noteId: doc.id,
+      noteTitle: d.noteTitle || doc.id,
+      questionCount: Array.isArray(d.questions) ? d.questions.length : 0,
+    };
+  });
+  return res.status(200).json({ mcqs });
+}
+
+// ── get-mcqs: returns full question set for one note ─────────────────────────
+async function handleGetMcqs(req: any, res: any) {
+  if (req.method !== "GET") return res.status(405).json({ error: "Method Not Allowed" });
+  const ip = getClientIp(req);
+  if (isRateLimited(`get-mcqs:${ip}`, { windowMs: 60_000, maxRequests: 60 }))
+    return res.status(429).json({ error: "Too many requests." });
+  try { await verifyAdmin(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
+
+  const { noteId } = req.query;
+  if (!noteId || typeof noteId !== "string" || !/^[\w\-]{1,128}$/.test(noteId))
+    return res.status(400).json({ error: "Invalid noteId." });
+
+  const snap = await adminDb.collection("note_mcqs").doc(noteId).get();
+  if (!snap.exists) return res.status(200).json({ noteId, noteTitle: noteId, questions: [] });
+
+  const d = snap.data()!;
+  return res.status(200).json({
+    noteId,
+    noteTitle: d.noteTitle || noteId,
+    questions: Array.isArray(d.questions) ? d.questions : [],
+  });
+}
+
+// ── save-mcqs: upserts MCQ set for a note ────────────────────────────────────
+async function handleSaveMcqs(req: any, res: any) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
+  const ip = getClientIp(req);
+  if (isRateLimited(`save-mcqs:${ip}`, { windowMs: 60_000, maxRequests: 20 }))
+    return res.status(429).json({ error: "Too many requests." });
+  try { await verifyAdmin(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
+
+  const { noteId, noteTitle, questions } = req.body || {};
+  if (!noteId || typeof noteId !== "string" || !/^[\w\-]{1,128}$/.test(noteId))
+    return res.status(400).json({ error: "Invalid noteId." });
+  if (!Array.isArray(questions))
+    return res.status(400).json({ error: "questions must be an array." });
+
+  // Sanitize each question
+  const sanitizedQuestions = questions.slice(0, 200).map((q: any, i: number) => ({
+    id: sanitize(q.id || String(i), 64),
+    question: sanitize(q.question || "", 2000, true),
+    options: Array.isArray(q.options)
+      ? q.options.slice(0, 4).map((o: unknown) => sanitize(o, 500, true))
+      : ["", "", "", ""],
+    correctIndex: typeof q.correctIndex === "number" && q.correctIndex >= 0 && q.correctIndex <= 3
+      ? q.correctIndex : 0,
+    explanation: sanitize(q.explanation || "", 2000, true),
+    difficulty: ["easy", "medium", "hard"].includes(q.difficulty) ? q.difficulty : "medium",
+  }));
+
+  await adminDb.collection("note_mcqs").doc(noteId).set({
+    noteId,
+    noteTitle: sanitize(noteTitle || noteId, 255),
+    questions: sanitizedQuestions,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: false });
+
+  return res.status(200).json({ success: true, questionCount: sanitizedQuestions.length });
+}
+
+// ── send-notification: sends a push notification as email via Resend ──────────
+async function handleSendNotification(req: any, res: any) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
+  const ip = getClientIp(req);
+  if (isRateLimited(`send-notification:${ip}`, { windowMs: 60_000, maxRequests: 5 }))
+    return res.status(429).json({ error: "Too many requests." });
+  try { await verifyAdmin(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
+
+  const { notificationId } = req.body || {};
+  if (!notificationId || typeof notificationId !== "string")
+    return res.status(400).json({ error: "Missing notificationId." });
+
+  // Fetch notification from Firestore
+  const notifRef = adminDb.collection("push_notifications").doc(notificationId);
+  const notifSnap = await notifRef.get();
+  if (!notifSnap.exists) return res.status(404).json({ error: "Notification not found." });
+
+  const notif = notifSnap.data()!;
+  if (notif.status === "sent") return res.status(400).json({ error: "Already sent." });
+
+  // Collect target audience emails
+  let emails: string[] = [];
+
+  if (notif.target === "all" || !notif.target) {
+    const listResult = await adminAuth.listUsers(1000);
+    emails = listResult.users.filter((u) => u.email).map((u) => u.email!);
+  } else if (notif.target === "premium") {
+    const usersSnap = await adminDb.collection("users").where("subscription.status", "==", "active").get();
+    const premiumUids = new Set(usersSnap.docs.map((d) => d.id));
+    const listResult = await adminAuth.listUsers(1000);
+    emails = listResult.users.filter((u) => u.email && premiumUids.has(u.uid)).map((u) => u.email!);
+  } else if (notif.target === "active_today") {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const listResult = await adminAuth.listUsers(1000);
+    emails = listResult.users
+      .filter((u) => u.email && u.metadata.lastSignInTime && new Date(u.metadata.lastSignInTime) >= since)
+      .map((u) => u.email!);
+  } else if (notif.target === "cart_abandoners") {
+    // Fallback: all users
+    const listResult = await adminAuth.listUsers(1000);
+    emails = listResult.users.filter((u) => u.email).map((u) => u.email!);
+  } else {
+    const listResult = await adminAuth.listUsers(1000);
+    emails = listResult.users.filter((u) => u.email).map((u) => u.email!);
+  }
+
+  emails = Array.from(new Set(emails)).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
+  const deepLinkHtml = notif.deepLink
+    ? `<p style="margin-top:16px"><a href="https://theedulaw.in${notif.deepLink}" style="background:#6B1E2E;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Open in EduLaw →</a></p>`
+    : "";
+
+  const emailHtml = `
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:32px">
+      <img src="https://theedulaw.in/logo.png" alt="EduLaw" style="height:32px;margin-bottom:24px" />
+      <h2 style="color:#1e293b;margin:0 0 8px">${notif.title || "EduLaw Alert"}</h2>
+      <p style="color:#64748b;line-height:1.6">${notif.body || ""}</p>
+      ${deepLinkHtml}
+      <hr style="margin:32px 0;border:none;border-top:1px solid #e2e8f0"/>
+      <p style="color:#94a3b8;font-size:12px">You received this because you're a registered EduLaw user. <a href="https://theedulaw.in" style="color:#C9A84C">Visit EduLaw</a></p>
+    </div>`;
+
+  const resendKey = process.env.RESEND_API_KEY;
+  let totalSent = 0;
+
+  if (!resendKey || emails.length === 0) {
+    // Simulated send
+    await notifRef.update({ status: "sent", sentAt: FieldValue.serverTimestamp(), sentCount: emails.length });
+    return res.status(200).json({ success: true, sentCount: emails.length, simulated: true });
+  }
+
+  const resend = new Resend(resendKey);
+  const BATCH_SIZE = 90;
+  const senderEmail = process.env.VITE_SENDER_EMAIL || "updates@theedulaw.in";
+
+  for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+    const batch = emails.slice(i, i + BATCH_SIZE).map((email) => ({
+      from: `The EduLaw <${senderEmail}>`,
+      to: [email],
+      subject: notif.title || "EduLaw Alert",
+      html: emailHtml,
+    }));
+    const { error } = await resend.batch.send(batch);
+    if (!error) totalSent += batch.length;
+  }
+
+  await notifRef.update({ status: "sent", sentAt: FieldValue.serverTimestamp(), sentCount: totalSent });
+  return res.status(200).json({ success: true, sentCount: totalSent });
+}
+
+// ── audience-count: returns estimated audience size for a target segment ──────
+async function handleAudienceCount(req: any, res: any) {
+  if (req.method !== "GET") return res.status(405).json({ error: "Method Not Allowed" });
+  const ip = getClientIp(req);
+  if (isRateLimited(`audience-count:${ip}`, { windowMs: 60_000, maxRequests: 30 }))
+    return res.status(429).json({ error: "Too many requests." });
+  try { await verifyAdmin(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
+
+  const { target } = req.query;
+
+  if (target === "premium") {
+    const snap = await adminDb.collection("users").where("subscription.status", "==", "active").get();
+    return res.status(200).json({ count: snap.size });
+  }
+
+  if (target === "active_today") {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const listResult = await adminAuth.listUsers(1000);
+    const count = listResult.users.filter(
+      (u) => u.metadata.lastSignInTime && new Date(u.metadata.lastSignInTime) >= since
+    ).length;
+    return res.status(200).json({ count });
+  }
+
+  // Default: all users
+  const listResult = await adminAuth.listUsers(1000);
+  const count = listResult.users.filter((u) => u.email).length;
+  return res.status(200).json({ count });
+}
+
 async function handleSeedPlayground(req: any, res: any) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
   try { await verifyAdmin(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
@@ -560,7 +761,7 @@ async function handleSeedPlayground(req: any, res: any) {
   if (items.length === 0) return res.status(400).json({ error: "No items provided." });
 
   const batch = adminDb.batch();
-  items.forEach((item) => {
+  items.forEach((item: any) => {
     const { id, ...data } = item;
     const ref = id 
       ? adminDb.collection("playground_content").doc(id)
@@ -574,6 +775,67 @@ async function handleSeedPlayground(req: any, res: any) {
   await batch.commit();
 
   return res.status(200).json({ success: true, count: items.length });
+}
+
+// ─── PDF Blast ────────────────────────────────────────────────────────────────
+async function handleSendPdfBlast(req: any, res: any) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
+  const ip = getClientIp(req);
+  if (isRateLimited(`pdf-blast:${ip}`, { windowMs: 60_000, maxRequests: 5 })) return res.status(429).json({ error: "Too many requests." });
+  try { await verifyAdmin(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
+
+  const { subject, message, pdfBase64, pdfFilename } = req.body || {};
+  if (!subject || !pdfBase64 || !pdfFilename) return res.status(400).json({ error: "Missing required fields: subject, pdfBase64, pdfFilename." });
+  if (typeof pdfBase64 !== "string" || pdfBase64.length > 20_000_000) return res.status(400).json({ error: "PDF too large or invalid (max ~15 MB)." });
+
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const senderEmail = process.env.VITE_SENDER_EMAIL || "updates@theedulaw.in";
+  const BATCH_SIZE = 90;
+
+  const usersSnap = await adminDb.collection("users").where("subscription.status", "==", "active").get();
+  const emails: string[] = [];
+  usersSnap.docs.forEach(doc => {
+    const email = doc.data()?.email;
+    if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) emails.push(email);
+  });
+  if (emails.length === 0) return res.status(200).json({ success: true, sentCount: 0, message: "No active subscribers." });
+
+  const safeMessage = (message || "Please find the attached document from EduLaw.").replace(/\n/g, "<br>");
+  const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f7f3ec;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f3ec;padding:32px 16px;"><tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+<tr><td style="background:#1a1209;padding:28px 32px;"><p style="margin:0 0 4px;font-size:11px;color:#c9a84c;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">EduLaw • For Subscribers</p><h1 style="margin:0;font-size:24px;color:#f7f3ec;font-weight:700;">Exclusive Document</h1></td></tr>
+<tr><td style="height:4px;background:linear-gradient(90deg,#c9a84c,#e8c96d);"></td></tr>
+<tr><td style="padding:28px 32px;"><p style="margin:0 0 20px;font-size:15px;color:#3d2b1f;line-height:1.7;">${safeMessage}</p>
+<table cellpadding="0" cellspacing="0" style="background:#f7f3ec;border:1px solid #e0d8cc;border-radius:12px;padding:16px 20px;width:100%;"><tr>
+<td style="width:40px;vertical-align:middle;text-align:center;font-size:20px;">📄</td>
+<td style="padding-left:12px;vertical-align:middle;"><p style="margin:0;font-size:14px;font-weight:700;color:#1a1209;">${pdfFilename}</p><p style="margin:4px 0 0;font-size:12px;color:#9c7b4a;">Attached to this email</p></td>
+</tr></table></td></tr>
+<tr><td style="padding:0 32px 28px;" align="center"><a href="https://store.theedulaw.in/dashboard" style="display:inline-block;background:#6B1E2E;color:#f7f3ec;text-decoration:none;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:700;">Visit Your Dashboard →</a></td></tr>
+<tr><td style="background:#f7f3ec;padding:20px 32px;border-top:1px solid #e8e0d4;"><p style="margin:0;font-size:12px;color:#9c7b4a;text-align:center;line-height:1.6;">Sent exclusively to EduLaw Pro &amp; Max subscribers.<br>© The EduLaw, Pune, Maharashtra<br><a href="https://store.theedulaw.in/subscription" style="color:#6B1E2E;">Manage subscription</a></p></td></tr>
+</table></td></tr></table></body></html>`;
+
+  const cleanBase64 = pdfBase64.includes(",") ? pdfBase64.split(",")[1] : pdfBase64;
+  let sentCount = 0;
+  if (resendApiKey) {
+    const resend = new Resend(resendApiKey);
+    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+      const batch = emails.slice(i, i + BATCH_SIZE).map(email => ({
+        from: `The EduLaw <${senderEmail}>`,
+        to: [email],
+        subject,
+        html,
+        attachments: [{ filename: pdfFilename, content: Buffer.from(cleanBase64, "base64") }],
+      }));
+      await resend.batch.send(batch as any);
+      sentCount += batch.length;
+    }
+  } else {
+    sentCount = emails.length;
+    console.log(`[dry-run] Would send PDF blast to ${sentCount} subscribers`);
+  }
+  await adminDb.collection("cron_logs").add({ type: "pdf_blast", sentAt: new Date(), recipientCount: sentCount, status: "sent", subject, pdfFilename });
+  return res.status(200).json({ success: true, sentCount });
 }
 
 // ─── Main router ──────────────────────────────────────────────────────────────
@@ -602,8 +864,14 @@ export default async function handler(req: any, res: any) {
       case "delete-file":      return await handleDeleteFile(req, res);
       case "delete-product":   return await handleDeleteProduct(req, res);
       case "save-coupon":      return await handleSaveCoupon(req, res);
-      case "send-campaign":    return await handleSendCampaign(req, res);
-      case "seed-playground":  return await handleSeedPlayground(req, res);
+      case "send-campaign":      return await handleSendCampaign(req, res);
+      case "seed-playground":    return await handleSeedPlayground(req, res);
+      case "list-mcqs":          return await handleListMcqs(req, res);
+      case "get-mcqs":           return await handleGetMcqs(req, res);
+      case "save-mcqs":          return await handleSaveMcqs(req, res);
+      case "send-notification":  return await handleSendNotification(req, res);
+      case "audience-count":     return await handleAudienceCount(req, res);
+      case "send-pdf-blast":     return await handleSendPdfBlast(req, res);
       default:
         return res.status(404).json({ error: `Unknown admin route: ${route}` });
     }

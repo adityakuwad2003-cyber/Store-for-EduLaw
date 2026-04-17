@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
   FileText, Scale, Search, MessageCircle, FileEdit, ArrowRight,
   Shield, Check, User, Mail, Phone, ChevronLeft, Loader2, IndianRupee,
   Clock, Zap, Star, ShieldCheck, HelpCircle,
-  CheckCircle2, PlayCircle, Lock
+  CheckCircle2, PlayCircle, Lock, MessageSquare, X,
 } from 'lucide-react';
 import { servicesData, type LegalService } from '../data/servicesData';
 import { SEO } from '../components/SEO';
@@ -14,6 +14,8 @@ import { createRazorpayCheckout } from '../lib/razorpay';
 import { TrustBadges } from '../components/ui/TrustBadges';
 import { Navbar as Header } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
+
+const WHATSAPP_NUMBER = '917028926065';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   MessageCircle, Scale, Search, FileEdit, FileText
@@ -74,10 +76,13 @@ const STEPS = [
 
 export function LegalServices() {
   const { currentUser } = useAuth();
-  
-  const [selectedService, setSelectedService] = useState<LegalService | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+
+  const [selectedService, setSelectedService]   = useState<LegalService | null>(null);
+  const [selectedTierIdx, setSelectedTierIdx]   = useState(0);
+  const [isProcessing, setIsProcessing]         = useState(false);
+  const [isInquiring, setIsInquiring]           = useState(false);
+  const [isSuccess, setIsSuccess]               = useState(false);
+  const [showInquirySuccess, setShowInquirySuccess] = useState(false);
   const [formData, setFormData] = useState({
     name: currentUser?.displayName || '',
     email: currentUser?.email || '',
@@ -85,7 +90,52 @@ export function LegalServices() {
     description: '',
   });
 
-  const goBack = () => setSelectedService(null);
+  // Reset tier selection whenever a new service is chosen
+  useEffect(() => { setSelectedTierIdx(0); }, [selectedService]);
+
+  const currentTier   = selectedService?.tiers[selectedTierIdx];
+  const currentPrice  = currentTier?.price ?? selectedService?.price ?? 0;
+  const isQuoteOnly   = currentTier?.isQuoteOnly ?? selectedService?.paymentType === 'quote';
+
+  const goBack = () => { setSelectedService(null); setIsSuccess(false); };
+
+  // ── WhatsApp Inquiry ─────────────────────────────────────────────────────
+  const handleWhatsAppInquiry = () => {
+    if (!selectedService) return;
+    if (!formData.name || !formData.phone) {
+      toast.error('Please enter your name and phone number first');
+      return;
+    }
+    setIsInquiring(true);
+    const tier = currentTier;
+    const priceText = tier && !tier.isQuoteOnly ? `₹${tier.price}` : 'Quote required';
+    const message = [
+      `*New Legal Service Inquiry — EduLaw*`,
+      ``,
+      `*Service:* ${selectedService.name}`,
+      `*Tier:* ${tier?.label ?? selectedService.shortDescription}`,
+      `*Amount:* ${priceText}`,
+      `*Turnaround:* ${tier?.turnaround ?? selectedService.turnaroundTime}`,
+      ``,
+      `*Client Details*`,
+      `Name: ${formData.name}`,
+      `Phone: ${formData.phone}`,
+      formData.email ? `Email: ${formData.email}` : '',
+      ``,
+      `*Requirement:*`,
+      formData.description || '(No details provided yet)',
+      ``,
+      `_Sent via store.theedulaw.in_`,
+    ].filter(l => l !== null).join('\n');
+
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+
+    setTimeout(() => {
+      setIsInquiring(false);
+      setShowInquirySuccess(true);
+    }, 800);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,12 +149,12 @@ export function LegalServices() {
     setIsProcessing(true);
 
     try {
-      if (selectedService.paymentType === 'instant') {
+      if (!isQuoteOnly && selectedService.paymentType === 'instant') {
         await createRazorpayCheckout({
-          amount: selectedService.price * 100,
+          amount: currentPrice * 100,
           currency: 'INR',
           name: 'The EduLaw Services',
-          description: selectedService.name,
+          description: `${selectedService.name} — ${currentTier?.label ?? ''}`,
           prefill: {
             name: formData.name,
             email: formData.email,
@@ -131,8 +181,9 @@ export function LegalServices() {
       const payload = {
         serviceId: selectedService?.id,
         serviceName: selectedService?.name,
-        pricingType: selectedService?.paymentType,
-        amountPaid: razorpayResponse ? selectedService?.price : 0,
+        serviceTier: currentTier?.label ?? '',
+        pricingType: isQuoteOnly ? 'quote' : selectedService?.paymentType,
+        amountPaid: razorpayResponse ? currentPrice : 0,
         razorpay_payment_id: razorpayResponse?.razorpay_payment_id,
         razorpay_order_id: razorpayResponse?.razorpay_order_id,
         razorpay_signature: razorpayResponse?.razorpay_signature,
@@ -366,9 +417,11 @@ export function LegalServices() {
                       </p>
                       <div className="flex items-center justify-between pt-6 border-t border-slate-50">
                         <div>
-                          <p className="text-[10px] font-ui font-black text-slate-400 uppercase tracking-widest">{service.paymentType === 'instant' ? 'Total Fee' : 'Approximate'}</p>
+                          <p className="text-[10px] font-ui font-black text-slate-400 uppercase tracking-widest">
+                            {service.paymentType === 'instant' ? 'Starting From' : 'Custom Quote'}
+                          </p>
                           <p className="font-display text-lg font-bold text-ink">
-                            {service.paymentType === 'instant' ? `₹${service.price}` : 'Get Quote'}
+                            {service.priceLabel ?? (service.paymentType === 'instant' ? `₹${service.price}` : 'Get Quote')}
                           </p>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all -translate-x-4 group-hover:translate-x-0">
@@ -542,11 +595,24 @@ export function LegalServices() {
                 <p className="font-ui text-xs text-slate-500 mb-8 leading-relaxed">{selectedService.shortDescription}</p>
 
                 <div className="space-y-4 pt-8 border-t border-slate-200">
-                  <div className="flex justify-between items-center">
-                    <span className="font-ui text-xs font-bold text-slate-400 uppercase tracking-widest">Price</span>
-                    <span className="font-display text-xl font-bold text-ink">
-                      {selectedService.paymentType === 'instant' ? `₹${selectedService.price}` : 'Quote'}
+                  <div className="flex justify-between items-start">
+                    <span className="font-ui text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      {isQuoteOnly ? 'Pricing' : 'Selected Tier'}
                     </span>
+                    <div className="text-right ml-4">
+                      {currentTier ? (
+                        <>
+                          <p className={`font-display text-xl font-bold ${isQuoteOnly ? 'text-slate-400' : 'text-ink'}`}>
+                            {isQuoteOnly ? 'Custom Quote' : `₹${currentPrice.toLocaleString('en-IN')}`}
+                          </p>
+                          <p className="font-ui text-[10px] text-slate-400 mt-0.5">{currentTier.turnaround}</p>
+                        </>
+                      ) : (
+                        <span className="font-display text-xl font-bold text-ink">
+                          {selectedService.priceLabel}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex justify-between items-center text-emerald-600">
                     <span className="font-ui text-xs font-bold uppercase tracking-widest">Protection</span>
@@ -620,6 +686,43 @@ export function LegalServices() {
                     </div>
                   </div>
 
+                  {/* Tier Selector */}
+                  {selectedService.tiers.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="block font-ui text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Select Package</label>
+                      <div className="space-y-2">
+                        {selectedService.tiers.map((tier, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setSelectedTierIdx(idx)}
+                            className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left ${
+                              selectedTierIdx === idx
+                                ? 'border-burgundy bg-burgundy/5'
+                                : 'border-slate-100 bg-slate-50 hover:border-slate-200'
+                            }`}
+                          >
+                            <div>
+                              <p className={`font-ui text-sm font-bold ${selectedTierIdx === idx ? 'text-burgundy' : 'text-ink'}`}>
+                                {tier.label}
+                              </p>
+                              <p className="font-ui text-[11px] text-slate-400 mt-0.5">Turnaround: {tier.turnaround}</p>
+                            </div>
+                            <div className="text-right shrink-0 ml-4">
+                              {tier.isQuoteOnly ? (
+                                <span className="font-ui text-xs font-bold text-slate-400">Custom Quote</span>
+                              ) : (
+                                <span className={`font-display text-lg font-bold ${selectedTierIdx === idx ? 'text-burgundy' : 'text-ink'}`}>
+                                  ₹{tier.price.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <label className="block font-ui text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Requirement Brief</label>
                     <textarea
@@ -631,24 +734,39 @@ export function LegalServices() {
                     />
                   </div>
 
-                  <div className="pt-6">
-                    <button
-                      type="submit"
-                      disabled={isProcessing}
-                      className="w-full py-5 bg-burgundy text-white rounded-[1.5rem] font-ui font-black uppercase tracking-[0.15em] text-xs hover:bg-[#5a1926] transition-all flex items-center justify-center gap-3 shadow-2xl shadow-burgundy/30 active:scale-[0.98] disabled:opacity-70 disabled:shadow-none translate-y-0 hover:-translate-y-1"
-                    >
-                      {isProcessing ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Finalizing Secure Checkout...</>
-                      ) : (
-                        selectedService.paymentType === 'instant' 
-                          ? `Pay Securely · ₹${selectedService.price}`
-                          : `Confirm Request for Quotation`
-                      )}
-                    </button>
-                    <div className="mt-8 flex items-center justify-center gap-8 grayscale opacity-40">
-                      <Shield className="w-8 h-8" />
-                      <Zap className="w-8 h-8" />
-                      <IndianRupee className="w-8 h-8" />
+                  <div className="pt-6 space-y-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      {/* WhatsApp Inquiry */}
+                      <button
+                        type="button"
+                        onClick={handleWhatsAppInquiry}
+                        disabled={isInquiring}
+                        className="flex-1 flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[1.5rem] font-ui font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-70"
+                      >
+                        {isInquiring
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+                          : <><MessageSquare className="w-4 h-4" /> Send Inquiry</>
+                        }
+                      </button>
+                      {/* Pay Now */}
+                      <button
+                        type="submit"
+                        disabled={isProcessing || isQuoteOnly}
+                        title={isQuoteOnly ? 'Send an inquiry for a custom quote' : undefined}
+                        className="flex-1 flex items-center justify-center gap-2 py-4 bg-burgundy hover:bg-[#5a1926] text-white rounded-[1.5rem] font-ui font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50 shadow-xl shadow-burgundy/20 disabled:shadow-none"
+                      >
+                        {isProcessing
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
+                          : isQuoteOnly
+                            ? 'Quote Only — Send Inquiry'
+                            : `Pay Securely · ₹${currentPrice.toLocaleString('en-IN')}`
+                        }
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-center gap-6 pt-1 grayscale opacity-30">
+                      <Shield className="w-6 h-6" />
+                      <Zap className="w-6 h-6" />
+                      <IndianRupee className="w-6 h-6" />
                     </div>
                   </div>
                 </form>
@@ -659,6 +777,50 @@ export function LegalServices() {
       )}
 
       <Footer />
+
+      {/* ── Inquiry Success Popup ── */}
+      <AnimatePresence>
+        {showInquirySuccess && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowInquirySuccess(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              transition={{ duration: 0.25 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl text-center relative"
+            >
+              <button
+                onClick={() => setShowInquirySuccess(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 transition-colors text-slate-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-5">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+              </div>
+              <h3 className="font-display text-xl text-ink font-bold mb-2">
+                Request Submitted!
+              </h3>
+              <p className="font-ui text-sm text-slate-500 leading-relaxed mb-6">
+                Your inquiry has been sent to our team on WhatsApp. We'll get back to you within the next <span className="font-bold text-ink">2–3 hours</span>.
+              </p>
+              <button
+                onClick={() => setShowInquirySuccess(false)}
+                className="w-full h-11 bg-ink text-white rounded-xl font-ui text-sm font-bold hover:bg-slate-800 transition-colors"
+              >
+                Done
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

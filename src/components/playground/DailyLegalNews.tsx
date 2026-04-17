@@ -1,14 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Newspaper, RefreshCw, Copy, Check,
-  Bookmark, BookMarked, Scale, Gavel, ExternalLink,
+  Bookmark, BookMarked, Scale, Gavel, ExternalLink, BookOpen,
 } from 'lucide-react';
 import { useDailyLegalNews } from '../../hooks/useDailyLegalNews';
 import type { LegalNewsItem } from '../../hooks/useDailyLegalNews';
 import { useBookmarks } from '../../hooks/useBookmarks';
 import { shareNewsStoryAction } from '../../lib/newsShare';
+import { useAuth } from '../../contexts/AuthContext';
+import { PlaygroundPaywall } from '../ui/PlaygroundPaywall';
 
 // Logic moved to src/lib/newsShare.ts
 
@@ -99,14 +100,10 @@ function SkeletonCard() {
 }
 
 // ─── Individual News Card ─────────────────────────────────────────────────────
-const SUMMARY_COLLAPSE_AT = 200;
-
 function NewsCard({ item }: { item: LegalNewsItem }) {
   const [copied, setCopied]       = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
-  const [expanded, setExpanded]   = useState(false);
   const { toggle, isBookmarked } = useBookmarks();
-  const longSummary = item.summary.length > SUMMARY_COLLAPSE_AT;
 
   const handleCopy = useCallback(() => {
     const text = `${item.title}\n${item.court} · ${item.source}\n\n${item.summary}${item.url !== '#' ? `\n\nRead more: ${item.url}` : ''}`;
@@ -134,6 +131,8 @@ function NewsCard({ item }: { item: LegalNewsItem }) {
 
   const catColor = categoryColors[item.category] ?? 'bg-slate-100 text-slate-600';
   const isBooked = isBookmarked(item.id);
+  // Determine the best link: use item.url if it's a real URL, else fall back to legal-news-feed
+  const articleHref = item.url && item.url !== '#' ? item.url : null;
 
   return (
     <motion.div
@@ -160,30 +159,18 @@ function NewsCard({ item }: { item: LegalNewsItem }) {
         )}
       </div>
 
-      {/* Headline — links to unified news feed */}
-      <Link
-        to="/legal-news-feed"
+      {/* Headline — opens shareable article URL in new tab (one click) */}
+      <a
+        href={`/legal-news/${item.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
         className="font-display text-base text-ink leading-snug group-hover:text-burgundy transition-colors hover:underline decoration-burgundy/30"
       >
         {item.title}
-      </Link>
+      </a>
 
-      {/* Summary */}
-      <div className="flex-1">
-        <p className="font-body text-sm text-ink/70 leading-relaxed">
-          {longSummary && !expanded
-            ? item.summary.slice(0, SUMMARY_COLLAPSE_AT).trimEnd() + '…'
-            : item.summary}
-        </p>
-        {longSummary && (
-          <button
-            onClick={() => setExpanded(e => !e)}
-            className="mt-1 text-[11px] font-ui font-bold text-burgundy/70 hover:text-burgundy transition-colors"
-          >
-            {expanded ? 'Show less ↑' : 'Read more ↓'}
-          </button>
-        )}
-      </div>
+      {/* Full summary — always shown, no truncation, no extra click needed */}
+      <p className="flex-1 font-body text-sm text-ink/70 leading-relaxed">{item.summary}</p>
 
       {/* Action row */}
       <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-ink/5">
@@ -203,13 +190,27 @@ function NewsCard({ item }: { item: LegalNewsItem }) {
           {shareBusy ? <RefreshCw className="w-3 h-3 animate-spin" /> : <span>📱</span>}
           {shareBusy ? 'Generating…' : 'Story'}
         </button>
-        <Link
-          to="/legal-news-feed"
-          className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-ink/5 hover:bg-ink/5 transition-colors text-[11px] font-ui text-ink/70 hover:text-ink"
+        {/* Full Article — opens in new tab (one click) */}
+        <a
+          href={`/legal-news/${item.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-burgundy/15 bg-burgundy/5 hover:bg-burgundy/10 transition-colors text-[11px] font-ui font-bold text-burgundy"
         >
-          <ExternalLink className="w-3.5 h-3.5" />
-          Full Feed
-        </Link>
+          <BookOpen className="w-3.5 h-3.5" />
+          Full Article
+        </a>
+        {articleHref && (
+          <a
+            href={articleHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-ink/5 hover:bg-ink/5 transition-colors text-[11px] font-ui text-ink/70 hover:text-ink"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Source
+          </a>
+        )}
       </div>
     </motion.div>
   );
@@ -223,6 +224,9 @@ export function DailyLegalNews() {
   const [activeTab, setActiveTab] = useState<Tab>('all');
   const refreshLabel = useNextRefreshLabel();
   useNewsJsonLd(items);
+  const { currentUser: digestCurrentUser, loading: authLoading } = useAuth();
+  const isGated = !authLoading && !digestCurrentUser;
+  const FREE_DIGEST_LIMIT = 5;
 
   const displayed = activeTab === 'all' ? items : activeTab === 'sc' ? sc : hc;
 
@@ -298,9 +302,16 @@ export function DailyLegalNews() {
         <AnimatePresence mode="wait">
           {!loading && !error && displayed.length > 0 && (
             <motion.div key={activeTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-              {displayed.map(item => (
+              {displayed.slice(0, isGated ? FREE_DIGEST_LIMIT : undefined).map(item => (
                 <NewsCard key={item.id} item={item} />
               ))}
+              {isGated && displayed.length > FREE_DIGEST_LIMIT && (
+                <PlaygroundPaywall
+                  section="digest"
+                  itemsShown={FREE_DIGEST_LIMIT}
+                  totalItems={displayed.length}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>

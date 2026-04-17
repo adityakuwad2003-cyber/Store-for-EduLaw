@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, BookOpen, Scale, GraduationCap, Zap, Flame } from 'lucide-react';
+import { ArrowRight, Sparkles, BookOpen, Scale, GraduationCap, Zap, Flame, BarChart2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { HeroSearch } from '@/components/ui/HeroSearch';
 import { 
@@ -10,7 +10,6 @@ import {
   DocumentCard3D,
   LaurelWreath 
 } from '@/components/ui/LegalSVGs';
-import { useUIStore } from '@/store';
 
 const floatingCards = [
   { title: 'BNS Notes', subtitle: 'Criminal Law', delay: 0, icon: Scale },
@@ -20,8 +19,6 @@ const floatingCards = [
 ];
 
 export function HeroSection() {
-  const { setScholarAI } = useUIStore();
-
   return (
     <section className="relative min-h-screen pt-20 lg:pt-24 overflow-hidden">
       {/* Background Pattern */}
@@ -196,12 +193,14 @@ export function HeroSection() {
                 Browse Notes
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link
-                to="/legal-hub"
+              <a
+                href="https://mediakit.theedulaw.in/contact"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3.5 border-2 border-burgundy text-burgundy rounded-xl font-ui font-semibold hover:bg-burgundy hover:text-parchment transition-all"
               >
-                Legal Updates
-              </Link>
+                Collaborate with us
+              </a>
               <Link
                 to="/legal-playground"
                 className="inline-flex items-center gap-2 px-6 py-3.5 border-2 border-teal-600 text-teal-700 rounded-xl font-ui font-semibold hover:bg-teal-600 hover:text-white transition-all"
@@ -210,18 +209,15 @@ export function HeroSection() {
                 Legal Playground
                 <span className="text-[10px] font-black uppercase tracking-widest bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full -mr-1">Free</span>
               </Link>
-              <button
-                onClick={() => setScholarAI(true)}
-                className="group relative inline-flex items-center gap-2 px-6 py-3.5 bg-ink text-white rounded-xl font-ui font-semibold hover:shadow-lg hover:shadow-ink/20 transition-all hover:translate-y-[-2px] overflow-hidden"
+              <a
+                href="https://mediakit.theedulaw.in/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3.5 border-2 border-gold/60 text-gold rounded-xl font-ui font-semibold hover:bg-gold hover:text-ink transition-all"
               >
-                <div className="absolute inset-0 bg-gold/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                <GraduationCap className="w-4 h-4 text-gold" />
-                <span className="relative">AI Scholar Assistant</span>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
-                </span>
-              </button>
+                <BarChart2 className="w-4 h-4" />
+                Our Digital Footprint
+              </a>
             </motion.div>
 
             {/* Trust Indicators */}
