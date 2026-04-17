@@ -78,19 +78,19 @@ export function Navbar() {
         <div className="section-container">
           <nav className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3 shrink-0">
-              <div className="relative w-10 h-10 lg:w-12 lg:h-12">
+            <Link to="/" className="flex items-center gap-3 shrink-0 group">
+              <div className="relative w-10 h-10 lg:w-12 lg:h-12 transition-transform duration-300 group-hover:scale-105">
                 <img 
                   src="/images/edulaw-logo.png" 
                   alt="EduLaw" 
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain mix-blend-multiply filter drop-shadow-[0_0_1px_rgba(0,0,0,0.1)]"
                 />
               </div>
               <div className="flex flex-col hidden sm:flex">
-                <span className="font-display text-xl lg:text-2xl text-ink leading-tight">
+                <span className="font-display font-bold text-xl lg:text-3xl text-ink leading-none tracking-tight">
                   Edu<span className="text-burgundy">Law</span>
                 </span>
-                <span className="text-[10px] text-mutedgray font-ui tracking-wider uppercase">Legal Notes Marketplace</span>
+                <span className="text-[10px] text-mutedgray font-ui font-bold tracking-[0.15em] uppercase mt-0.5">Legal Notes Marketplace</span>
               </div>
             </Link>
 
