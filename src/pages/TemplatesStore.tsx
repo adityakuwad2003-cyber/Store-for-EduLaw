@@ -5,8 +5,9 @@ import {
   File, Eye, ShoppingCart, ChevronRight, Tag, FileSpreadsheet,
   Shield, Clock, Award, Check
 } from 'lucide-react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, addDoc, serverTimestamp, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/hooks/useAuth';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { SEO } from '@/components/SEO';
@@ -24,8 +25,8 @@ interface FirestoreTemplate {
   price: number;
   isFree: boolean;
   language: 'English' | 'Hindi' | 'Both';
-  pdfUrl?: string;
-  docxUrl?: string;
+  pdfKey?: string;
+  docxKey?: string;
   downloadCount: number;
   createdAt: any;
   updatedAt: any;
@@ -34,8 +35,8 @@ interface FirestoreTemplate {
 type DisplayFormat = 'pdf' | 'docx' | 'both';
 
 function deriveFormat(t: FirestoreTemplate): DisplayFormat {
-  if (t.pdfUrl && t.docxUrl) return 'both';
-  if (t.docxUrl) return 'docx';
+  if (t.pdfKey && t.docxKey) return 'both';
+  if (t.docxKey) return 'docx';
   return 'pdf';
 }
 
@@ -56,6 +57,7 @@ export default function TemplatesStore() {
 
   const navigate = useNavigate();
   const { addNote } = useCartStore();
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -72,6 +74,46 @@ export default function TemplatesStore() {
     };
     fetchTemplates();
   }, []);
+
+  const handleClaimFree = async (template: FirestoreTemplate) => {
+    if (!currentUser) {
+      toast.error('Please sign in to claim free templates');
+      navigate('/login');
+      return;
+    }
+    try {
+      // Check if already claimed
+      const existing = await getDocs(
+        query(collection(db, 'purchases'),
+          where('userId', '==', currentUser.uid),
+          where('productId', '==', template.id),
+          limit(1))
+      );
+      if (!existing.empty) {
+        toast.info('Already claimed!', { description: 'Find it in your Dashboard.' });
+        navigate('/dashboard');
+        return;
+      }
+      await addDoc(collection(db, 'purchases'), {
+        userId: currentUser.uid,
+        productId: template.id,
+        title: template.title,
+        price: 0,
+        type: 'template',
+        status: 'success',
+        razorpay_payment_id: 'FREE_CLAIM',
+        purchasedAt: serverTimestamp(),
+      });
+      toast.success('Template claimed!', {
+        description: 'Find it in your Dashboard to download.',
+        action: { label: 'Go to Dashboard', onClick: () => navigate('/dashboard') },
+      });
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Claim failed:', err);
+      toast.error('Could not claim template. Please try again.');
+    }
+  };
 
   const handleAddToCart = (template: FirestoreTemplate) => {
     addNote({ ...template, totalPages: 0, isNew: false } as any);
@@ -331,13 +373,23 @@ export default function TemplatesStore() {
                           >
                             Quick View
                           </button>
-                          <button
-                            onClick={() => handleAddToCart(template)}
-                            className="flex-1 py-3 bg-burgundy text-parchment rounded-xl font-ui font-bold text-xs hover:bg-burgundy-light transition-all flex items-center justify-center gap-2"
-                          >
-                            <ShoppingCart className="w-3.5 h-3.5" />
-                            {template.isFree ? 'Get Free' : 'Add'}
-                          </button>
+                          {template.isFree ? (
+                            <button
+                              onClick={() => handleClaimFree(template)}
+                              className="flex-1 py-3 bg-green-600 text-white rounded-xl font-ui font-bold text-xs hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Get Free
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleAddToCart(template)}
+                              className="flex-1 py-3 bg-burgundy text-parchment rounded-xl font-ui font-bold text-xs hover:bg-burgundy-light transition-all flex items-center justify-center gap-2"
+                            >
+                              <ShoppingCart className="w-3.5 h-3.5" />
+                              Add
+                            </button>
+                          )}
                         </div>
                       </motion.div>
                     );
@@ -424,18 +476,30 @@ export default function TemplatesStore() {
                 </div>
 
                 <div className="sticky bottom-4 left-0 right-0 flex gap-4 pt-4 bg-white">
-                  <button
-                    onClick={() => { if (selectedTemplate) handleAddToCart(selectedTemplate); }}
-                    className="flex-1 py-5 border-2 border-slate-100 text-ink rounded-[2rem] font-ui font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
-                  >
-                    Add to Cart
-                  </button>
-                  <button
-                    onClick={() => { if (selectedTemplate) handleBuyNow(selectedTemplate); }}
-                    className="flex-1 py-5 bg-burgundy text-parchment rounded-[2rem] font-ui font-black text-xs uppercase tracking-widest hover:bg-burgundy-light transition-all shadow-xl shadow-burgundy/20 active:scale-95"
-                  >
-                    Buy Now
-                  </button>
+                  {selectedTemplate?.isFree ? (
+                    <button
+                      onClick={() => { if (selectedTemplate) handleClaimFree(selectedTemplate); setSelectedTemplate(null); }}
+                      className="flex-1 py-5 bg-green-600 text-white rounded-[2rem] font-ui font-black text-xs uppercase tracking-widest hover:bg-green-700 transition-all shadow-xl shadow-green-600/20 active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Claim Free
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { if (selectedTemplate) handleAddToCart(selectedTemplate); }}
+                        className="flex-1 py-5 border-2 border-slate-100 text-ink rounded-[2rem] font-ui font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
+                      >
+                        Add to Cart
+                      </button>
+                      <button
+                        onClick={() => { if (selectedTemplate) handleBuyNow(selectedTemplate); }}
+                        className="flex-1 py-5 bg-burgundy text-parchment rounded-[2rem] font-ui font-black text-xs uppercase tracking-widest hover:bg-burgundy-light transition-all shadow-xl shadow-burgundy/20 active:scale-95"
+                      >
+                        Buy Now
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

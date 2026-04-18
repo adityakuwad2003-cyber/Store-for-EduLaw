@@ -86,8 +86,9 @@ export default async function handler(req: any, res: any) {
   const { fileName: rawFileName, productId, subscriptionDownload } = req.body || {};
 
   const fileName = cleanFilePath(typeof rawFileName === "string" ? rawFileName : "");
-  if (!isSafeFilePath(fileName)) {
-    return res.status(400).json({ error: "Invalid fileName. Must be a path like: notes/subject/file.pdf" });
+  const isTemplate = /^templates\/[\w\-]{1,200}\.(pdf|docx)$/.test(fileName) && !fileName.includes("..");
+  if (!isSafeFilePath(fileName) && !isTemplate) {
+    return res.status(400).json({ error: "Invalid fileName. Must be a path like: notes/subject/file.pdf or templates/slug.docx" });
   }
 
   if (!isSafeId(productId)) {

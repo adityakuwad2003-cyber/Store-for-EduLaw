@@ -6,6 +6,7 @@ import { setCorsHeaders, verifyBearerToken, isRateLimited, getClientIp } from ".
  * /api/purchases
  * GET:  Returns authenticated user's purchases + invoice data.
  * POST: Saves a new purchase record and auto-creates a GST invoice.
+ *       Also handles action="ping-google", action="verify-coupon", action="subscribe".
  */
 
 // ── GST helpers (intrastate, prices inclusive of 18%) ─────────────────────────
@@ -55,11 +56,129 @@ async function getNextInvoiceNumber(): Promise<string> {
   return `EL-${fy}-${String(num).padStart(6, "0")}`;
 }
 
+// ── ping-google sub-handler ──────────────────────────────────────────────────
+async function handlePingGoogle(res: any) {
+  const SITEMAP_URL = 'https://www.store.theedulaw.in/sitemap.xml';
+  try {
+    const googlePing = await fetch(
+      `https://www.google.com/ping?sitemap=${encodeURIComponent(SITEMAP_URL)}`,
+      { method: 'GET' }
+    );
+    const bingPing = await fetch(
+      `https://www.bing.com/ping?sitemap=${encodeURIComponent(SITEMAP_URL)}`,
+      { method: 'GET' }
+    ).catch(() => null);
+    return res.status(200).json({ success: true, google: googlePing.status, bing: bingPing?.status ?? 'skipped' });
+  } catch (err: any) {
+    console.error('Google ping failed:', err?.message);
+    return res.status(200).json({ success: false, error: err?.message });
+  }
+}
+
+// ── verify-coupon sub-handler ────────────────────────────────────────────────
+async function handleVerifyCoupon(req: any, res: any, body: any) {
+  const { code, subtotal, userId } = body;
+  if (!code || typeof code !== "string") {
+    return res.status(400).json({ valid: false, message: "Invalid coupon code." });
+  }
+  const sub = Number(subtotal) || 0;
+  try {
+    const snap = await adminDb.collection("coupons").where("code", "==", code.toUpperCase().trim()).limit(1).get();
+    if (snap.empty) return res.status(200).json({ valid: false, message: "Invalid promo code" });
+    const doc = snap.docs[0];
+    const c = doc.data();
+    if (!c.isActive) return res.status(200).json({ valid: false, message: "This coupon has been deactivated" });
+    if (c.validUntil) {
+      const expiry = new Date(c.validUntil);
+      if (expiry < new Date()) return res.status(200).json({ valid: false, message: "This coupon has expired" });
+    }
+    if (c.maxUses > 0 && (c.usesCount || 0) >= c.maxUses) {
+      return res.status(200).json({ valid: false, message: "Usage limit reached for this code" });
+    }
+    if (sub < (c.minOrder || 0)) {
+      return res.status(200).json({ valid: false, message: `Min. order of ₹${c.minOrder} required for this discount` });
+    }
+    if (userId && typeof userId === "string") {
+      const used = await adminDb.collection("purchases")
+        .where("userId", "==", userId).where("couponCode", "==", code.toUpperCase().trim()).limit(1).get();
+      if (!used.empty) return res.status(200).json({ valid: false, message: "You have already used this coupon" });
+    }
+    let discount = 0;
+    if (c.discountType === "percent") {
+      discount = Math.round(sub * (c.discountValue / 100));
+      if (c.maxDiscount && c.maxDiscount > 0) discount = Math.min(discount, c.maxDiscount);
+    } else {
+      discount = c.discountValue;
+    }
+    return res.status(200).json({ valid: true, discount, couponId: doc.id });
+  } catch (error) {
+    console.error("Coupon verification error:", error);
+    return res.status(500).json({ valid: false, message: "Verification service error" });
+  }
+}
+
+// ── subscribe sub-handler ────────────────────────────────────────────────────
+const PLAN_PRICES: Record<string, number> = { pro: 499, max: 999 };
+
+async function handleSubscribe(req: any, res: any, body: any, uid: string) {
+  const { planId, razorpay_payment_id, buyerName, buyerEmail } = body;
+  if (!planId || !PLAN_PRICES[planId]) return res.status(400).json({ error: "Invalid planId. Must be 'pro' or 'max'." });
+  if (!razorpay_payment_id || typeof razorpay_payment_id !== "string") return res.status(400).json({ error: "Missing razorpay_payment_id." });
+  const existingSnap = await adminDb.collection("purchases").where("razorpay_payment_id", "==", razorpay_payment_id).limit(1).get();
+  if (!existingSnap.empty) return res.status(200).json({ success: true, message: "Already activated." });
+  const now = new Date();
+  const expiresAt = new Date(now);
+  expiresAt.setDate(expiresAt.getDate() + 30);
+  try {
+    await adminDb.collection("users").doc(uid).set({
+      subscription: { planId, status: "active", expiresAt: expiresAt.toISOString(), activatedAt: now.toISOString(), razorpay_payment_id },
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await adminDb.collection("purchases").add({
+      userId: uid, type: "subscription", planId,
+      title: `EduLaw ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan — 30 days`,
+      price: PLAN_PRICES[planId], razorpay_payment_id,
+      buyerName: buyerName || "", buyerEmail: buyerEmail || "",
+      purchasedAt: now, status: "success", expiresAt: expiresAt.toISOString(),
+    });
+    return res.status(200).json({ success: true, expiresAt: expiresAt.toISOString() });
+  } catch (err) {
+    console.error("subscribe handler error:", err);
+    return res.status(500).json({ error: "Failed to activate subscription." });
+  }
+}
+
 export default async function handler(req: any, res: any) {
   const origin = req.headers.origin || "";
   setCorsHeaders(res, origin, "GET, POST, OPTIONS");
 
   if (req.method === "OPTIONS") return res.status(204).end();
+
+  // ── Action dispatch (some actions don't require auth) ────────────────────
+  if (req.method === "POST") {
+    const postBody = req.body || {};
+    const { action } = postBody;
+
+    if (action === "ping-google") return handlePingGoogle(res);
+
+    if (action === "verify-coupon") {
+      const vcIp = getClientIp(req);
+      if (isRateLimited(`verify-coupon:${vcIp}`, { windowMs: 60_000, maxRequests: 20 })) {
+        return res.status(429).json({ valid: false, message: "Too many attempts. Please wait." });
+      }
+      return handleVerifyCoupon(req, res, postBody);
+    }
+
+    if (action === "subscribe") {
+      const subIp = getClientIp(req);
+      if (isRateLimited(`subscribe:${subIp}`, { windowMs: 60_000, maxRequests: 20 })) {
+        return res.status(429).json({ error: "Too many requests." });
+      }
+      let subUid: string;
+      try { subUid = await verifyBearerToken(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
+      return handleSubscribe(req, res, postBody, subUid);
+    }
+  }
 
   const ip = getClientIp(req);
   if (isRateLimited(`purchases:${ip}`, { windowMs: 60_000, maxRequests: 60 })) {
@@ -112,8 +231,18 @@ export default async function handler(req: any, res: any) {
       const notesMap = new Map();
       noteDocs.forEach(doc => { if (doc.exists) notesMap.set(doc.id, doc.data()); });
 
-      // For productIds not found in notes, check the bundles collection
-      const unresolvedIds = Array.from(productIds).filter(id => !notesMap.has(id));
+      // Check templates collection for productIds not found in notes
+      const unresolvedAfterNotes = Array.from(productIds).filter(id => !notesMap.has(id));
+      const templatesMap = new Map<string, { pdfUrl?: string; docxUrl?: string }>();
+      if (unresolvedAfterNotes.length > 0) {
+        const templateDocs = await Promise.all(
+          unresolvedAfterNotes.map(id => adminDb.collection("templates").doc(id).get())
+        );
+        templateDocs.forEach(doc => { if (doc.exists) templatesMap.set(doc.id, doc.data() as any); });
+      }
+
+      // For productIds not found in notes or templates, check the bundles collection
+      const unresolvedIds = Array.from(productIds).filter(id => !notesMap.has(id) && !templatesMap.has(id));
       if (unresolvedIds.length > 0) {
         const bundleDocs = await Promise.all(
           unresolvedIds.map(id => adminDb.collection("bundles").doc(id).get())
@@ -161,6 +290,7 @@ export default async function handler(req: any, res: any) {
 
       const purchases = purchasesData.map(data => {
         const noteMapData = notesMap.get(data.productId);
+        const templateMapData = templatesMap.get(data.productId);
         let fileKeys: any[] = [];
         if (noteMapData && Array.isArray(noteMapData.fileKeys) && noteMapData.fileKeys.length > 0) {
           fileKeys = noteMapData.fileKeys;
@@ -183,6 +313,7 @@ export default async function handler(req: any, res: any) {
         }
 
         const inv = invoiceMap.get(data.id);
+        const isTemplate = !!templateMapData;
         return {
           id: data.id,
           productId: data.productId,
@@ -194,6 +325,9 @@ export default async function handler(req: any, res: any) {
           purchasedAt: data.purchasedAt ? data.purchasedAt.toDate().toISOString() : null,
           invoiceNumber: inv?.invoiceNumber || null,
           invoiceId: inv?.invoiceId || null,
+          type: data.type || (isTemplate ? "template" : "note"),
+          pdfKey: isTemplate ? (templateMapData.pdfKey || null) : null,
+          docxKey: isTemplate ? (templateMapData.docxKey || null) : null,
         };
       });
 
@@ -249,7 +383,23 @@ export default async function handler(req: any, res: any) {
           .limit(1)
           .get();
         if (!couponSnap.empty) {
-          await couponSnap.docs[0].ref.update({ usesCount: FieldValue.increment(1) });
+          const couponRef = couponSnap.docs[0].ref;
+          try {
+            await adminDb.runTransaction(async tx => {
+              const freshDoc = await tx.get(couponRef);
+              const couponData = freshDoc.data();
+              if (couponData && couponData.maxUses > 0 && (couponData.usesCount || 0) >= couponData.maxUses) {
+                throw new Error("Coupon limit reached");
+              }
+              tx.update(couponRef, { usesCount: FieldValue.increment(1) });
+            });
+          } catch (couponErr: any) {
+            if (couponErr.message === "Coupon limit reached") {
+              return res.status(400).json({ error: "This coupon has reached its usage limit." });
+            }
+            // Non-fatal: log but don't fail the purchase
+            console.error("Coupon transaction error:", couponErr);
+          }
         }
       }
 

@@ -20,15 +20,34 @@ import type { UsageInfo, UsageReason } from '../hooks/useJudgmentUsage';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MAJOR_ACTS = [
-  { id: 'ipc',   name: 'Indian Penal Code (IPC) 1860',           sections: 511 },
-  { id: 'bns',   name: 'Bharatiya Nyaya Sanhita (BNS) 2023',     sections: 358 },
-  { id: 'crpc',  name: 'CrPC 1973 (Code of Criminal Procedure)', sections: 528 },
-  { id: 'bnss',  name: 'BNSS 2023 (Bharatiya Nagarik Suraksha)', sections: 531 },
-  { id: 'cpc',   name: 'Code of Civil Procedure (CPC) 1908',     sections: 158 },
-  { id: 'iea',   name: 'Indian Evidence Act 1872',                sections: 167 },
-  { id: 'bsa',   name: 'Bharatiya Sakshya Adhiniyam (BSA) 2023', sections: 170 },
-  { id: 'ca',    name: 'Companies Act 2013',                      sections: 470 },
-  { id: 'const', name: 'Constitution of India (Articles)',        sections: 395 },
+  // ── Core Criminal ──────────────────────────────────────────────────────────
+  { id: 'ipc',   name: 'Indian Penal Code (IPC) 1860',              sections: 511 },
+  { id: 'bns',   name: 'Bharatiya Nyaya Sanhita (BNS) 2023',        sections: 358 },
+  { id: 'crpc',  name: 'CrPC 1973 (Code of Criminal Procedure)',    sections: 528 },
+  { id: 'bnss',  name: 'BNSS 2023 (Bharatiya Nagarik Suraksha)',    sections: 531 },
+  // ── Evidence ───────────────────────────────────────────────────────────────
+  { id: 'iea',   name: 'Indian Evidence Act 1872',                   sections: 167 },
+  { id: 'bsa',   name: 'Bharatiya Sakshya Adhiniyam (BSA) 2023',    sections: 170 },
+  // ── Civil & Property ──────────────────────────────────────────────────────
+  { id: 'cpc',   name: 'Code of Civil Procedure (CPC) 1908',        sections: 158 },
+  { id: 'tp',    name: 'Transfer of Property Act 1882',             sections: 137 },
+  { id: 'sra',   name: 'Specific Relief Act 1963',                  sections:  44 },
+  // ── Family ────────────────────────────────────────────────────────────────
+  { id: 'hma',   name: 'Hindu Marriage Act 1955',                    sections:  38 },
+  { id: 'dv',    name: 'Domestic Violence Act (PWDVA) 2005',        sections:  37 },
+  { id: 'pocso', name: 'POCSO Act 2012',                            sections:  46 },
+  // ── Commercial ────────────────────────────────────────────────────────────
+  { id: 'ni',    name: 'Negotiable Instruments Act 1881 (Sec 138)', sections: 147 },
+  { id: 'ca',    name: 'Companies Act 2013',                        sections: 470 },
+  { id: 'arb',   name: 'Arbitration & Conciliation Act 1996',       sections:  86 },
+  // ── Consumer & Digital ────────────────────────────────────────────────────
+  { id: 'cp',    name: 'Consumer Protection Act 2019',              sections: 107 },
+  { id: 'it',    name: 'Information Technology Act 2000',           sections:  94 },
+  { id: 'rti',   name: 'Right to Information Act 2005',             sections:  31 },
+  // ── Motor & Miscellaneous ─────────────────────────────────────────────────
+  { id: 'mv',    name: 'Motor Vehicles Act 1988',                   sections: 217 },
+  // ── Constitutional ────────────────────────────────────────────────────────
+  { id: 'const', name: 'Constitution of India (Articles)',          sections: 395 },
 ];
 
 type SearchMode   = 'section' | 'keyword' | 'citation';
@@ -42,7 +61,11 @@ const COURT_LABELS: Record<CourtFilter, string> = {
 const LAWYER_TYPE: Record<string, string> = {
   ipc: 'Criminal Lawyer', bns: 'Criminal Lawyer', crpc: 'Criminal Lawyer',
   bnss: 'Criminal Lawyer', iea: 'Criminal Lawyer', bsa: 'Criminal Lawyer',
-  cpc: 'Civil Lawyer', ca: 'Corporate Lawyer', const: 'Constitutional Lawyer',
+  cpc: 'Civil Lawyer', tp: 'Civil / Property Lawyer', sra: 'Civil Lawyer',
+  hma: 'Family Lawyer', dv: 'Family Lawyer', pocso: 'Criminal Lawyer',
+  ni: 'Civil / Criminal Lawyer', ca: 'Corporate Lawyer', arb: 'Arbitration Lawyer',
+  cp: 'Consumer Lawyer', it: 'Cyber Lawyer', rti: 'Civil Lawyer',
+  mv: 'Motor Accident Lawyer', const: 'Constitutional Lawyer',
 };
 
 const EXAM_FREQ: Record<string, { label: string; color: string; exams: string }> = {
@@ -55,6 +78,17 @@ const EXAM_FREQ: Record<string, { label: string; color: string; exams: string }>
   bsa:   { label: 'Emerging',  color: 'bg-yellow-500/20 text-yellow-300', exams: 'UPSC J (from 2025)' },
   cpc:   { label: 'High',      color: 'bg-orange-500/20 text-orange-300', exams: 'Munsiff · Civil Judge · HJS' },
   ca:    { label: 'Medium',    color: 'bg-blue-500/20 text-blue-300',     exams: 'Company Secretary · NCLT Bar' },
+  ni:    { label: 'Very High', color: 'bg-red-500/20 text-red-300',       exams: 'UPSC J · Munsiff · HJS' },
+  tp:    { label: 'High',      color: 'bg-orange-500/20 text-orange-300', exams: 'Civil Judge · Munsiff · HJS' },
+  sra:   { label: 'High',      color: 'bg-orange-500/20 text-orange-300', exams: 'Civil Judge · Munsiff' },
+  hma:   { label: 'High',      color: 'bg-orange-500/20 text-orange-300', exams: 'UPSC J · Family Court Judge' },
+  dv:    { label: 'Medium',    color: 'bg-blue-500/20 text-blue-300',     exams: 'UPSC J · APO · HJS' },
+  pocso: { label: 'High',      color: 'bg-orange-500/20 text-orange-300', exams: 'APO · UPSC J · HJS' },
+  arb:   { label: 'Medium',    color: 'bg-blue-500/20 text-blue-300',     exams: 'UPSC J · HJS · Law Officer' },
+  cp:    { label: 'Medium',    color: 'bg-blue-500/20 text-blue-300',     exams: 'Consumer Forum · UPSC J' },
+  it:    { label: 'Emerging',  color: 'bg-yellow-500/20 text-yellow-300', exams: 'Cyber Law Exams · UPSC J' },
+  rti:   { label: 'Medium',    color: 'bg-blue-500/20 text-blue-300',     exams: 'UPSC CSE · State PCS' },
+  mv:    { label: 'High',      color: 'bg-orange-500/20 text-orange-300', exams: 'UPSC J · Motor Accident Tribunal' },
 };
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
@@ -242,8 +276,17 @@ function KnowYourRights({ rights }: { rights: string[] }) {
 }
 
 // ─── § 3 Judicial Intelligence ───────────────────────────────────────────────
-function JudicialIntelligence({ synthesis, fallbackSnippets }: { synthesis: string; fallbackSnippets: string[] }) {
+function JudicialIntelligence({
+  problemSummary, currentPosition, solution, keyPrinciples, synthesis, fallbackSnippets,
+}: {
+  problemSummary: string; currentPosition: string; solution: string;
+  keyPrinciples: string[]; synthesis: string; fallbackSnippets: string[];
+}) {
   const [collapsed, setCollapsed] = useState(false);
+
+  // Has structured AI output?
+  const hasAI = !!(problemSummary || currentPosition || solution || keyPrinciples.length);
+
   return (
     <section>
       <SectionLabel
@@ -252,20 +295,80 @@ function JudicialIntelligence({ synthesis, fallbackSnippets }: { synthesis: stri
         collapsible collapsed={collapsed} onToggle={() => setCollapsed(c => !c)}
       />
       {!collapsed && (
-        <div className="bg-white border border-gold/20 rounded-2xl p-5 shadow-[0_2px_12px_rgba(201,168,76,0.06)]">
-          <div className="border-l-2 border-gold/40 pl-4">
-            {synthesis ? (
-              <p className="font-body text-sm text-ink/80 leading-relaxed text-justify">{synthesis}</p>
-            ) : (
-              <div className="space-y-2">
+        <div className="space-y-3">
+          {hasAI ? (
+            <>
+              {/* ① Problem Summary */}
+              {problemSummary && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-amber-700/70 font-ui mb-2">
+                    ① What This Section Addresses
+                  </p>
+                  <p className="font-body text-sm text-ink/85 leading-relaxed">{problemSummary}</p>
+                </div>
+              )}
+
+              {/* ② Current Legal Position */}
+              {currentPosition && (
+                <div className="bg-white border border-gold/20 rounded-2xl p-5 shadow-[0_2px_12px_rgba(201,168,76,0.06)]">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gold/70 font-ui mb-3">
+                    ② Current Legal Position — How Courts Have Ruled
+                  </p>
+                  <div className="border-l-2 border-gold/40 pl-4">
+                    <p className="font-body text-sm text-ink/80 leading-relaxed text-justify">{currentPosition}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ③ How to Use This / Prospective Solution */}
+              {solution && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/70 font-ui mb-3">
+                    ③ Prospective Solution — How to Use This in Your Case
+                  </p>
+                  <div className="border-l-2 border-emerald-400 pl-4">
+                    <p className="font-body text-sm text-ink/80 leading-relaxed">{solution}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ④ Key Principles */}
+              {keyPrinciples.length > 0 && (
+                <div className="bg-white border border-ink/8 rounded-2xl p-5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-ink/30 font-ui mb-3">
+                    ④ Key Legal Principles Established by Courts
+                  </p>
+                  <div className="space-y-2">
+                    {keyPrinciples.map((p, i) => (
+                      <div key={i} className="flex items-start gap-3 bg-parchment/60 border border-ink/6 rounded-xl p-3">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center text-[10px] font-black text-amber-700">{i + 1}</span>
+                        <p className="font-body text-sm text-ink/80 leading-relaxed">{p}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : synthesis ? (
+            /* Fallback: old single-paragraph synthesis */
+            <div className="bg-white border border-gold/20 rounded-2xl p-5 shadow-[0_2px_12px_rgba(201,168,76,0.06)]">
+              <div className="border-l-2 border-gold/40 pl-4">
+                <p className="font-body text-sm text-ink/80 leading-relaxed text-justify">{synthesis}</p>
+              </div>
+            </div>
+          ) : (
+            /* Last fallback: raw snippets (no AI) */
+            <div className="bg-white border border-ink/8 rounded-2xl p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-ink/30 font-ui mb-3">Matching Fragments from Court Records</p>
+              <div className="space-y-3">
                 {fallbackSnippets.map((s, i) => (
-                  <p key={i} className="font-body text-sm text-ink/70 leading-relaxed">
-                    <span className="text-gold font-black">▸</span> {s}
+                  <p key={i} className="font-body text-sm text-ink/70 leading-relaxed border-l-2 border-ink/10 pl-3">
+                    {s}
                   </p>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </section>
@@ -274,6 +377,7 @@ function JudicialIntelligence({ synthesis, fallbackSnippets }: { synthesis: stri
 
 // ─── § 4 Know Your Judges ────────────────────────────────────────────────────
 function JudgeCard({ judge }: { judge: JudgeProfile }) {
+  const { currentUser }               = useAuth();
   const [expanded, setExpanded]       = useState(false);
   const [loading,  setLoading]        = useState(false);
   const [judgments, setJudgments]     = useState<{ title: string; url: string; snippet: string }[]>([]);
@@ -283,7 +387,12 @@ function JudgeCard({ judge }: { judge: JudgeProfile }) {
     setExpanded(true);
     setLoading(true);
     try {
-      const res = await fetch(`/api/judgment-search?act=const&query=${encodeURIComponent(judge.name.replace('Justice ', ''))}&mode=keyword&court=all`);
+      const token = currentUser ? await currentUser.getIdToken() : '';
+      const res = await fetch(`/api/judgment-search?act=const&query=${encodeURIComponent(judge.name.replace('Justice ', ''))}&mode=keyword&court=all`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setJudgments((data.results ?? []).slice(0, 4).map((r: any) => ({
@@ -422,7 +531,17 @@ function OfficialPrecedents({ results }: { results: JudgmentResult[] }) {
                 <p className="font-ui font-bold text-sm text-ink leading-snug mb-2">{r.title}</p>
                 {/* Full summary */}
                 {r.summary && (
-                  <p className="font-body text-sm text-ink/70 leading-relaxed">{r.summary}</p>
+                  <p className="font-body text-sm text-ink/70 leading-relaxed mb-3">{r.summary}</p>
+                )}
+                {/* Go to Source */}
+                {r.url && (
+                  <a
+                    href={r.url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-burgundy/8 border border-burgundy/15 text-[11px] font-black uppercase tracking-wider text-burgundy hover:bg-burgundy hover:text-white transition-all group"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Read Full Judgment on {r.source}
+                  </a>
                 )}
               </motion.div>
             );
@@ -613,23 +732,90 @@ function NewsNarrative({ newsResults }: { newsResults: NewsResult[] }) {
 }
 
 // ─── § 9 Know Your Lawyer ────────────────────────────────────────────────────
-function KnowYourLawyer({ actId }: { actId: string }) {
+function KnowYourLawyer({
+  actId, query, lawyerResults,
+}: { actId: string; query: string; lawyerResults: LawyerResult[] }) {
   const [collapsed, setCollapsed] = useState(false);
   const lawyerType = LAWYER_TYPE[actId] ?? 'Legal Professional';
 
+  // Determine if this is a criminal/urgent matter
+  const isCriminal = ['ipc', 'bns', 'crpc', 'bnss'].includes(actId);
+  const isConstitutional = actId === 'const';
+  const sectionRef = query.trim() ? `Section ${query.trim()}` : 'this matter';
+  const actNames: Record<string, string> = {
+    ipc: 'IPC', bns: 'BNS', crpc: 'CrPC', bnss: 'BNSS',
+    iea: 'IEA', bsa: 'BSA', cpc: 'CPC', ca: 'Companies Act', const: 'Constitution',
+  };
+  const actLabel = actNames[actId] ?? actId.toUpperCase();
+
+  // Query-specific steps based on act + actual section searched
   const WHAT_TO_EXPECT: Record<string, string[]> = {
-    ipc:   ['A criminal lawyer will review the FIR and advise whether charges are bailable or non-bailable', 'They can file for bail before the Sessions Court or High Court', 'They will represent you at trial and cross-examine prosecution witnesses'],
-    bns:   ['A criminal lawyer familiar with BNS 2023 will identify if the new section applies to your matter', 'They will check whether the transitional provisions protect your existing rights', 'They can challenge incorrect section application before the Magistrate'],
-    crpc:  ['A criminal procedure lawyer can file anticipatory bail if arrest is feared', 'They can challenge illegal detention via habeas corpus', 'They will ensure police follow correct FIR and chargesheet timelines'],
-    bnss:  ['A BNSS-specialist lawyer will verify 60/90 day chargesheet timelines are followed', 'They can file bail applications under the new regime', 'They will identify trial-stage rights under the updated procedure'],
-    iea:   ['An evidence lawyer can challenge admissibility of electronic records under §65B', 'They can cross-examine expert witnesses on forensic evidence', 'They advise on what documents are admissible and how to present them'],
-    bsa:   ['A BSA-specialist will advise on new rules for electronic evidence under §63', 'They can argue admissibility of digital documents before the court', 'They ensure proper certification requirements are followed'],
-    cpc:   ['A civil lawyer will draft your plaint and value the suit correctly', 'They can apply for temporary injunctions and interim relief', 'They manage appeals, revisions, and execution of decrees'],
-    ca:    ['A corporate lawyer can file before the NCLT for insolvency or oppression matters', 'They advise on board resolutions, share transfers, and compliance filings', 'They handle MCA portal filings and statutory audit requirements'],
-    const: ['A constitutional lawyer can file writ petitions in the High Court or Supreme Court', 'They can seek interim stay on executive or legislative action', 'They argue fundamental rights violations before constitutional benches'],
+    ipc: [
+      `Review the FIR and verify whether ${actLabel} ${sectionRef} is correctly applied to your facts`,
+      `Advise if the offence under ${sectionRef} is bailable or non-bailable and apply for bail at the right court`,
+      `Challenge incorrectly framed charges under ${sectionRef} before the Magistrate at the charge-framing stage`,
+    ],
+    bns: [
+      `Check if ${actLabel} ${sectionRef} (2023) or the equivalent old IPC section governs your case under transitional rules`,
+      `File bail applications citing the correct section in the new code`,
+      `Challenge incorrect application of ${sectionRef} before the Magistrate if the IPC version was charged instead`,
+    ],
+    crpc: [
+      `File anticipatory bail under ${actLabel} ${sectionRef} before the Sessions Court if arrest is imminent`,
+      `Challenge unlawful detention or police procedure violations under ${sectionRef} via habeas corpus`,
+      `Ensure the chargesheet and trial timelines specified under ${sectionRef} are being followed`,
+    ],
+    bnss: [
+      `Verify 60/90 day chargesheet timelines under ${actLabel} ${sectionRef} are being respected`,
+      `File bail and remand applications under the updated procedure in ${sectionRef}`,
+      `Identify new rights at the trial stage introduced by ${sectionRef} of the BNSS`,
+    ],
+    iea: [
+      `Challenge admissibility of electronic records and documents under ${actLabel} ${sectionRef}`,
+      `Cross-examine expert witnesses and forensic evidence relied on by the other side`,
+      `Advise which documents can be admitted and in what form under ${sectionRef}`,
+    ],
+    bsa: [
+      `Advise on new electronic evidence rules under ${actLabel} ${sectionRef} including digital certification`,
+      `Challenge or argue admissibility of digital documents and communications under ${sectionRef}`,
+      `Ensure correct certification and authentication requirements under ${sectionRef} are followed`,
+    ],
+    cpc: [
+      `Draft your plaint under ${actLabel} ${sectionRef} with correct valuation and court jurisdiction`,
+      `Apply for an urgent temporary injunction or stay under ${sectionRef} to protect your rights immediately`,
+      `File appeals, revisions, or execute decrees under the procedure in ${sectionRef}`,
+    ],
+    ca: [
+      `File a petition before NCLT invoking ${actLabel} ${sectionRef} for insolvency, oppression, or mismanagement`,
+      `Advise on board-level compliance and statutory filings required under ${sectionRef}`,
+      `Handle MCA portal filings and coordinate with auditors on obligations under ${sectionRef}`,
+    ],
+    const: [
+      `File a writ petition in the High Court or Supreme Court enforcing rights under ${actLabel} ${sectionRef}`,
+      `Seek an urgent interim stay on any executive action or legislation violating ${sectionRef}`,
+      `Argue the constitutional question before a division bench or larger bench if needed`,
+    ],
   };
 
   const steps = WHAT_TO_EXPECT[actId] ?? WHAT_TO_EXPECT['const'];
+
+  // Emergency action steps — what to do RIGHT NOW
+  const emergencySteps = isCriminal ? [
+    { label: 'Call NALSA immediately', detail: 'Dial 15100 — free legal aid 24×7 for arrested persons, SC/ST, women, and income below ₹1 lakh.', urgent: true },
+    { label: 'Go to the nearest District Court', detail: 'Find the District Legal Services Authority (DLSA) on the ground floor. Ask for the duty lawyer — free representation, no paperwork needed.', urgent: true },
+    { label: 'Do not speak to police without a lawyer', detail: `Under Article 22 of the Constitution you have the right to legal counsel. Invoke it. Do not sign anything related to ${sectionRef} without legal advice.`, urgent: true },
+    { label: 'Apply for bail within 24 hours', detail: 'If arrested, your lawyer must file bail before a Magistrate within the first remand hearing. Do not let this window pass.', urgent: false },
+  ] : isConstitutional ? [
+    { label: 'File a writ petition urgently', detail: 'For fundamental rights violations, writ petitions can be filed in the High Court or Supreme Court without waiting. Seek urgent mentioning for interim relief.', urgent: true },
+    { label: 'Call NALSA 15100', detail: 'Free legal aid available for constitutional matters too, especially for economically weaker sections.', urgent: true },
+    { label: 'Preserve all evidence immediately', detail: 'Collect government orders, notifications, and any communication showing the violation. Courts require documentary proof.', urgent: false },
+    { label: 'Apply for stay / interim relief first', detail: `Ask your lawyer to move the court for a stay of any action being challenged under ${sectionRef} before the matter is heard on merits.`, urgent: false },
+  ] : [
+    { label: 'Call NALSA 15100', detail: 'Free legal aid for eligible citizens. Describe your civil matter — they will assign a panel lawyer.', urgent: true },
+    { label: 'File for interim injunction immediately', detail: 'If your property, business, or rights are under threat, an urgent temporary injunction can be obtained the same day. Do not delay.', urgent: true },
+    { label: 'Go to District Legal Services Authority', detail: 'Every district court has a DLSA on the ground floor. Walk in and ask for a duty lawyer for free civil legal advice.', urgent: false },
+    { label: 'Collect all documents NOW', detail: 'Agreements, receipts, notices, communications — gather everything. Civil cases are won on documents, not oral arguments.', urgent: false },
+  ];
 
   return (
     <section>
@@ -640,15 +826,39 @@ function KnowYourLawyer({ actId }: { actId: string }) {
       />
       {!collapsed && (
         <div className="space-y-4">
-          {/* Lawyer type badge + what to expect */}
+
+          {/* ── Emergency Action Guide ─────────────────────────────────── */}
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-red-600 font-ui">
+                If You Need Help RIGHT NOW — {isCriminal ? 'Criminal Matter' : isConstitutional ? 'Constitutional Matter' : 'Civil Matter'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              {emergencySteps.map((step, i) => (
+                <div key={i} className={`flex items-start gap-3 rounded-xl p-3 border ${step.urgent ? 'bg-white border-red-200' : 'bg-white border-red-100/60'}`}>
+                  <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${step.urgent ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>
+                    {i + 1}
+                  </div>
+                  <div>
+                    <p className={`font-ui font-black text-xs mb-0.5 ${step.urgent ? 'text-red-700' : 'text-ink'}`}>{step.label}</p>
+                    <p className="font-body text-[11px] text-ink/70 leading-relaxed">{step.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── What a Lawyer Will Do (query-specific) ─────────────────── */}
           <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
             <div className="flex items-center gap-3 mb-4">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 border border-emerald-200 text-[11px] font-black uppercase tracking-wider text-emerald-700">
                 <Briefcase className="w-3 h-3" /> {lawyerType}
               </span>
-              <span className="text-[11px] font-ui text-ink/40">recommended for this matter</span>
+              <span className="text-[11px] font-ui text-ink/40">for {actLabel} {sectionRef}</span>
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/60 font-ui mb-3">What a {lawyerType} will do for you</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/60 font-ui mb-3">Specifically for your matter — {actLabel} {sectionRef}</p>
             <div className="space-y-2">
               {steps.map((step, i) => (
                 <div key={i} className="flex items-start gap-3 bg-white border border-emerald-100 rounded-xl p-3">
@@ -659,27 +869,56 @@ function KnowYourLawyer({ actId }: { actId: string }) {
             </div>
           </div>
 
-          {/* Free legal aid */}
+          {/* ── Live Lawyer Directory from Serper ──────────────────────── */}
+          {lawyerResults.length > 0 && (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-ink/30 font-ui mb-2">Find a Lawyer — Live Directory</p>
+              <div className="space-y-2">
+                {lawyerResults.map((r, i) => (
+                  <a key={i} href={r.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-start gap-3 bg-white border border-ink/8 rounded-xl p-3 hover:border-gold/30 hover:shadow-sm transition-all group"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-ink/25 group-hover:text-gold shrink-0 mt-0.5 transition-colors" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-ui font-black text-xs text-ink truncate">{r.title}</p>
+                        <span className="shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded bg-gold/10 text-amber-700">{r.source}</span>
+                      </div>
+                      {r.snippet && <p className="font-body text-[11px] text-ink/55 leading-relaxed line-clamp-2">{r.snippet}</p>}
+                    </div>
+                    <span className="shrink-0 text-[10px] font-black text-gold/60 group-hover:text-gold transition-colors whitespace-nowrap">Go to Source →</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Free Legal Aid in India ─────────────────────────────────── */}
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-ink/30 font-ui mb-2">Free Legal Aid in India</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-ink/30 font-ui mb-2">Free Legal Aid — No Money Needed</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {[
-                { name: 'NALSA', desc: 'National Legal Services Authority — free legal aid for eligible citizens. SC, ST, women, disabled, persons with income below ₹1 lakh.', phone: '15100' },
-                { name: 'District Legal Services Authority (DLSA)', desc: 'Present in every district court. Walk in and ask for a duty lawyer. Free advice and representation.', phone: null },
-                { name: 'Tele-Law / eSewa Kendra', desc: 'Free video consultation with a panel lawyer at your nearest Common Service Centre (CSC). Available in all villages.', phone: null },
+                { name: 'NALSA — Call 15100', desc: 'National Legal Services Authority. Free legal aid for SC/ST, women, children, disabled, and income below ₹1 lakh. Available 24×7.', phone: '15100', url: 'https://nalsa.gov.in' },
+                { name: 'District Legal Services Authority', desc: 'Walk into your District Court and go to the DLSA room. Ask for a duty lawyer. Free advice and representation, no appointment needed.', phone: null, url: 'https://nalsa.gov.in/lsas' },
+                { name: 'Tele-Law / eSewa Kendra', desc: 'Free video call with a panel lawyer at your nearest Common Service Centre. Available in every panchayat. Call 14415 to find the nearest CSC.', phone: '14415', url: 'https://tele-law.in' },
               ].map((aid, i) => (
-                <div key={i} className="bg-white border border-emerald-100 rounded-xl p-3">
+                <a key={i} href={aid.url} target="_blank" rel="noopener noreferrer"
+                  className="bg-white border border-emerald-100 rounded-xl p-3 hover:border-emerald-300 hover:shadow-sm transition-all group block"
+                >
                   <div className="flex items-start gap-2">
                     <Users className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-ui font-black text-xs text-ink mb-1">{aid.name}</p>
+                    <div className="flex-1">
+                      <p className="font-ui font-black text-xs text-ink mb-1 group-hover:text-emerald-700 transition-colors">{aid.name}</p>
                       <p className="font-body text-[11px] text-ink/60 leading-relaxed">{aid.desc}</p>
-                      {aid.phone && (
-                        <p className="mt-1.5 text-[11px] font-black text-emerald-600 font-ui">Helpline: {aid.phone}</p>
-                      )}
+                      <div className="mt-2 flex items-center gap-2">
+                        {aid.phone && (
+                          <span className="text-[10px] font-black text-emerald-600 font-ui">📞 {aid.phone}</span>
+                        )}
+                        <span className="text-[10px] font-black text-gold/70 group-hover:text-gold transition-colors font-ui">Go to Source →</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>
@@ -707,20 +946,30 @@ function CitationHub({ results }: { results: JudgmentResult[] }) {
               const citation = `${r.title}${r.date ? ` (${r.date})` : ''} — ${r.court}. Source: ${r.url}`;
               return (
                 <div key={i} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-parchment/40 transition-colors">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-ui text-xs text-ink/70 leading-snug">
                       <span className="font-black text-ink">{r.title}</span>
                       {r.date && <span className="text-gold"> ({r.date})</span>}
                       {' '}— <span className="text-ink/40">{r.court}</span>
                     </p>
+                    <p className="text-[10px] font-ui text-ink/30 mt-0.5">{r.source}</p>
                   </div>
-                  <CopyButton text={citation} />
+                  <div className="flex items-center gap-2 shrink-0">
+                    {r.url && (
+                      <a href={r.url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider font-ui bg-burgundy/8 border border-burgundy/15 text-burgundy hover:bg-burgundy hover:text-white transition-all"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Verify
+                      </a>
+                    )}
+                    <CopyButton text={citation} />
+                  </div>
                 </div>
               );
             })}
           </div>
           <p className="mt-3 text-[10px] font-ui text-ink/30 text-center">
-            Format: Case Name (Year) — Court · Source URL
+            Format: Case Name (Year) — Court · Click Verify to confirm on IndianKanoon / JUDIS
           </p>
         </>
       )}
@@ -950,12 +1199,16 @@ export default function JudgementFinder() {
   const [status, setStatus]             = useState<SearchStatus>('idle');
   const [results, setResults]           = useState<JudgmentResult[]>([]);
   const [newsResults, setNewsResults]   = useState<NewsResult[]>([]);
-  const [, setLawyerResults] = useState<LawyerResult[]>([]);
+  const [lawyerResults, setLawyerResults] = useState<LawyerResult[]>([]);
   const [judgesMentioned, setJudgesMentioned] = useState<string[]>([]);
-  const [synthesis, setSynthesis]       = useState('');
-  const [plainEnglish, setPlainEnglish] = useState('');
-  const [citizenRights, setCitizenRights] = useState<string[]>([]);
-  const [examAngle, setExamAngle]       = useState('');
+  const [problemSummary, setProblemSummary]   = useState('');
+  const [currentPosition, setCurrentPosition] = useState('');
+  const [solution, setSolution]               = useState('');
+  const [keyPrinciples, setKeyPrinciples]     = useState<string[]>([]);
+  const [synthesis, setSynthesis]             = useState('');
+  const [plainEnglish, setPlainEnglish]       = useState('');
+  const [citizenRights, setCitizenRights]     = useState<string[]>([]);
+  const [examAngle, setExamAngle]             = useState('');
   const [errorMsg, setErrorMsg]         = useState('');
   const [noToken, setNoToken]           = useState(false);
   const [reportMeta, setReportMeta]     = useState<{ query: string; act: string; court: string } | null>(null);
@@ -988,7 +1241,8 @@ export default function JudgementFinder() {
 
   const clearResults = () => {
     setStatus('idle'); setResults([]); setNewsResults([]); setLawyerResults([]);
-    setJudgesMentioned([]); setSynthesis(''); setPlainEnglish('');
+    setJudgesMentioned([]); setProblemSummary(''); setCurrentPosition(''); setSolution(''); setKeyPrinciples([]);
+    setSynthesis(''); setPlainEnglish('');
     setCitizenRights([]); setExamAngle(''); setErrorMsg(''); setNoToken(false); setReportMeta(null);
     setShowPaywall(false);
   };
@@ -1018,8 +1272,21 @@ export default function JudgementFinder() {
     setStatus('searching'); // re-set after clearResults
 
     try {
+      const token = await currentUser.getIdToken();
       const params = new URLSearchParams({ act: actId, query: query.trim(), mode, court });
-      const res  = await fetch(`/api/judgment-search?${params}`);
+      const res = await fetch(`/api/judgment-search?${params}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal: AbortSignal.timeout(58000), // 58 s — Gemini can take up to 20 s after 7 s Serper
+      });
+
+      // Guard against HTML timeout pages from Vercel (which can't be parsed as JSON)
+      const contentType = res.headers.get('content-type') ?? '';
+      if (!contentType.includes('application/json')) {
+        setErrorMsg('Search timed out. Please try again.');
+        setStatus('error');
+        return;
+      }
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -1029,24 +1296,37 @@ export default function JudgementFinder() {
         return;
       }
 
-      setResults(data.results          ?? []);
-      setNewsResults(data.newsResults   ?? []);
+      setResults(data.results            ?? []);
+      setNewsResults(data.newsResults     ?? []);
       setLawyerResults(data.lawyerResults ?? []);
-      setJudgesMentioned(data.judgesMentioned ?? []);
-      setSynthesis(data.synthesis       ?? '');
-      setPlainEnglish(data.plainEnglish ?? '');
-      setCitizenRights(data.citizenRights ?? []);
-      setExamAngle(data.examAngle       ?? '');
+      setJudgesMentioned(data.judgesMentioned   ?? []);
+      setProblemSummary(data.problemSummary     ?? '');
+      setCurrentPosition(data.currentPosition  ?? '');
+      setSolution(data.solution                ?? '');
+      setKeyPrinciples(data.keyPrinciples       ?? []);
+      setSynthesis(data.synthesis               ?? '');
+      setPlainEnglish(data.plainEnglish         ?? '');
+      setCitizenRights(data.citizenRights       ?? []);
+      setExamAngle(data.examAngle               ?? '');
       setReportMeta({ query: query.trim(), act: selectedAct.name, court: COURT_LABELS[court] });
       setStatus('results');
+    } catch (err: any) {
+      const isAbort = err?.name === 'AbortError' || err?.name === 'TimeoutError';
+      setErrorMsg(isAbort
+        ? 'Search timed out. Please try again.'
+        : 'Network error. Check your connection and try again.'
+      );
+      setStatus('error');
+    }
 
-      // Record the successful search and refresh usage display
+    // Post-search usage recording — separate try so a Firestore hiccup
+    // never overwrites a successfully-displayed result.
+    try {
       await recordSearch(currentUser, isPro, isMax);
       const updated = await checkCanSearch(currentUser, isPro, isMax);
       setLiveUsage(updated.usageInfo);
     } catch {
-      setErrorMsg('Network error. Check your connection and try again.');
-      setStatus('error');
+      // non-critical — usage counter will reconcile on next load
     }
   };
 
@@ -1234,15 +1514,22 @@ export default function JudgementFinder() {
                     <div className="px-6 sm:px-8 pb-8 space-y-8">
                       {plainEnglish  && <KnowTheLaw text={plainEnglish} />}
                       {citizenRights.length > 0 && <KnowYourRights rights={citizenRights} />}
-                      {(synthesis || results.length > 0) && (
-                        <JudicialIntelligence synthesis={synthesis} fallbackSnippets={results.slice(0, 3).map(r => r.summary)} />
+                      {(problemSummary || currentPosition || synthesis || results.length > 0) && (
+                        <JudicialIntelligence
+                          problemSummary={problemSummary}
+                          currentPosition={currentPosition}
+                          solution={solution}
+                          keyPrinciples={keyPrinciples}
+                          synthesis={synthesis}
+                          fallbackSnippets={results.slice(0, 3).map(r => r.summary)}
+                        />
                       )}
                       <KnowYourJudges actId={actId} judgesMentioned={judgesMentioned} />
                       <OfficialPrecedents results={results} />
                       <ActBridge actId={actId} query={query} />
                       <ExamRadar actId={actId} query={query} examAngle={examAngle} />
                       {newsResults.length > 0 && <NewsNarrative newsResults={newsResults} />}
-                      <KnowYourLawyer actId={actId} />
+                      <KnowYourLawyer actId={actId} query={query} lawyerResults={lawyerResults} />
                       <CitationHub results={results} />
                     </div>
                   </div>

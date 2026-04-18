@@ -1,18 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
-import { 
-  Plus, Edit, 
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Plus, Edit,
   FileText, X, Save, Trash2,
   FileCode, Globe, Loader2, DollarSign,
-  RefreshCw
+  RefreshCw, Upload, CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { 
-  collection, query, orderBy, 
-  getDocs, doc, updateDoc, 
-  addDoc, deleteDoc, serverTimestamp 
+import {
+  collection, query, orderBy,
+  getDocs, doc, updateDoc,
+  addDoc, deleteDoc, serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
 import { DataTable } from '../../../components/admin/DataTable';
 import type { Column } from '../../../components/admin/DataTable';
 
@@ -24,8 +25,8 @@ interface Template {
   price: number;
   isFree: boolean;
   language: 'English' | 'Hindi' | 'Both';
-  pdfUrl?: string;
-  docxUrl?: string;
+  pdfKey?: string;   // R2 key e.g. templates/slug.pdf
+  docxKey?: string;  // R2 key e.g. templates/slug.docx
   downloadCount: number;
   createdAt: any;
   updatedAt: any;
@@ -34,11 +35,62 @@ interface Template {
 const CATEGORIES = ['Petition', 'Agreement', 'Notice', 'Affidavit', 'Other'];
 
 export default function TemplatesManager() {
+  const { currentUser } = useAuth();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Partial<Template> | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ pdf: number | null; docx: number | null }>({ pdf: null, docx: null });
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const docxInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (type: 'pdf' | 'docx', file: File) => {
+    const ext = type === 'pdf' ? 'pdf' : 'docx';
+    if (!file.name.toLowerCase().endsWith(`.${ext}`)) {
+      toast.error(`Please select a .${ext} file`);
+      return;
+    }
+    if (!currentUser) { toast.error('Not authenticated'); return; }
+
+    const slug = (editingTemplate?.slug || editingTemplate?.title?.toLowerCase().replace(/\s+/g, '-') || `template-${Date.now()}`)
+      .replace(/[^a-z0-9\-]/g, '-');
+    const fileName = `templates/${slug}.${ext}`;
+
+    setUploadProgress(p => ({ ...p, [type]: 0 }));
+    try {
+      // 1. Get a presigned R2 PUT URL from the admin API (same mechanism as Notes)
+      const token = await currentUser.getIdToken();
+      const urlRes = await fetch('/api/admin/get-upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName, fileSize: file.size }),
+      });
+      if (!urlRes.ok) {
+        const err = await urlRes.json().catch(() => ({}));
+        throw new Error(err.error || 'Could not get upload URL');
+      }
+      const { uploadUrl } = await urlRes.json();
+
+      // 2. Upload directly to R2 via PUT
+      const mime = ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mime },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
+
+      // 3. Store the R2 key in state
+      const keyField = type === 'pdf' ? 'pdfKey' : 'docxKey';
+      setEditingTemplate(v => ({ ...v, [keyField]: fileName }));
+      setUploadProgress(p => ({ ...p, [type]: null }));
+      toast.success(`${ext.toUpperCase()} uploaded successfully`);
+    } catch (err: any) {
+      toast.error(`Upload failed: ${err.message}`);
+      setUploadProgress(p => ({ ...p, [type]: null }));
+    }
+  };
 
   // ── DATA FETCHING ──
   const fetchTemplates = useCallback(async () => {
@@ -82,7 +134,7 @@ export default function TemplatesManager() {
         toast.success('Template created successfully');
       }
       // Auto-ping Google to pick up the new/updated template in sitemap
-      fetch('/api/ping-google', { method: 'POST' }).catch(() => null);
+      fetch('/api/purchases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ping-google' }) }).catch(() => null);
       setIsEditorOpen(false);
       fetchTemplates();
     } catch (error) {
@@ -143,8 +195,8 @@ export default function TemplatesManager() {
       label: 'Formats',
       render: (row) => (
         <div className="flex gap-2">
-          {row.pdfUrl && <FileText className="w-4 h-4 text-red-400" aria-label="PDF Available" />}
-          {row.docxUrl && <FileCode className="w-4 h-4 text-blue-400" aria-label="DOCX Available" />}
+          {row.pdfKey && <FileText className="w-4 h-4 text-red-400" aria-label="PDF Available" />}
+          {row.docxKey && <FileCode className="w-4 h-4 text-blue-400" aria-label="DOCX Available" />}
         </div>
       )
     },
@@ -327,16 +379,68 @@ export default function TemplatesManager() {
 
                   <div className="space-y-4">
                     <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">Asset Management</h3>
+
+                    {/* Hidden file inputs */}
+                    <input
+                      ref={pdfInputRef} type="file" accept=".pdf,application/pdf" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload('pdf', f); e.target.value = ''; }}
+                    />
+                    <input
+                      ref={docxInputRef} type="file"
+                      accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload('docx', f); e.target.value = ''; }}
+                    />
+
                     <div className="grid grid-cols-2 gap-4">
+                      {/* PDF upload */}
                       <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col items-center gap-3">
-                        <FileText className="w-5 h-5 text-red-500" />
+                        {editingTemplate?.pdfKey
+                          ? <CheckCircle className="w-5 h-5 text-green-500" />
+                          : <FileText className="w-5 h-5 text-red-400" />}
                         <span className="text-xs text-slate-900 font-medium">PDF File</span>
-                        <button type="button" className="text-[10px] text-gold underline font-bold uppercase">Upload</button>
+                        {uploadProgress.pdf !== null ? (
+                          <div className="w-full bg-slate-200 rounded-full h-1.5">
+                            <div className="bg-red-400 h-1.5 rounded-full transition-all" style={{ width: `${uploadProgress.pdf}%` }} />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => pdfInputRef.current?.click()}
+                            className="flex items-center gap-1 text-[10px] text-red-500 font-bold uppercase hover:text-red-600 transition-colors"
+                          >
+                            <Upload className="w-3 h-3" />
+                            {editingTemplate?.pdfKey ? 'Replace' : 'Upload PDF'}
+                          </button>
+                        )}
+                        {editingTemplate?.pdfKey && (
+                          <p className="text-[9px] text-slate-400 truncate max-w-full">{editingTemplate.pdfKey}</p>
+                        )}
                       </div>
-                      <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col items-center gap-3">
-                        <FileCode className="w-5 h-5 text-blue-500" />
-                        <span className="text-xs text-slate-900 font-medium">DOCX (Editable)</span>
-                        <button type="button" className="text-[10px] text-gold underline font-bold uppercase">Upload</button>
+
+                      {/* DOCX upload */}
+                      <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/40 flex flex-col items-center gap-3">
+                        {editingTemplate?.docxKey
+                          ? <CheckCircle className="w-5 h-5 text-green-500" />
+                          : <FileCode className="w-5 h-5 text-blue-500" />}
+                        <span className="text-xs text-slate-900 font-medium">Word (.docx)</span>
+                        {uploadProgress.docx !== null ? (
+                          <div className="w-full bg-slate-200 rounded-full h-1.5">
+                            <div className="bg-blue-400 h-1.5 rounded-full transition-all" style={{ width: `${uploadProgress.docx}%` }} />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => docxInputRef.current?.click()}
+                            className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase hover:text-blue-700 transition-colors"
+                          >
+                            <Upload className="w-3 h-3" />
+                            {editingTemplate?.docxKey ? 'Replace' : 'Upload Word'}
+                          </button>
+                        )}
+                        {editingTemplate?.docxKey && (
+                          <p className="text-[9px] text-slate-400 truncate max-w-full">{editingTemplate.docxKey}</p>
+                        )}
                       </div>
                     </div>
                   </div>

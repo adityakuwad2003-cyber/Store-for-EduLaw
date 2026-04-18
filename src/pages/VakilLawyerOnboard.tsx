@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   User, Briefcase, FileText, CheckSquare,
@@ -90,7 +89,7 @@ const EXPERIENCE_OPTIONS = ['0–2 years', '3–5 years', '6–10 years', '10+ y
 const CURRENT_YEAR = new Date().getFullYear();
 const ENROLLMENT_YEARS = Array.from({ length: CURRENT_YEAR - 1950 + 1 }, (_, i) => String(CURRENT_YEAR - i));
 
-const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Step1 { name: string; phone: string; email: string; city: string; state: string; languages: string[]; }
@@ -309,9 +308,9 @@ export default function VakilLawyerOnboard() {
 
       // File size checks
       if (s3.enrollmentCertFile && s3.enrollmentCertFile.size > MAX_FILE_SIZE)
-        e.enrollmentCert = 'File too large — please compress to under 1 MB';
+        e.enrollmentCert = 'File too large — maximum 5 MB';
       if (s3.photoFile && s3.photoFile.size > MAX_FILE_SIZE)
-        e.photo = 'File too large — please compress to under 1 MB';
+        e.photo = 'File too large — maximum 5 MB';
     }
     if (step === 4 && !confirmed) e.confirmed = 'Please confirm your details are accurate';
     setErrors(e);
@@ -331,27 +330,36 @@ export default function VakilLawyerOnboard() {
     try {
       const uid = currentUser.uid;
 
-      // Try file uploads — non-blocking: if storage rules haven't been set,
-      // we still save the profile doc and admin can request re-upload later.
-      let enrollmentCertUrl = '';
-      let photoUrl = '';
+      // Upload files to R2 via presigned URLs (no Firebase Storage rules needed)
+      let enrollmentCertKey = '';
+      let photoKey = '';
       try {
-        if (s3.enrollmentCertFile) {
-          const ext = s3.enrollmentCertFile.name.split('.').pop() ?? 'pdf';
-          const certRef = ref(storage, `vakil-kyc/${uid}/enrollment.${ext}`);
-          await uploadBytes(certRef, s3.enrollmentCertFile);
-          enrollmentCertUrl = await getDownloadURL(certRef);
+        const token = await currentUser.getIdToken();
+        const certExt = s3.enrollmentCertFile?.name.split('.').pop()?.toLowerCase() ?? 'pdf';
+        const photoExt = s3.photoFile?.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+
+        const urlRes = await fetch('/api/user-upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            fileType: certExt,
+            fileSize: Math.max(s3.enrollmentCertFile?.size ?? 0, s3.photoFile?.size ?? 0),
+          }),
+        });
+        if (urlRes.ok) {
+          const urls = await urlRes.json();
+          if (s3.enrollmentCertFile && urls.enrollmentUrl) {
+            const mime = certExt === 'pdf' ? 'application/pdf' : 'image/jpeg';
+            await fetch(urls.enrollmentUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: s3.enrollmentCertFile });
+            enrollmentCertKey = urls.enrollmentKey;
+          }
+          if (s3.photoFile && urls.photoUrl) {
+            await fetch(urls.photoUrl, { method: 'PUT', headers: { 'Content-Type': `image/${photoExt === 'png' ? 'png' : 'jpeg'}` }, body: s3.photoFile });
+            photoKey = urls.photoKey;
+          }
         }
-        if (s3.photoFile) {
-          const ext = s3.photoFile.name.split('.').pop() ?? 'jpg';
-          const photoRef = ref(storage, `vakil-kyc/${uid}/photo.${ext}`);
-          await uploadBytes(photoRef, s3.photoFile);
-          photoUrl = await getDownloadURL(photoRef);
-        }
-      } catch (storageErr) {
-        // Storage upload failed (likely rules not set yet) — save profile without URLs.
-        // Admin can re-request documents manually.
-        console.warn('Storage upload skipped:', storageErr);
+      } catch (uploadErr) {
+        console.warn('File upload skipped — profile saved without documents:', uploadErr);
       }
 
       const now = Timestamp.now();
@@ -371,8 +379,8 @@ export default function VakilLawyerOnboard() {
         specializations: s2.specializations,
         experience: s2.experience,
         bio: s3.bio,
-        enrollmentCertUrl,
-        photoUrl,
+        enrollmentCertKey,
+        photoKey,
         enrollmentCertName: s3.enrollmentCertFile?.name ?? '',
         photoName: s3.photoFile?.name ?? '',
         status: 'pending',
@@ -398,14 +406,14 @@ export default function VakilLawyerOnboard() {
   const SuccessPopup = () => (
     <AnimatePresence>
       {showPopup && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-ink/70 backdrop-blur-sm" />
-          <div className="flex min-h-full items-end sm:items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-ink/70 backdrop-blur-sm" />
+          <div className="relative flex w-full max-w-md justify-center">
             <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 40 }}
-              className="relative z-10 w-full max-w-md bg-white rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative z-10 w-full bg-white rounded-[2rem] overflow-hidden shadow-2xl"
             >
               {/* Gold bar */}
               <div className="h-1.5 bg-gradient-to-r from-gold/40 via-gold to-gold/40" />
@@ -681,7 +689,7 @@ export default function VakilLawyerOnboard() {
                 <FileUploadZone
                   label="Bar Enrollment Certificate *"
                   accept=".pdf,.jpg,.jpeg,.png"
-                  hint="PDF or image — max 1 MB"
+                  hint="PDF or image — max 5 MB"
                   file={s3.enrollmentCertFile}
                   onFile={f => setS3(p => ({ ...p, enrollmentCertFile: f }))}
                   error={errors.enrollmentCert}
@@ -690,7 +698,7 @@ export default function VakilLawyerOnboard() {
                 <FileUploadZone
                   label="Profile Photo *"
                   accept=".jpg,.jpeg,.png,.webp"
-                  hint="JPEG, PNG or WebP — max 1 MB"
+                  hint="JPEG, PNG or WebP — max 5 MB"
                   file={s3.photoFile}
                   onFile={f => setS3(p => ({ ...p, photoFile: f }))}
                   error={errors.photo}
