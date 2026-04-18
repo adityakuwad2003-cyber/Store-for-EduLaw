@@ -46,11 +46,15 @@ export default function TemplatesManager() {
 
   const handleFileUpload = (type: 'pdf' | 'docx', file: File) => {
     const ext = type === 'pdf' ? 'pdf' : 'docx';
-    const mime = type === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    if (!file.type.includes(type === 'pdf' ? 'pdf' : 'wordprocessingml') && !file.name.endsWith(`.${ext}`)) {
-      toast.error(`Please select a valid .${ext} file`);
+    // Validate by extension only — Windows often reports docx as application/octet-stream
+    if (!file.name.toLowerCase().endsWith(`.${ext}`)) {
+      toast.error(`Please select a .${ext} file`);
       return;
     }
+    // Always send the correct MIME so Storage rules and browsers handle it right
+    const mime = type === 'pdf'
+      ? 'application/pdf'
+      : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     const slug = editingTemplate?.slug || editingTemplate?.title?.toLowerCase().replace(/\s+/g, '-') || `template-${Date.now()}`;
     const path = `templates/${slug}.${ext}`;
     const sRef = storageRef(storage, path);
