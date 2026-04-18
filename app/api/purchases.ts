@@ -231,8 +231,18 @@ export default async function handler(req: any, res: any) {
       const notesMap = new Map();
       noteDocs.forEach(doc => { if (doc.exists) notesMap.set(doc.id, doc.data()); });
 
-      // For productIds not found in notes, check the bundles collection
-      const unresolvedIds = Array.from(productIds).filter(id => !notesMap.has(id));
+      // Check templates collection for productIds not found in notes
+      const unresolvedAfterNotes = Array.from(productIds).filter(id => !notesMap.has(id));
+      const templatesMap = new Map<string, { pdfUrl?: string; docxUrl?: string }>();
+      if (unresolvedAfterNotes.length > 0) {
+        const templateDocs = await Promise.all(
+          unresolvedAfterNotes.map(id => adminDb.collection("templates").doc(id).get())
+        );
+        templateDocs.forEach(doc => { if (doc.exists) templatesMap.set(doc.id, doc.data() as any); });
+      }
+
+      // For productIds not found in notes or templates, check the bundles collection
+      const unresolvedIds = Array.from(productIds).filter(id => !notesMap.has(id) && !templatesMap.has(id));
       if (unresolvedIds.length > 0) {
         const bundleDocs = await Promise.all(
           unresolvedIds.map(id => adminDb.collection("bundles").doc(id).get())
@@ -280,6 +290,7 @@ export default async function handler(req: any, res: any) {
 
       const purchases = purchasesData.map(data => {
         const noteMapData = notesMap.get(data.productId);
+        const templateMapData = templatesMap.get(data.productId);
         let fileKeys: any[] = [];
         if (noteMapData && Array.isArray(noteMapData.fileKeys) && noteMapData.fileKeys.length > 0) {
           fileKeys = noteMapData.fileKeys;
@@ -302,6 +313,7 @@ export default async function handler(req: any, res: any) {
         }
 
         const inv = invoiceMap.get(data.id);
+        const isTemplate = !!templateMapData;
         return {
           id: data.id,
           productId: data.productId,
@@ -313,6 +325,9 @@ export default async function handler(req: any, res: any) {
           purchasedAt: data.purchasedAt ? data.purchasedAt.toDate().toISOString() : null,
           invoiceNumber: inv?.invoiceNumber || null,
           invoiceId: inv?.invoiceId || null,
+          type: data.type || (isTemplate ? "template" : "note"),
+          pdfUrl: isTemplate ? (templateMapData.pdfUrl || null) : null,
+          docxUrl: isTemplate ? (templateMapData.docxUrl || null) : null,
         };
       });
 

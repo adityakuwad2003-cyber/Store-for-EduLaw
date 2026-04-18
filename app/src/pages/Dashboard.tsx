@@ -7,7 +7,7 @@ import {
   ShoppingBag, Shield, Loader2, AlertCircle, Clock,
   FileText, Heart, ShoppingCart, Trash2, Receipt,
   Bookmark, Package, ChevronDown, ChevronUp, Search,
-  CheckCircle2, X, Files, Crown,
+  CheckCircle2, X, Files, Crown, FileCode, Scale,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
@@ -36,7 +36,9 @@ interface Purchase {
   purchasedAt: string | null;
   invoiceNumber: string | null;
   invoiceId: string | null;
-  type?: string; // 'subscription' records must be filtered out of My Library
+  type?: string; // 'subscription' | 'template' | 'note'
+  pdfUrl?: string | null;
+  docxUrl?: string | null;
 }
 
 interface SubNote {
@@ -307,6 +309,118 @@ function PurchaseCard({
   );
 }
 
+// ─── Template Card ────────────────────────────────────────────────────────────
+function TemplateCard({ purchase }: { purchase: Purchase }) {
+  const [downloading, setDownloading] = useState<'pdf' | 'docx' | null>(null);
+
+  const formatDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  const triggerDownload = async (url: string, type: 'pdf' | 'docx') => {
+    setDownloading(type);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${purchase.title.replace(/[^a-z0-9]/gi, '_')}.${type}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      toast.success(`Downloading "${purchase.title}" (${type.toUpperCase()})…`);
+    } catch {
+      toast.error('Download failed. Please try again.');
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const hasPdf = !!purchase.pdfUrl;
+  const hasDocx = !!purchase.docxUrl;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all overflow-hidden">
+      <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-400" />
+      <div className="p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <Scale className="w-5 h-5 text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="text-[9px] font-ui font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 mb-1 inline-block">
+              Legal Template
+            </span>
+            <h3 className="font-ui font-bold text-ink text-sm leading-snug line-clamp-2">{purchase.title}</h3>
+            <p className="text-[11px] text-mutedgray mt-1 flex items-center gap-1">
+              <Clock className="w-3 h-3" />{formatDate(purchase.purchasedAt)}
+              <span className="mx-1 text-parchment-dark">·</span>
+              <span className="font-display text-gold font-bold">₹{purchase.price}</span>
+            </p>
+          </div>
+        </div>
+
+        {!hasPdf && !hasDocx ? (
+          <div className="flex items-center gap-2 py-3 px-4 bg-slate-50 rounded-xl text-sm text-slate-400 font-ui">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            Files being prepared — check back shortly
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {hasDocx && (
+              <button
+                onClick={() => triggerDownload(purchase.docxUrl!, 'docx')}
+                disabled={downloading !== null}
+                className="w-full py-3 rounded-2xl font-ui font-bold text-sm transition-all flex items-center justify-center gap-2.5 bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100 active:scale-[0.98] disabled:opacity-60"
+              >
+                {downloading === 'docx' ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Downloading…</>
+                ) : (
+                  <><FileCode className="w-4 h-4" />Download Word (.docx)</>
+                )}
+              </button>
+            )}
+            {hasPdf && (
+              <button
+                onClick={() => triggerDownload(purchase.pdfUrl!, 'pdf')}
+                disabled={downloading !== null}
+                className="w-full py-2.5 rounded-2xl font-ui font-bold text-sm transition-all flex items-center justify-center gap-2.5 bg-white border border-slate-200 text-slate-700 hover:border-burgundy/30 hover:text-burgundy active:scale-[0.98] disabled:opacity-60"
+              >
+                {downloading === 'pdf' ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Downloading…</>
+                ) : (
+                  <><FileText className="w-4 h-4" />Download PDF</>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
+        {purchase.invoiceNumber && (
+          <button
+            onClick={() => {
+              const inv = buildInvoiceFromPurchase({
+                invoiceNumber:       purchase.invoiceNumber!,
+                buyerName:           '',
+                buyerEmail:          '',
+                cartItems:           [{ title: purchase.title, price: purchase.price }],
+                razorpay_payment_id: purchase.razorpay_payment_id,
+                invoiceDate:         purchase.purchasedAt || undefined,
+              });
+              downloadInvoicePdf(inv);
+            }}
+            className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-ui font-bold text-slate-400 hover:text-burgundy border border-dashed border-slate-200 hover:border-burgundy/30 rounded-xl transition-all"
+          >
+            <Receipt className="w-3 h-3" />
+            GST Invoice — {purchase.invoiceNumber}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function Dashboard() {
   const { currentUser, logout, isPro, isMax } = useAuth();
@@ -470,13 +584,21 @@ export function Dashboard() {
     }
   }, [currentUser, isMax, subUsed]);
 
-  // Filter out subscription payment records — they are NOT downloadable notes
-  const notePurchases = useMemo(
+  // Filter out subscription records; split remaining into notes and templates
+  const allPurchases = useMemo(
     () => purchases.filter(p => p.type !== 'subscription'),
     [purchases]
   );
+  const notePurchases = useMemo(
+    () => allPurchases.filter(p => p.type !== 'template'),
+    [allPurchases]
+  );
+  const templatePurchases = useMemo(
+    () => allPurchases.filter(p => p.type === 'template'),
+    [allPurchases]
+  );
 
-  const totalSpent = notePurchases.reduce((sum, p) => sum + (p.price || 0), 0);
+  const totalSpent = allPurchases.reduce((sum, p) => sum + (p.price || 0), 0);
   const totalFiles = useMemo(() => getTotalFileCount(notePurchases), [notePurchases]);
 
   const sortedPurchases = useMemo(() =>
@@ -486,6 +608,15 @@ export function Dashboard() {
       return db - da;
     }),
     [notePurchases]
+  );
+
+  const sortedTemplates = useMemo(() =>
+    [...templatePurchases].sort((a, b) => {
+      const da = a.purchasedAt ? new Date(a.purchasedAt).getTime() : 0;
+      const db = b.purchasedAt ? new Date(b.purchasedAt).getTime() : 0;
+      return db - da;
+    }),
+    [templatePurchases]
   );
 
   const filteredPurchases = useMemo(() => {
@@ -574,7 +705,7 @@ export function Dashboard() {
               <BookOpen className="w-5 h-5 text-burgundy" />
             </div>
             <div>
-              <p className="font-display text-2xl text-ink leading-none">{notePurchases.length}</p>
+              <p className="font-display text-2xl text-ink leading-none">{allPurchases.length}</p>
               <p className="text-xs text-mutedgray mt-0.5">Documents</p>
             </div>
           </div>
@@ -770,10 +901,62 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* ── My Library ── */}
+        {/* ── My Templates ── */}
+        {(isLoading || sortedTemplates.length > 0) && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
+                <Scale className="w-4 h-4 text-blue-600" />
+              </div>
+              <h2 className="font-display text-2xl text-ink">My Templates</h2>
+              {sortedTemplates.length > 0 && (
+                <span className="text-[10px] font-ui font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
+                  {sortedTemplates.length} purchased
+                </span>
+              )}
+            </div>
+            {isLoading ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl p-5 animate-pulse border border-slate-100">
+                    <div className="h-1 w-full bg-blue-100 rounded-full mb-4" />
+                    <div className="flex gap-3 mb-4">
+                      <div className="w-10 h-10 bg-parchment-dark rounded-xl" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-parchment-dark rounded w-3/4" />
+                        <div className="h-3 bg-parchment-dark rounded w-1/2" />
+                      </div>
+                    </div>
+                    <div className="h-10 bg-blue-50 rounded-xl" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sortedTemplates.map((purchase, index) => (
+                  <motion.div
+                    key={purchase.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.04 }}
+                  >
+                    <TemplateCard purchase={purchase} />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── My Notes ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <h2 className="font-display text-2xl text-ink">My Library</h2>
-          {purchases.length > 3 && (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-burgundy/8 flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-burgundy" />
+            </div>
+            <h2 className="font-display text-2xl text-ink">My Notes</h2>
+          </div>
+          {sortedPurchases.length > 3 && (
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mutedgray" />
               <input
@@ -877,7 +1060,7 @@ export function Dashboard() {
                 </div>
               ))}
             </div>
-          ) : purchases.length === 0 ? (
+          ) : allPurchases.length === 0 ? (
             <div className="text-center py-10 bg-white rounded-2xl text-mutedgray border border-slate-100">
               <Receipt className="w-10 h-10 mx-auto mb-3 opacity-20" />
               <p className="font-ui text-sm">No purchases yet.</p>
@@ -891,7 +1074,11 @@ export function Dashboard() {
                 <span className="col-span-3">Payment ID</span>
               </div>
               <div className="divide-y divide-slate-50">
-                {sortedPurchases.map((p, idx) => (
+                {[...sortedPurchases, ...sortedTemplates].sort((a, b) => {
+                  const da = a.purchasedAt ? new Date(a.purchasedAt).getTime() : 0;
+                  const db = b.purchasedAt ? new Date(b.purchasedAt).getTime() : 0;
+                  return db - da;
+                }).map((p, idx) => (
                   <motion.div
                     key={p.id}
                     initial={{ opacity: 0 }}
@@ -922,7 +1109,7 @@ export function Dashboard() {
 
               {/* Total row */}
               <div className="px-5 py-3 bg-parchment/40 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs font-ui text-mutedgray">{purchases.length} purchase{purchases.length !== 1 ? 's' : ''}</span>
+                <span className="text-xs font-ui text-mutedgray">{allPurchases.length} purchase{allPurchases.length !== 1 ? 's' : ''}</span>
                 <span className="font-display text-ink font-bold">Total: ₹{totalSpent}</span>
               </div>
             </div>

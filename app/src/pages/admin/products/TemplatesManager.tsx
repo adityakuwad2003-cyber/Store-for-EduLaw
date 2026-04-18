@@ -1,18 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
-import { 
-  Plus, Edit, 
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Plus, Edit,
   FileText, X, Save, Trash2,
   FileCode, Globe, Loader2, DollarSign,
-  RefreshCw
+  RefreshCw, Upload, CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { 
-  collection, query, orderBy, 
-  getDocs, doc, updateDoc, 
-  addDoc, deleteDoc, serverTimestamp 
+import {
+  collection, query, orderBy,
+  getDocs, doc, updateDoc,
+  addDoc, deleteDoc, serverTimestamp
 } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../../lib/firebase';
 import { DataTable } from '../../../components/admin/DataTable';
 import type { Column } from '../../../components/admin/DataTable';
 
@@ -39,6 +40,34 @@ export default function TemplatesManager() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Partial<Template> | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ pdf: number | null; docx: number | null }>({ pdf: null, docx: null });
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const docxInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (type: 'pdf' | 'docx', file: File) => {
+    const ext = type === 'pdf' ? 'pdf' : 'docx';
+    const mime = type === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (!file.type.includes(type === 'pdf' ? 'pdf' : 'wordprocessingml') && !file.name.endsWith(`.${ext}`)) {
+      toast.error(`Please select a valid .${ext} file`);
+      return;
+    }
+    const slug = editingTemplate?.slug || editingTemplate?.title?.toLowerCase().replace(/\s+/g, '-') || `template-${Date.now()}`;
+    const path = `templates/${slug}.${ext}`;
+    const sRef = storageRef(storage, path);
+    const task = uploadBytesResumable(sRef, file, { contentType: mime });
+    setUploadProgress(p => ({ ...p, [type]: 0 }));
+    task.on(
+      'state_changed',
+      snap => setUploadProgress(p => ({ ...p, [type]: Math.round((snap.bytesTransferred / snap.totalBytes) * 100) })),
+      err => { toast.error(`Upload failed: ${err.message}`); setUploadProgress(p => ({ ...p, [type]: null })); },
+      async () => {
+        const url = await getDownloadURL(task.snapshot.ref);
+        setEditingTemplate(v => ({ ...v, [type === 'pdf' ? 'pdfUrl' : 'docxUrl']: url }));
+        setUploadProgress(p => ({ ...p, [type]: null }));
+        toast.success(`${ext.toUpperCase()} uploaded successfully`);
+      },
+    );
+  };
 
   // ── DATA FETCHING ──
   const fetchTemplates = useCallback(async () => {
@@ -327,16 +356,86 @@ export default function TemplatesManager() {
 
                   <div className="space-y-4">
                     <h3 className="text-gold font-ui text-[10px] uppercase tracking-[0.2em] font-black">Asset Management</h3>
+
+                    {/* Hidden file inputs */}
+                    <input
+                      ref={pdfInputRef} type="file" accept=".pdf,application/pdf" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload('pdf', f); e.target.value = ''; }}
+                    />
+                    <input
+                      ref={docxInputRef} type="file"
+                      accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload('docx', f); e.target.value = ''; }}
+                    />
+
                     <div className="grid grid-cols-2 gap-4">
+                      {/* PDF upload */}
                       <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col items-center gap-3">
-                        <FileText className="w-5 h-5 text-red-500" />
+                        {editingTemplate?.pdfUrl
+                          ? <CheckCircle className="w-5 h-5 text-green-500" />
+                          : <FileText className="w-5 h-5 text-red-400" />}
                         <span className="text-xs text-slate-900 font-medium">PDF File</span>
-                        <button type="button" className="text-[10px] text-gold underline font-bold uppercase">Upload</button>
+                        {uploadProgress.pdf !== null ? (
+                          <div className="w-full bg-slate-200 rounded-full h-1.5">
+                            <div className="bg-red-400 h-1.5 rounded-full transition-all" style={{ width: `${uploadProgress.pdf}%` }} />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => pdfInputRef.current?.click()}
+                            className="flex items-center gap-1 text-[10px] text-red-500 font-bold uppercase hover:text-red-600 transition-colors"
+                          >
+                            <Upload className="w-3 h-3" />
+                            {editingTemplate?.pdfUrl ? 'Replace' : 'Upload PDF'}
+                          </button>
+                        )}
+                        {editingTemplate?.pdfUrl && (
+                          <a href={editingTemplate.pdfUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-[9px] text-slate-400 underline truncate max-w-full">View file</a>
+                        )}
                       </div>
-                      <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col items-center gap-3">
-                        <FileCode className="w-5 h-5 text-blue-500" />
-                        <span className="text-xs text-slate-900 font-medium">DOCX (Editable)</span>
-                        <button type="button" className="text-[10px] text-gold underline font-bold uppercase">Upload</button>
+
+                      {/* DOCX upload */}
+                      <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/40 flex flex-col items-center gap-3">
+                        {editingTemplate?.docxUrl
+                          ? <CheckCircle className="w-5 h-5 text-green-500" />
+                          : <FileCode className="w-5 h-5 text-blue-500" />}
+                        <span className="text-xs text-slate-900 font-medium">Word (.docx)</span>
+                        {uploadProgress.docx !== null ? (
+                          <div className="w-full bg-slate-200 rounded-full h-1.5">
+                            <div className="bg-blue-400 h-1.5 rounded-full transition-all" style={{ width: `${uploadProgress.docx}%` }} />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => docxInputRef.current?.click()}
+                            className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase hover:text-blue-700 transition-colors"
+                          >
+                            <Upload className="w-3 h-3" />
+                            {editingTemplate?.docxUrl ? 'Replace' : 'Upload Word'}
+                          </button>
+                        )}
+                        {editingTemplate?.docxUrl && (
+                          <a href={editingTemplate.docxUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-[9px] text-slate-400 underline truncate max-w-full">View file</a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* URL overrides */}
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <label className="input-label">PDF URL (paste direct link instead)</label>
+                        <input type="url" value={editingTemplate?.pdfUrl || ''}
+                          onChange={e => setEditingTemplate(v => ({ ...v, pdfUrl: e.target.value }))}
+                          className="admin-input" placeholder="https://..." />
+                      </div>
+                      <div>
+                        <label className="input-label text-blue-600/70">Word Doc URL (paste direct link instead)</label>
+                        <input type="url" value={editingTemplate?.docxUrl || ''}
+                          onChange={e => setEditingTemplate(v => ({ ...v, docxUrl: e.target.value }))}
+                          className="admin-input border-blue-200 focus:border-blue-400" placeholder="https://..." />
                       </div>
                     </div>
                   </div>

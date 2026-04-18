@@ -40,8 +40,17 @@ export function Navbar() {
   const cartItemCount = getTotalItems();
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -66,7 +75,7 @@ export function Navbar() {
       <UniversalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
       <header
-        className={`fixed top-0 left-0 right-0 z-[7000] transition-all duration-300 ${
+        className={`navbar-gpu fixed top-0 left-0 right-0 z-[7000] transition-all duration-300 ${
           isScrolled
             ? 'bg-parchment/95 shadow-md'
             : 'bg-parchment/80'

@@ -4,11 +4,11 @@ service cloud.firestore {
 
     // ── HELPERS ──────────────────────────────────────────────────────────
     function isAdmin() {
-      return request.auth != null && 
+      return request.auth != null &&
              request.auth.token.email.lower() in [
                'adityakuwad2003@gmail.com',
-               'aditya@theedulaw.in',
-               'law.vikalp@gmail.com'
+               'siddhantkd1998@gmail.com',
+               'instituteedulaw@gmail.com'
              ];
     }
 
@@ -84,7 +84,7 @@ service cloud.firestore {
     }
 
     // ── LEGAL GLOSSARY (public read, admin-only write) ───────────────────
-    match /glossary_terms/{termId} {
+    match /legal_glossary/{termId} {
       allow read: if true;
       allow write: if isAdmin();
     }
@@ -137,6 +137,70 @@ service cloud.firestore {
       allow create: if true;
       allow read, update: if request.auth != null;
       allow delete: if false;
+    }
+
+    // ── BLOG POSTS (public read, admin-only write) ───────────────────────
+    // Used by HeroSearch and UniversalSearch components.
+    match /blog_posts/{postId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── MOCK TESTS (public read, admin-only write) ───────────────────────
+    match /mock_tests/{testId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── VIDEO LECTURES (public read, admin-only write) ───────────────────
+    match /video_lectures/{lectureId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── NOTE MCQS (public read, admin-only write) ────────────────────────
+    match /note_mcqs/{mcqId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── SUPPORT TICKETS (admin only, including messages subcollection) ────
+    match /support_tickets/{ticketId} {
+      allow read, write: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // ── REFERRALS (user reads own, admin reads all, auth create) ─────────
+    match /referrals/{referralId} {
+      allow read: if request.auth != null
+                  && (resource.data.referrerUid == request.auth.uid || isAdmin());
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    // ── SERVICE REQUESTS (public create, admin read/write) ───────────────
+    // Unauthenticated visitors can submit requests (lead capture).
+    match /service_requests/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ── CAMPAIGNS (admin only) ───────────────────────────────────────────
+    match /campaigns/{campaignId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── PUSH NOTIFICATIONS (admin only) ─────────────────────────────────
+    match /push_notifications/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── ADMIN ACTIVITY LOGS (admin only) ─────────────────────────────────
+    match /admin_activity_logs/{logId} {
+      allow read, write: if isAdmin();
     }
 
     // ── EVERYTHING ELSE: DENY ─────────────────────────────────────────────

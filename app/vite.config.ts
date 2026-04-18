@@ -21,7 +21,11 @@ export default defineConfig({
     },
   },
   build: {
+    // Split CSS per chunk so pages only load their own styles
+    cssCodeSplit: true,
     chunkSizeWarningLimit: 800,
+    // Use esbuild (default, fast) for minification — terser not needed
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -53,13 +57,12 @@ export default defineConfig({
           'page-hub': ['./src/pages/LegalHub'],
           'page-playground': ['./src/pages/LegalPlayground'],
           'page-mcq-quiz': ['./src/pages/MCQQuiz'],
-          
+
           // Chart library — only used in admin analytics
           'vendor-charts': ['recharts'],
           // Form handling
           'vendor-forms': ['react-hook-form', 'zod'],
         },
-
       },
     },
   },

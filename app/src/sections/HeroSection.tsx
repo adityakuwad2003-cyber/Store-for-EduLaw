@@ -254,16 +254,9 @@ export function HeroSection() {
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-72 z-20"
               style={{ perspective: '1000px' }}
             >
-              <motion.div
-                animate={{ 
-                  rotateY: [0, 10, 0, -10, 0],
-                  rotateX: [0, 5, 0, -5, 0]
-                }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                style={{ transformStyle: 'preserve-3d' }}
-              >
+              <div className="scales-float" style={{ transformStyle: 'preserve-3d' }}>
                 <ScalesOfJustice3D className="w-full h-full drop-shadow-2xl" />
-              </motion.div>
+              </div>
             </motion.div>
 
             {/* Floating Document Cards */}
@@ -271,31 +264,31 @@ export function HeroSection() {
               <motion.div
                 key={index}
                 initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ 
-                  opacity: 1, 
-                  scale: 1,
-                  y: [0, -20, 0],
-                  rotateZ: [-2, 2, -2]
-                }}
-                transition={{ 
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{
                   opacity: { delay: card.delay + 0.3, duration: 0.5 },
                   scale: { delay: card.delay + 0.3, duration: 0.5 },
-                  y: { delay: card.delay + 0.8, duration: 4, repeat: Infinity, ease: "easeInOut" },
-                  rotateZ: { delay: card.delay + 0.8, duration: 5, repeat: Infinity, ease: "easeInOut" }
                 }}
                 className="absolute w-44"
                 style={{
                   top: `${15 + (index % 2) * 35}%`,
                   left: `${5 + (index % 3) * 30}%`,
-                  transform: `rotate(${-8 + index * 4}deg)`,
                   zIndex: 10 - index
                 }}
               >
-                <DocumentCard3D 
-                  title={card.title} 
-                  subtitle={card.subtitle} 
-                  delay={card.delay}
-                />
+                <div
+                  className="card-float"
+                  style={{
+                    ['--card-rotate' as string]: `rotate(${-8 + index * 4}deg)`,
+                    animationDelay: `${card.delay + 0.8}s`,
+                  }}
+                >
+                  <DocumentCard3D
+                    title={card.title}
+                    subtitle={card.subtitle}
+                    delay={card.delay}
+                  />
+                </div>
               </motion.div>
             ))}
 
