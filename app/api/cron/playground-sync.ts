@@ -327,6 +327,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     ];
 
+    let rawItems: RawRssItem[] = [];
     const rssStatus: Record<string, string> = {};
     const feedResults = await Promise.allSettled(
       RSS_FEEDS.map(async feed => {
@@ -387,12 +388,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (newsItems.length === 0) {
       results.newsError = 'No RSS items found within 72 hours';
     } else {
-      // Articles are NEVER deleted — they accumulate indefinitely for indexing.
-      // Each article gets a permanent URL (/legal-news/:id) that Google can index.
+      const col = adminDb.collection('playground_content');
+
+      // ── 500-item rolling window ──────────────────────────────────────────────
+      // Use count() aggregation (costs only 1 read, no full document scan) to
+      // check current collection size.  When ≥ 500, delete the 25 oldest items
+      // before inserting today's batch.  This keeps the collection bounded so
+      // useDailyLegalNews stays within Firestore's free-tier quota.
+      const countSnap = await col
+        .where('contentType', '==', 'daily_news')
+        .count()
+        .get();
+      const currentCount = countSnap.data().count;
+
+      if (currentCount >= 500) {
+        const oldestSnap = await col
+          .where('contentType', '==', 'daily_news')
+          .orderBy('createdAt', 'asc')
+          .limit(25)
+          .get();
+
+        if (!oldestSnap.empty) {
+          const deleteBatch = adminDb.batch();
+          oldestSnap.docs.forEach(d => deleteBatch.delete(d.ref));
+          await deleteBatch.commit();
+          results.deletedOldItems = oldestSnap.size;
+        }
+      }
 
       // Write rephrased items
       const newsBatch = adminDb.batch();
-      const col = adminDb.collection('playground_content');
       newsItems.forEach(item => newsBatch.set(col.doc(), { ...item, type: 'news', createdAt: new Date() }));
       await newsBatch.commit();
 

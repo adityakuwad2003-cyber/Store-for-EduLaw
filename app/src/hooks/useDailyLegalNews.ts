@@ -13,12 +13,22 @@ export interface LegalNewsItem {
   dateString: string;
   category: string;
   isAI: boolean;
+  contentType?: string;
 }
 
-function todayString(): string {
-  return new Date().toISOString().split('T')[0];
+function dateStringFor(daysAgo: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().split('T')[0];
 }
 
+/**
+ * Fetches today's legal news (or the most recent available day).
+ *
+ * QUOTA-SAFE: Queries by exact dateString so each call reads only that
+ * day's ~50 documents — never the entire collection.  No composite index
+ * required because we filter on a single field ('dateString').
+ */
 export function useDailyLegalNews() {
   const [items, setItems]     = useState<LegalNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,30 +42,30 @@ export function useDailyLegalNews() {
         setLoading(true);
         setError(null);
 
-        const today = todayString();
-        // Single where clause — no composite index needed.
-        // At most ~60 docs exist at any time (cron keeps 3 days × 20 items).
-        // Filter dateString and sort client-side.
-        const q = query(
-          collection(db, 'playground_content'),
-          where('contentType', '==', 'daily_news'),
-        );
-        const snap = await getDocs(q);
-        if (cancelled) return;
+        // Try today, yesterday, then day-before-yesterday (covers weekends / missed cron runs).
+        // Each query reads at most ~50 docs (the cron's daily cap) — never the whole collection.
+        const datesToTry = [
+          dateStringFor(0), // today
+          dateStringFor(1), // yesterday
+          dateStringFor(2), // 2 days ago
+        ];
 
-        const all = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<LegalNewsItem, 'id'>) }));
+        let filtered: LegalNewsItem[] = [];
 
-        // Prefer today, fall back to most-recent available date
-        let filtered = all.filter(d => d.dateString === today);
-        if (filtered.length === 0) {
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          filtered = all.filter(d => d.dateString === yesterday.toISOString().split('T')[0]);
-        }
-        if (filtered.length === 0 && all.length > 0) {
-          // Use whatever is newest
-          const latest = all.reduce((a, b) => (a.dateString > b.dateString ? a : b)).dateString;
-          filtered = all.filter(d => d.dateString === latest);
+        for (const dateStr of datesToTry) {
+          if (filtered.length > 0) break;
+          const q = query(
+            collection(db, 'playground_content'),
+            where('dateString', '==', dateStr),
+          );
+          const snap = await getDocs(q);
+          if (cancelled) return;
+
+          const docs = snap.docs
+            .map(d => ({ id: d.id, ...(d.data() as Omit<LegalNewsItem, 'id'>) }))
+            .filter(d => d.contentType === 'daily_news');
+
+          if (docs.length > 0) filtered = docs;
         }
 
         if (!cancelled) {

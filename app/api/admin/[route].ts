@@ -50,18 +50,36 @@ function isSafePreviewPath(v: unknown): v is string {
 
 // ─── Route handlers ───────────────────────────────────────────────────────────
 
+// In-process cache: refreshes at most once per 2 minutes per warm instance.
+// Serverless instances are stateless, so this only helps warm-lambda reuse —
+// the real quota savings come from slowing down the client-side polling interval.
+let _statsCache: { data: Record<string, unknown>; ts: number } | null = null;
+const STATS_CACHE_MS = 120_000; // 2 minutes
+
 async function handleDashboardStats(req: any, res: any) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method Not Allowed" });
   const ip = getClientIp(req);
-  if (isRateLimited(`dashboard-stats:${ip}`, { windowMs: 60_000, maxRequests: 30 }))
+  if (isRateLimited(`dashboard-stats:${ip}`, { windowMs: 60_000, maxRequests: 10 }))
     return res.status(429).json({ error: "Too many requests." });
   try { await verifyAdmin(req); } catch (err: any) { return res.status(err.status || 401).json({ error: err.message }); }
 
-  const purchasesSnap = await adminDb.collection("purchases").orderBy("purchasedAt", "desc").get();
+  // Return cached result if fresh
+  if (_statsCache && Date.now() - _statsCache.ts < STATS_CACHE_MS) {
+    return res.status(200).json(_statsCache.data);
+  }
+
+  // Fetch the 500 most-recent purchases only — avoids reading the entire collection
+  // on every admin dashboard refresh and keeps Firestore reads well under quota.
+  const purchasesSnap = await adminDb.collection("purchases")
+    .orderBy("purchasedAt", "desc")
+    .limit(500)
+    .get();
+
   let totalRevenue = 0, ordersToday = 0;
   const uniqueUsers = new Set<string>();
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const recentOrders: any[] = [];
+
   purchasesSnap.docs.forEach((doc) => {
     const d = doc.data();
     totalRevenue += Number(d.price) || 0;
@@ -75,13 +93,25 @@ async function handleDashboardStats(req: any, res: any) {
       razorpay_payment_id: d.razorpay_payment_id || null,
     });
   });
-  const notesSnap = await adminDb.collection("notes").get();
-  const bundlesSnap = await adminDb.collection("bundles").get();
-  return res.status(200).json({
-    totalRevenue, totalOrders: purchasesSnap.size, ordersToday,
-    totalUsers: uniqueUsers.size, totalNotes: notesSnap.size,
-    totalBundles: bundlesSnap.size, recentOrders,
-  });
+
+  // Use count() aggregation for collection sizes — costs 1 read each regardless of size
+  const [notesCountSnap, bundlesCountSnap] = await Promise.all([
+    adminDb.collection("notes").count().get(),
+    adminDb.collection("bundles").count().get(),
+  ]);
+
+  const payload = {
+    totalRevenue,
+    totalOrders: purchasesSnap.size,
+    ordersToday,
+    totalUsers: uniqueUsers.size,
+    totalNotes: notesCountSnap.data().count,
+    totalBundles: bundlesCountSnap.data().count,
+    recentOrders,
+  };
+
+  _statsCache = { data: payload, ts: Date.now() };
+  return res.status(200).json(payload);
 }
 
 async function handleListData(req: any, res: any) {

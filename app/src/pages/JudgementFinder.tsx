@@ -274,6 +274,7 @@ function JudicialIntelligence({ synthesis, fallbackSnippets }: { synthesis: stri
 
 // ─── § 4 Know Your Judges ────────────────────────────────────────────────────
 function JudgeCard({ judge }: { judge: JudgeProfile }) {
+  const { currentUser }               = useAuth();
   const [expanded, setExpanded]       = useState(false);
   const [loading,  setLoading]        = useState(false);
   const [judgments, setJudgments]     = useState<{ title: string; url: string; snippet: string }[]>([]);

@@ -53,8 +53,9 @@ export function useAdminStats() {
 
   useEffect(() => {
     fetchStats();
-    // Auto-refresh every 60 seconds
-    const interval = setInterval(fetchStats, 60_000);
+    // Auto-refresh every 5 minutes — the server also caches for 2 min, so
+    // polling faster than this just wastes Firestore quota.
+    const interval = setInterval(fetchStats, 300_000);
     return () => clearInterval(interval);
   }, [fetchStats]);
 

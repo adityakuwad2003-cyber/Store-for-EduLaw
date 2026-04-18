@@ -48,7 +48,7 @@ export default async function handler(req: any, res: any) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           { role: 'system', content: systemPrompt || 'You are an expert Indian Legal Assistant helping students prepare for Judiciary and UPSC exams.' },
           { role: 'user', content: prompt }
