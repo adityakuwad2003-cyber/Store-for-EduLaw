@@ -350,7 +350,7 @@ async function handleGetUploadUrl(req: any, res: any) {
   else if ((isPreview || isInfo) && fileName.endsWith(".gif")) contentType = "image/gif";
   else if (isPreview || isInfo) contentType = "image/jpeg";
   else if (isPdf) contentType = "application/pdf";
-  else if (isTemplate && fileName.endsWith(".docx")) contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  else if (isTemplate && (fileName as string).endsWith(".docx")) contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   else if (isTemplate) contentType = "application/pdf";
 
   const r2 = new S3Client({

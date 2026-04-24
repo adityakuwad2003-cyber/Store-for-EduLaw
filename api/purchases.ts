@@ -233,7 +233,7 @@ export default async function handler(req: any, res: any) {
 
       // Check templates collection for productIds not found in notes
       const unresolvedAfterNotes = Array.from(productIds).filter(id => !notesMap.has(id));
-      const templatesMap = new Map<string, { pdfUrl?: string; docxUrl?: string }>();
+      const templatesMap = new Map<string, { pdfUrl?: string; docxUrl?: string; pdfKey?: string; docxKey?: string }>();
       if (unresolvedAfterNotes.length > 0) {
         const templateDocs = await Promise.all(
           unresolvedAfterNotes.map(id => adminDb.collection("templates").doc(id).get())
