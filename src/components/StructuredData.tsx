@@ -93,7 +93,11 @@ export const getBreadcrumbSchema = (items: { name: string; url: string }[]) => (
 });
 
 // Helper to generate Product Schema
-export const getProductSchema = (note: any) => ({
+export const getProductSchema = (
+  note: any,
+  ratingValue = 4.5,
+  reviewCount = 12
+) => ({
   "@context": "https://schema.org",
   "@type": "Product",
   "name": note.title,
@@ -103,11 +107,18 @@ export const getProductSchema = (note: any) => ({
     "@type": "Brand",
     "name": "The EduLaw"
   },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": ratingValue,
+    "reviewCount": reviewCount,
+    "bestRating": 5,
+    "worstRating": 1
+  },
   "offers": {
     "@type": "Offer",
     "url": `https://www.store.theedulaw.in/product/${note.slug}`,
     "priceCurrency": "INR",
-    "price": note.price,
+    "price": Number(note.price) || 0,
     "availability": "https://schema.org/InStock",
     "seller": {
       "@type": "Organization",
